@@ -1,89 +1,24 @@
 <template>
-  <header class="header">
-    <div class="header-container">
-      <div class="logo-section">
-        <div class="logo-icon">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="6" width="16" height="20" rx="2" stroke="#1e3a8a" stroke-width="2" fill="none"/>
-            <path d="M12 10h8M12 14h8M12 18h6" stroke="#1e3a8a" stroke-width="1.5"/>
-            <rect x="20" y="12" width="12" height="16" rx="2" stroke="#1e3a8a" stroke-width="2" fill="none"/>
-            <circle cx="26" cy="18" r="2" fill="#1e3a8a"/>
-            <path d="M24 22h4" stroke="#1e3a8a" stroke-width="1.5"/>
-          </svg>
-        </div>
-        <span class="logo-text">MIL MOOC</span>
+  <header class="bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="6" width="16" height="20" rx="2" stroke="#1e3a8a" stroke-width="2" fill="none"/>
+          <path d="M12 10h8M12 14h8M12 18h6" stroke="#1e3a8a" stroke-width="1.5"/>
+          <rect x="20" y="12" width="12" height="16" rx="2" stroke="#1e3a8a" stroke-width="2" fill="none"/>
+          <circle cx="26" cy="18" r="2" fill="#1e3a8a"/>
+          <path d="M24 22h4" stroke="#1e3a8a" stroke-width="1.5"/>
+        </svg>
+        <span class="text-2xl font-bold text-blue-900">MIL MOOC</span>
       </div>
-      <nav class="nav">
-        <button class="btn-login">Log In</button>
-        <button class="btn-enroll">Enroll for free</button>
+      <nav class="flex items-center gap-4">
+        <Button label="Log In" text severity="secondary" class="text-blue-900" />
+        <Button label="Enroll for free" class="bg-blue-900" />
       </nav>
     </div>
   </header>
 </template>
 
 <script setup>
+import Button from 'primevue/button'
 </script>
-
-<style scoped>
-.header {
-  background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.header-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #1e3a8a;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.btn-login {
-  padding: 0.5rem 1.5rem;
-  color: #1e3a8a;
-  font-weight: 500;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-login:hover {
-  opacity: 0.8;
-}
-
-.btn-enroll {
-  padding: 0.5rem 1.5rem;
-  background-color: #1e3a8a;
-  color: white;
-  font-weight: 500;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-enroll:hover {
-  opacity: 0.9;
-}
-</style>
-

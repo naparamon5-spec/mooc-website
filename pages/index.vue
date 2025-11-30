@@ -1,11 +1,11 @@
 <template>
-  <div class="page-wrapper">
+  <div class="min-h-screen bg-white w-full">
     <Header />
     <main>
       <Hero />
       <FeatureCards />
       <CourseDescription />
-      <div class="outcomes-section">
+      <div class="max-w-7xl mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-2 gap-8">
         <LearningOutcomes />
         <Credentials />
       </div>
@@ -15,27 +15,7 @@
 </template>
 
 <script setup>
+useHead({
+  title: 'MIL MOOC - Media and Information Literacy',
+})
 </script>
-
-<style scoped>
-.page-wrapper {
-  min-height: 100vh;
-  background-color: white;
-}
-
-.outcomes-section {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .outcomes-section {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-</style>
-
