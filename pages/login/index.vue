@@ -77,13 +77,13 @@ async function onSubmit() {
     if (error) throw error
 
     // Optionally, you can check the profile role
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user?.id)
-      .single()
-    if (profileError) throw profileError
-    console.log('Profile:', profileData)
+    // const { data: profileData, error: profileError } = await supabase
+    //   .from('profiles')
+    //   .select('*')
+    //   .eq('id', data.user?.id)
+    //   .single()
+    // if (profileError) throw profileError
+    // console.log('Profile:', profileData)
 
     // Navigate to dashboard
     navigateTo('/dashboard')
