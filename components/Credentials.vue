@@ -1,5 +1,6 @@
 <template>
-  <Card class="shadow-md">
+  <div class="w-full px-4 md:px-8 lg:px-12">
+    <Card class="shadow-md">
     <template #header>
       <div class="bg-blue-900 text-white text-center py-6 px-6 rounded-t-lg">
         <h2 class="text-2xl font-bold">Earn recognized credentials</h2>
@@ -28,7 +29,8 @@
         </div>
       </div>
     </template>
-  </Card>
+    </Card>
+  </div>
 </template>
 
 <script setup>

@@ -5,7 +5,7 @@
       <Hero />
       <FeatureCards />
       <CourseDescription />
-      <div class="max-w-7xl mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="max-w-7xl mx-auto py-10 px-6 grid grid-cols-1 md:grid-cols-2 gap-8 ">
         <LearningOutcomes />
         <Credentials />
       </div>

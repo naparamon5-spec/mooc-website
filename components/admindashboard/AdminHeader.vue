@@ -1,0 +1,155 @@
+<template>
+  <header class="bg-primary-600 text-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="w-full flex items-center justify-between py-4 px-4 md:px-8 lg:px-12">
+      <NuxtLink to="/" class="flex items-center gap-3">
+        <img src="/assets/logo.png" alt="MIL MOOC" class="h-10 w-auto rounded-md shadow-sm bg-white" />
+        <div class="hidden sm:block">
+          <div class="text-lg font-bold text-white">MIL MOOC</div>
+        </div>
+      </NuxtLink>
+
+      <nav class="hidden md:flex items-center gap-6">
+        <NuxtLink 
+          to="/admin" 
+          class="text-sm font-medium transition-colors"
+          :class="currentRoute === '/admin' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+        >
+          Dashboard
+        </NuxtLink>
+        <NuxtLink 
+          to="/admin/modules" 
+          class="text-sm font-medium transition-colors"
+          :class="currentRoute === '/admin/modules' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+        >
+          Manage Modules
+        </NuxtLink>
+        <NuxtLink 
+          to="/admin/quizzes" 
+          class="text-sm font-medium transition-colors"
+          :class="currentRoute === '/admin/quizzes' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+        >
+          Quizzes
+        </NuxtLink>
+        <NuxtLink 
+          to="/admin/users" 
+          class="text-sm font-medium transition-colors"
+          :class="currentRoute === '/admin/users' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+        >
+          User Management
+        </NuxtLink>
+      </nav>
+
+      <div class="flex items-center gap-4">
+        <!-- Messages Icon -->
+  <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+        </button>
+
+        <!-- Notifications Icon -->
+  <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+        </button>
+
+        <!-- User Profile Dropdown -->
+        <div class="relative">
+          <button @click="dropdownOpen = !dropdownOpen" class="flex items-center gap-2 p-2 text-white hover:text-gray-200 transition-colors">
+            <div class="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-semibold">
+              {{ userInitials }}
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          <div v-if="dropdownOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+            <hr class="my-2" />
+            <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile menu button -->
+      <div class="md:hidden">
+  <button @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Open menu" class="p-2 rounded-md text-white">
+          <svg v-if="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <transition name="fade">
+      <div v-if="mobileMenuOpen" class="md:hidden bg-primary-600 border-t border-primary-700">
+        <div class="px-4 py-4 space-y-3">
+          <NuxtLink to="/admin" class="block text-white font-medium">Dashboard</NuxtLink>
+          <NuxtLink to="/admin/modules" class="block text-white font-medium">Manage Modules</NuxtLink>
+          <NuxtLink to="/admin/quizzes" class="block text-white font-medium">Quizzes</NuxtLink>
+          <NuxtLink to="/admin/users" class="block text-white font-medium">User Management</NuxtLink>
+        </div>
+      </div>
+    </transition>
+  </header>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const dropdownOpen = ref(false)
+const mobileMenuOpen = ref(false)
+
+const props = defineProps({
+  adminName: {
+    type: String,
+    default: 'Admin'
+  }
+})
+
+const currentRoute = computed(() => route.path)
+
+const userInitials = computed(() => {
+  const name = props.adminName.split(' ')
+  if (name.length >= 2) {
+    return (name[0][0] + name[1][0]).toUpperCase()
+  }
+  return props.adminName.substring(0, 2).toUpperCase()
+})
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event) => {
+  if (dropdownOpen.value && !event.target.closest('.relative')) {
+    dropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+</script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+</style>
+

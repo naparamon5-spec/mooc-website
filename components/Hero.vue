@@ -1,35 +1,25 @@
 <template>
-  <section class="py-16 px-6">
-    <div class="max-w-7xl mx-auto text-center">
-      <div class="flex items-center justify-center gap-4 mb-4 flex-col md:flex-row">
-        <div class="hidden md:block flex-shrink-0">
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M30 10L15 20v20l15 10V10z" fill="#1e3a8a"/>
-            <path d="M15 20l15-10v30l-15-10V20z" fill="#3b82f6"/>
-            <ellipse cx="40" cy="30" rx="8" ry="12" fill="#3b82f6" opacity="0.3"/>
-            <ellipse cx="45" cy="30" rx="6" ry="10" fill="#3b82f6" opacity="0.2"/>
-          </svg>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm text-blue-900 uppercase tracking-wide mb-2">
-            WELCOME TO THE MASSIVE OPEN ONLINE COURSE FOR
-          </p>
-          <h1 class="text-4xl md:text-6xl font-bold text-blue-900 mb-4 leading-tight">
-            Media and Information Literacy
-          </h1>
-        </div>
-        <div class="hidden md:block flex-shrink-0">
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M30 10L15 20v20l15 10V10z" fill="#1e3a8a"/>
-            <path d="M15 20l15-10v30l-15-10V20z" fill="#3b82f6"/>
-            <ellipse cx="40" cy="30" rx="8" ry="12" fill="#3b82f6" opacity="0.3"/>
-            <ellipse cx="45" cy="30" rx="6" ry="10" fill="#3b82f6" opacity="0.2"/>
-          </svg>
+  <section class="py-12 w-full px-0 bg-gradient-to-b from-blue-200 to-white">
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-4 md:px-8 lg:px-12">
+
+      <div class="order-2 md:order-1">
+        <p class="text-sm uppercase tracking-wide text-accent-500 font-semibold mb-3">Free course • Self-paced</p>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-primary-600 leading-tight mb-4">Media and Information Literacy</h1>
+        <p class="text-lg text-muted mb-6">Learn to verify facts, spot misinformation, and participate responsibly online — practical skills for every learner.</p>
+
+        <div class="flex flex-wrap gap-3">
+          <a href="#enroll" class="btn-primary inline-flex items-center gap-2">Enroll for free</a>
+          <a href="#about" class="text-sm text-primary-600 underline self-center">Learn more</a>
         </div>
       </div>
-      <p class="text-xl text-blue-900 max-w-3xl mx-auto">
-        Learn to think critically, verify facts, and become a responsible digital citizen.
-      </p>
+
+      <div class="order-1 md:order-2 flex justify-center md:justify-end">
+        <div class="rounded-xl p-0">
+          <img src="~/assets/megaphone-removebg.png" alt="megaphone" class="w-80 max-w-full h-auto object-contain" />
+        </div>
+      </div>
+
+
     </div>
   </section>
 </template>
