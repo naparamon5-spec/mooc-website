@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <DashboardHeader :student-name="studentName" />
-    
-  <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+
+    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
@@ -26,16 +26,20 @@
               :key="level.id"
               @click="switchCourseLevel(level.id)"
               class="px-6 py-3 rounded-lg font-semibold transition-colors"
-              :class="currentCourseLevel === level.id
-                ? 'bg-primary-600 text-white hover:bg-primary-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+              :class="
+                currentCourseLevel === level.id
+                  ? 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              "
             >
               {{ level.name }}
             </button>
           </div>
 
           <!-- Modules Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          <div
+            class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
+          >
             <ModuleCard
               v-for="(module, index) in currentModules"
               :key="`${currentCourseLevel}-${module.id}`"
@@ -49,7 +53,10 @@
           </div>
 
           <!-- Module Description -->
-          <div v-if="selectedModule" class="bg-white rounded-lg p-6 shadow-sm mb-6">
+          <div
+            v-if="selectedModule"
+            class="bg-white rounded-lg p-6 shadow-sm mb-6"
+          >
             <h3 class="text-xl font-bold text-gray-800 mb-4">
               {{ selectedModule.title }}
             </h3>
@@ -90,13 +97,19 @@
 
           <!-- Footer Buttons -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <button class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors">
+            <button
+              class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors"
+            >
               FAQs
             </button>
-            <button class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors">
+            <button
+              class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors"
+            >
               Report Fraud or False Information
             </button>
-            <button class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors">
+            <button
+              class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors"
+            >
               About us
             </button>
           </div>
@@ -112,201 +125,207 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue'
-import DashboardSidebar from '~/components/studentdashboard/DashboardSidebar.vue'
-import ModuleCard from '~/components/studentdashboard/ModuleCard.vue'
+import { ref, computed } from "vue";
+import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
+import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
+import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
 
 useHead({
-  title: 'Dashboard - MIL MOOC',
-})
+  title: "Dashboard - MIL MOOC",
+});
 
-const studentName = ref("Student's name")
+const studentName = ref("Student's name");
 
 // Course levels configuration
 const courseLevels = ref([
-  { id: 'beginner', name: 'Beginner Course' },
-  { id: 'advanced', name: 'Advanced Course' }
-])
+  { id: "beginner", name: "Beginner Course" },
+  { id: "advanced", name: "Advanced Course" },
+]);
 
 // Current course level
-const currentCourseLevel = ref('beginner')
+const currentCourseLevel = ref("beginner");
 
 // Course data structure - stores data for each course level
 const courseData = ref({
   beginner: {
     progress: 60,
-    currentModule: 'Introduction to Media and Information Literacy',
-    completionStatus: 'In progress',
+    currentModule: "Introduction to Media and Information Literacy",
+    completionStatus: "In progress",
     completedModules: 0,
     totalModules: 5,
     badges: [
-      { name: 'LITERACY SCHOLAR', earned: true },
-      { name: 'MEDIA DEFENDER', earned: true },
-      { name: 'DIGITAL LIBRARIAN', earned: true },
-      { name: 'FACTS ADVOCATE', earned: true },
-      { name: 'RESPONSIBLE CITIZEN', earned: true }
+      { name: "LITERACY SCHOLAR", earned: true },
+      { name: "MEDIA DEFENDER", earned: true },
+      { name: "DIGITAL LIBRARIAN", earned: true },
+      { name: "FACTS ADVOCATE", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
+      { name: "RESPONSIBLE CITIZEN", earned: true },
     ],
     modules: [
       {
         id: 1,
-        title: 'MODULE 1: Introduction to Media and Information Literacy',
-        subtitle: '',
+        title: "MODULE 1: Introduction to Media and Information Literacy",
+        subtitle: "",
         isActive: true,
         isRestricted: false,
-        emoji: '📱',
-        description: 'This module introduces learners to the fundamental concepts of Media and Information Literacy (MIL). It focuses on understanding the role of media in society and recognizing the types of information encountered daily. Learners will explore common challenges in the digital information landscape, including misinformation, disinformation, and malinformation, and understand their social, cultural, and ethical implications.',
+        emoji: "📱",
+        description:
+          "This module introduces learners to the fundamental concepts of Media and Information Literacy (MIL). It focuses on understanding the role of media in society and recognizing the types of information encountered daily. Learners will explore common challenges in the digital information landscape, including misinformation, disinformation, and malinformation, and understand their social, cultural, and ethical implications.",
         learningOutcomes: [
-          'Define Media and Information Literacy and its relevance in the digital age.',
-          'Identify the differences between misinformation, disinformation, and malinformation.',
-          'Develop a foundation for responsible and critical engagement with media content.'
-        ]
+          "Define Media and Information Literacy and its relevance in the digital age.",
+          "Identify the differences between misinformation, disinformation, and malinformation.",
+          "Develop a foundation for responsible and critical engagement with media content.",
+        ],
       },
       {
         id: 2,
-        title: 'MODULE 2: Media in the Age of Algorithms',
-        subtitle: '',
+        title: "MODULE 2: Media in the Age of Algorithms",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '🤖',
-        description: '',
-        learningOutcomes: []
+        emoji: "🤖",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 3,
-        title: 'MODULE 3: How the Media talks',
-        subtitle: '',
+        title: "MODULE 3: How the Media talks",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '💬',
-        description: '',
-        learningOutcomes: []
+        emoji: "💬",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 4,
-        title: 'MODULE 4: Media Representations',
-        subtitle: '',
+        title: "MODULE 4: Media Representations",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '👥',
-        description: '',
-        learningOutcomes: []
+        emoji: "👥",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 5,
-        title: 'MODULE 5: Digital Citizenship',
-        subtitle: '',
+        title: "MODULE 5: Digital Citizenship",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '🌐',
-        description: '',
-        learningOutcomes: []
-      }
-    ]
+        emoji: "🌐",
+        description: "",
+        learningOutcomes: [],
+      },
+    ],
   },
   advanced: {
     progress: 0,
-    currentModule: 'Advanced Media Analysis',
-    completionStatus: 'Not started',
+    currentModule: "Advanced Media Analysis",
+    completionStatus: "Not started",
     completedModules: 0,
     totalModules: 5,
     badges: [
-      { name: 'ADVANCED ANALYST', earned: false },
-      { name: 'CRITICAL THINKER', earned: false },
-      { name: 'MEDIA EXPERT', earned: false },
-      { name: 'RESEARCH MASTER', earned: false },
-      { name: 'DIGITAL LEADER', earned: false }
+      { name: "ADVANCED ANALYST", earned: false },
+      { name: "CRITICAL THINKER", earned: false },
+      { name: "MEDIA EXPERT", earned: false },
+      { name: "RESEARCH MASTER", earned: false },
+      { name: "DIGITAL LEADER", earned: false },
     ],
     modules: [
       {
         id: 1,
-        title: 'MODULE 1: Advanced Media Analysis',
-        subtitle: '',
+        title: "MODULE 1: Advanced Media Analysis",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '🔍',
-        description: 'This advanced module delves deep into sophisticated media analysis techniques and critical evaluation methods.',
+        emoji: "🔍",
+        description:
+          "This advanced module delves deep into sophisticated media analysis techniques and critical evaluation methods.",
         learningOutcomes: [
-          'Master advanced media analysis frameworks.',
-          'Apply critical thinking to complex media scenarios.',
-          'Develop expertise in media research methodologies.'
-        ]
+          "Master advanced media analysis frameworks.",
+          "Apply critical thinking to complex media scenarios.",
+          "Develop expertise in media research methodologies.",
+        ],
       },
       {
         id: 2,
-        title: 'MODULE 2: Advanced Algorithmic Literacy',
-        subtitle: '',
+        title: "MODULE 2: Advanced Algorithmic Literacy",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '🧠',
-        description: '',
-        learningOutcomes: []
+        emoji: "🧠",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 3,
-        title: 'MODULE 3: Advanced Communication Strategies',
-        subtitle: '',
+        title: "MODULE 3: Advanced Communication Strategies",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '📡',
-        description: '',
-        learningOutcomes: []
+        emoji: "📡",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 4,
-        title: 'MODULE 4: Advanced Media Production',
-        subtitle: '',
+        title: "MODULE 4: Advanced Media Production",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '🎬',
-        description: '',
-        learningOutcomes: []
+        emoji: "🎬",
+        description: "",
+        learningOutcomes: [],
       },
       {
         id: 5,
-        title: 'MODULE 5: Advanced Digital Leadership',
-        subtitle: '',
+        title: "MODULE 5: Advanced Digital Leadership",
+        subtitle: "",
         isActive: false,
         isRestricted: true,
-        emoji: '👑',
-        description: '',
-        learningOutcomes: []
-      }
-    ]
-  }
-})
+        emoji: "👑",
+        description: "",
+        learningOutcomes: [],
+      },
+    ],
+  },
+});
 
 // Computed properties for current course data
 const currentCourseData = computed(() => {
-  return courseData.value[currentCourseLevel.value]
-})
+  return courseData.value[currentCourseLevel.value];
+});
 
 const currentModules = computed(() => {
-  return courseData.value[currentCourseLevel.value].modules
-})
+  return courseData.value[currentCourseLevel.value].modules;
+});
 
-const selectedModule = ref(null)
+const selectedModule = ref(null);
 
 // Initialize selected module
 const initializeSelectedModule = () => {
-  const activeModule = currentModules.value.find(m => m.isActive)
-  selectedModule.value = activeModule || currentModules.value[0]
-}
+  const activeModule = currentModules.value.find((m) => m.isActive);
+  selectedModule.value = activeModule || currentModules.value[0];
+};
 
 // Switch between course levels
 const switchCourseLevel = (levelId) => {
-  currentCourseLevel.value = levelId
-  initializeSelectedModule()
-}
+  currentCourseLevel.value = levelId;
+  initializeSelectedModule();
+};
 
 // Select a module
 const selectModule = (module) => {
   if (!module.isRestricted) {
-    selectedModule.value = module
+    selectedModule.value = module;
   }
-}
+};
 
 // Initialize on mount
-initializeSelectedModule()
+initializeSelectedModule();
 </script>
-
