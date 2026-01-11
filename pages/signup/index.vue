@@ -8,13 +8,17 @@
       </div>
 
       <form @submit.prevent="onSubmit" class="space-y-5">
+        <div v-if="errorMsg" class="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+          {{ errorMsg }}
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-sky-700 mb-1">Full name</label>
           <input
             v-model="name"
             type="text"
             required
-            placeholder="Your full name"
+            placeholder="Full Name"
             class="mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
           />
         </div>
@@ -25,7 +29,7 @@
             v-model="email"
             type="email"
             required
-            placeholder="you@example.com"
+            placeholder="Email Address"
             class="mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
           />
         </div>
@@ -38,7 +42,7 @@
               v-model="password"
               required
               minlength="6"
-              placeholder="Create a password"
+              placeholder="Password"
               class="mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm pr-12 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
             />
             <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-2.5 text-sky-600 hover:text-sky-800">
@@ -54,11 +58,19 @@
         </div>
 
         <div>
-          <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 text-white px-4 py-2 font-medium shadow hover:brightness-105 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button 
+            type="submit" 
+            :disabled="loading"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 text-white px-4 py-2 font-medium shadow hover:brightness-105 transition disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            Create account
+            <svg v-else class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ loading ? 'Creating account...' : 'Create account' }}
           </button>
         </div>
       </form>
@@ -72,14 +84,62 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const { $supabase } = useNuxtApp()
+const router = useRouter()
+
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const loading = ref(false)
+const errorMsg = ref('')
 
-function onSubmit() {
-  // Placeholder: replace with real signup call
-  console.log('signup', { name: name.value, email: email.value })
-  alert('Signup submitted — check console')
+async function onSubmit() {
+  try {
+    loading.value = true
+    errorMsg.value = ''
+    
+    // 1. Sign up the user in Supabase Auth
+    const { data: userData, error: authError } = await $supabase.auth.signUp({
+      email: email.value,
+      password: password.value,
+      options: {
+        data: {
+          full_name: name.value,
+        }
+      }
+    })
+
+    if (authError) throw authError
+
+    const userId = userData.user?.id
+    if (userId) {
+      // 2. Insert profile as student
+      const { error: profileError } = await $supabase
+        .from('profiles')
+        .insert([{ 
+          id: userId, 
+          full_name: name.value,
+          email: email.value,
+          role: 'student' 
+        }])
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        // Optional: You might want to handle this error, e.g., by showing a warning
+        // or trying to delete the auth user if profile creation fails (rollback)
+      }
+    }
+
+    // If email confirmation is enabled, user might not be signed in yet
+    // But typically we can redirect or show a success message
+    alert('Account created! Please check your email for verification.')
+    router.push('/login')
+    
+  } catch (error: any) {
+    errorMsg.value = error.message
+  } finally {
+    loading.value = false
+  }
 }
 </script>

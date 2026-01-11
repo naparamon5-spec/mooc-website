@@ -111,11 +111,19 @@ const email = ref('')
 const password = ref('')
 const remember = ref(false)
 const showPassword = ref(false)
+const supabase = useNuxtApp().$supabase
 
-function onSubmit() {
-  // Placeholder: replace with real auth call
-  console.log('login', { email: email.value, password: password.value, remember: remember.value })
-  // small visual feedback
-  alert('Login submitted — check console')
+async function onSubmit() {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+    if (error) throw error
+    console.log('data', data)
+    navigateTo('/dashboard')
+  } catch (error) {
+    console.log('error', error)
+  }
 }
 </script>
