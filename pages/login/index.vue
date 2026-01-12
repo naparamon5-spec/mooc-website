@@ -108,7 +108,7 @@ async function onSubmit() {
     toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Welcome back!', life: 3000 });
 
     // Navigate to dashboard
-    navigateTo('/dashboard')
+    navigateTo('/')
   } catch (err: any) {
     console.log(err)
     errorMsg.value = err.message || 'Login failed'

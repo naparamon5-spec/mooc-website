@@ -10,28 +10,28 @@
 
       <nav class="hidden md:flex items-center gap-6">
         <NuxtLink 
-          to="/dashboard" 
+          to="/" 
           class="text-sm font-medium transition-colors"
           :class="currentRoute === '/dashboard' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
         >
           Home
         </NuxtLink>
         <NuxtLink 
-          to="/dashboard/modules" 
+          to="/modules" 
           class="text-sm font-medium transition-colors"
           :class="currentRoute === '/dashboard/modules' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
         >
           Modules
         </NuxtLink>
         <NuxtLink 
-          to="/dashboard/quizzes" 
+          to="/quizzes" 
           class="text-sm font-medium transition-colors"
           :class="currentRoute === '/dashboard/quizzes' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
         >
           Quizzes
         </NuxtLink>
         <NuxtLink 
-          to="/dashboard/resources" 
+          to="/resources" 
           class="text-sm font-medium transition-colors"
           :class="currentRoute === '/dashboard/resources' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
         >
@@ -93,10 +93,10 @@
     <transition name="fade">
       <div v-if="mobileMenuOpen" class="md:hidden bg-primary-600 border-t border-primary-700">
         <div class="px-4 py-4 space-y-3">
-          <NuxtLink to="/dashboard" class="block text-white font-medium">Home</NuxtLink>
-          <NuxtLink to="/dashboard/modules" class="block text-white font-medium">Modules</NuxtLink>
-          <NuxtLink to="/dashboard/quizzes" class="block text-white font-medium">Quizzes</NuxtLink>
-          <NuxtLink to="/dashboard/resources" class="block text-white font-medium">Resource Hub</NuxtLink>
+          <NuxtLink to="/" class="block text-white font-medium">Home</NuxtLink>
+          <NuxtLink to="/modules" class="block text-white font-medium">Modules</NuxtLink>
+          <NuxtLink to="/quizzes" class="block text-white font-medium">Quizzes</NuxtLink>
+          <NuxtLink to="/resources" class="block text-white font-medium">Resource Hub</NuxtLink>
         </div>
       </div>
     </transition>
