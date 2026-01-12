@@ -51,8 +51,7 @@
               @click="selectModule(module)"
             />
           </div>
-
-          <!-- Module Description -->
+              <!-- Module Description -->
           <div
             v-if="selectedModule"
             class="bg-white rounded-lg p-6 shadow-sm mb-6"
@@ -135,6 +134,9 @@ useHead({
 });
 
 const studentName = ref("Student's name");
+
+// Currently selected module
+const selectedModule = ref(null);
 
 // Course levels configuration
 const courseLevels = ref([
@@ -305,27 +307,22 @@ const currentModules = computed(() => {
   return courseData.value[currentCourseLevel.value].modules;
 });
 
-const selectedModule = ref(null);
-
-// Initialize selected module
-const initializeSelectedModule = () => {
-  const activeModule = currentModules.value.find((m) => m.isActive);
-  selectedModule.value = activeModule || currentModules.value[0];
-};
-
-// Switch between course levels
-const switchCourseLevel = (levelId) => {
-  currentCourseLevel.value = levelId;
-  initializeSelectedModule();
-};
+// Watch for changes in currentCourseData or currentCourseLevel to set initial selectedModule
+watchEffect(() => {
+  if (currentCourseData.value && currentCourseData.value.modules.length > 0) {
+    if (!selectedModule.value || selectedModule.value.id !== currentCourseData.value.modules[0].id) {
+      selectedModule.value = currentCourseData.value.modules[0];
+    }
+  } else {
+    selectedModule.value = null;
+  }
+});
 
 // Select a module
 const selectModule = (module) => {
+  selectedModule.value = module;
   if (!module.isRestricted) {
-    selectedModule.value = module;
+    navigateTo(`/modules/${module.id}`);
   }
 };
-
-// Initialize on mount
-initializeSelectedModule();
 </script>
