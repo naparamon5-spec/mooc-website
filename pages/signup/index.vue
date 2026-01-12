@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky-50 to-white">
-    <div class="w-full max-w-lg bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-sky-100">
+    <div v-if="!showSuccessModal" class="w-full max-w-lg bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-sky-100">
       <!-- Logo -->
       <div class="flex justify-center mb-4">
         <img src="/assets/logo.png" alt="MIL MOOC" class="h-28 w-auto object-contain" />
@@ -48,15 +48,24 @@
         </div>
       </form>
 
-      <p class="mt-6 text-sm text-center text-sky-700">
-        Already have an account? <NuxtLink to="/login" class="font-medium text-sky-800 hover:underline">Log in</NuxtLink>
-      </p>
+      <div>
+        <p class="mt-6 text-sm text-center text-sky-700">
+          Already have an account? <NuxtLink to="/login" class="font-medium text-sky-800 hover:underline">Log in</NuxtLink>
+        </p>
+        <!-- <p class="mt-2 text-xs text-center text-sky-600 font-light">
+          You will be asked to verify your email.
+        </p> -->
+      </div>
     </div>
+
+    <SuccessModal :isOpen="showSuccessModal" title="Account Created!" :message="modalMessage" @close="handleModalClose" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import SuccessModal from '~/components/SuccessModal.vue'
+
 const { $supabase } = useNuxtApp()
 const router = useRouter()
 
@@ -66,6 +75,19 @@ const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
+const showSuccessModal = ref(false)
+const countdown = ref(5)
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+
+const modalMessage = computed(() => {
+  if (countdown.value > 1) {
+    return `Please check your email for verification. Redirecting to login in ${countdown.value} seconds...`
+  }
+  if (countdown.value === 1) {
+    return `Please check your email for verification. Redirecting to login in 1 second...`
+  }
+  return 'Redirecting to login...'
+})
 
 async function onSubmit() {
   try {
@@ -86,13 +108,30 @@ async function onSubmit() {
     if (authError) throw authError
 
     // ✅ Profile is automatically created by the DB trigger
+    showSuccessModal.value = true
+    countdown.value = 5 // Reset countdown
+    countdownInterval = setInterval(() => {
+      countdown.value--
+      if (countdown.value === 0) {
+        if (countdownInterval) clearInterval(countdownInterval)
+        redirectToLogin()
+      }
+    }, 1000)
 
-    alert('Account created! Please check your email for verification.')
-    router.push('/login')
   } catch (error: any) {
     errorMsg.value = error.message
   } finally {
     loading.value = false
   }
 }
+
+function redirectToLogin() {
+  router.push('/login')
+}
+
+function handleModalClose() {
+  if (countdownInterval) clearInterval(countdownInterval)
+  redirectToLogin()
+}
 </script>
+
