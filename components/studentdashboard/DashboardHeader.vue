@@ -144,7 +144,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s;
 }
@@ -170,5 +170,5 @@ onUnmounted(() => {
 .bg-primary-600 .h-8 {
   background-color: rgba(255,255,255,0.12) !important; /* keep contrast for avatar background */
 }
-</style>
+</style> -->
 
