@@ -1,6 +1,7 @@
 // plugins/primevue.js
 import { defineNuxtPlugin } from '#app'
 import PrimeVue from 'primevue/config'
+import ToastService from 'primevue/toastservice'
 import Lara from '@primevue/themes/lara'
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -14,4 +15,5 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
     }
   })
+  nuxtApp.vueApp.use(ToastService)
 })

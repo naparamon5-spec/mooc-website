@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { validateEmail, validatePassword } from '~/utils/validation/auth'
 
 const email = ref('')
@@ -68,6 +69,7 @@ const remember = ref(false)
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
+const toast = useToast()
 
 const errors = ref({
   email: '',
@@ -103,20 +105,14 @@ async function onSubmit() {
 
     if (error) throw error
 
-    // Optionally, you can check the profile role
-    // const { data: profileData, error: profileError } = await supabase
-    //   .from('profiles')
-    //   .select('*')
-    //   .eq('id', data.user?.id)
-    //   .single()
-    // if (profileError) throw profileError
-    // console.log('Profile:', profileData)
+    toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Welcome back!', life: 3000 });
 
     // Navigate to dashboard
     navigateTo('/dashboard')
   } catch (err: any) {
     console.log(err)
     errorMsg.value = err.message || 'Login failed'
+    toast.add({ severity: 'error', summary: 'Login Failed', detail: errorMsg.value, life: 3000 });
   } finally {
     loading.value = false
   }
