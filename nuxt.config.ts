@@ -8,6 +8,13 @@ export default defineNuxtConfig({
       supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
     }
   },
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/assets/logo.png' }
+      ]
+    }
+  },
   css: [
     'primeicons/primeicons.css'
   ],
