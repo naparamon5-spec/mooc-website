@@ -9,15 +9,18 @@
       <form @submit.prevent="onSubmit" class="space-y-5">
         <div>
           <label class="block text-sm font-medium text-sky-700 mb-1">Email</label>
-          <input v-model="email" type="email" required placeholder="Enter your email address"
-            class="mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"/>
+          <input v-model="email" type="email" placeholder="Enter your email address"
+            :class="[inputClass, errors.email && errorClass]"/>
+          <p v-if="errors.email" class="mt-1 text-sm text-red-600">
+            {{ errors.email }}
+          </p>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-sky-700 mb-1">Password</label>
           <div class="relative">
-            <input :type="showPassword ? 'text' : 'password'" v-model="password" required minlength="6" placeholder="Enter your password"
-              class="mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm pr-12 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"/>
+            <input :type="showPassword ? 'text' : 'password'" v-model="password" placeholder="Enter your password"
+              :class="[inputClass, 'pr-12', errors.password && errorClass]"/>
             <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-2.5 text-sky-600 hover:text-sky-800">
               <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -28,6 +31,9 @@
               </svg>
             </button>
           </div>
+          <p v-if="errors.password" class="mt-1 text-sm text-red-600">
+            {{ errors.password }}
+          </p>
         </div>
 
         <div class="flex items-center justify-between">
@@ -54,6 +60,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { validateEmail, validatePassword } from '~/utils/validation/auth'
 
 const email = ref('')
 const password = ref('')
@@ -62,9 +69,29 @@ const showPassword = ref(false)
 const loading = ref(false)
 const errorMsg = ref('')
 
+const errors = ref({
+  email: '',
+  password: ''
+})
+
+const inputClass =
+  'mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400'
+
+const errorClass =
+  'border-red-400 focus:ring-red-300 focus:border-red-400'
+
 const supabase = useNuxtApp().$supabase
 
+function validateForm() {
+  errors.value.email = validateEmail(email.value)
+  errors.value.password = validatePassword(password.value)
+
+  return !errors.value.email && !errors.value.password
+}
+
 async function onSubmit() {
+  if (!validateForm()) return
+
   loading.value = true
   errorMsg.value = ''
   try {
