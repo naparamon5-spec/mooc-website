@@ -307,6 +307,10 @@ const currentModules = computed(() => {
   return courseData.value[currentCourseLevel.value].modules;
 });
 
+const switchCourseLevel = (levelId) => {
+  currentCourseLevel.value = levelId;
+};
+
 // Watch for changes in currentCourseData or currentCourseLevel to set initial selectedModule
 watchEffect(() => {
   if (currentCourseData.value && currentCourseData.value.modules.length > 0) {
