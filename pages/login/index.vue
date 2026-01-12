@@ -35,7 +35,7 @@
             <input type="checkbox" v-model="remember" class="mr-2 h-4 w-4 text-sky-600 rounded focus:ring-sky-500" />
             Remember me
           </label>
-          <NuxtLink to="/" class="text-sm text-sky-600 hover:underline">Forgot Password?</NuxtLink>
+          <NuxtLink to="/forgot-password" class="text-sm text-sky-600 hover:underline">Forgot Password?</NuxtLink>
         </div>
 
         <button type="submit" :disabled="loading"
