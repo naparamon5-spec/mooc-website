@@ -2,7 +2,7 @@
   <header class="bg-primary-600 text-white border-b border-gray-200 sticky top-0 z-50">
     <div class="relative w-full flex items-center justify-between py-4 px-4 md:px-8 lg:px-12">
       <!-- Left side: Mobile menu or Desktop logo -->
-      <div class="flex-shrink-0">
+      <div class="flex-shrink-0 relative z-10">
         <!-- Mobile Menu Button -->
         <div class="md:hidden">
           <button @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Open menu" class="p-2 rounded-md text-white">
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Right side: Icons & User avatar -->
-      <div class="flex-shrink-0 flex items-center gap-4">
+      <div class="flex-shrink-0 flex items-center gap-4 relative z-10">
         <!-- Messages Icon -->
         <!-- <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
