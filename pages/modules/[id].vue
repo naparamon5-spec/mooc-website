@@ -1,14 +1,14 @@
 <template>
-  <div>
+  <div class="bg-white">
     <!-- Header -->
     <DashboardHeader :activeModuleId="parseInt(moduleId)" />
 
     <main
-      class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8"
+      class="bg-primary-100 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8"
     >
       <!-- Sidebar -->
       <aside class="lg:col-span-1">
-        <nav class="bg-white rounded-lg shadow p-4 sticky top-8">
+        <nav class="bg-white rounded-lg shadow p-4 top-8">
           <h2 class="text-xl font-bold text-gray-800 mb-4">Modules</h2>
           <ul class="space-y-2">
             <li v-for="(mod, modIndex) in allModules" :key="mod.id">
@@ -43,7 +43,7 @@
                     @click.prevent="selectLesson(index)"
                     class="flex items-center p-2 rounded-md hover:bg-gray-100"
                     :class="{
-                      'bg-primary-50 text-primary-600 font-medium': index === currentLessonIndex,
+                      'bg-primary-100 text-primary-600 font-medium': index === currentLessonIndex,
                     }"
                   >
                     <span class="mr-2 text-primary-600">{{ index + 1 }}.</span>
@@ -91,7 +91,7 @@
           <button
             v-if="currentLessonIndex > 0"
             @click="goToPreviousLesson"
-            class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300"
+            class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200"
           >
             Previous Lesson
           </button>
@@ -117,7 +117,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-primary-600 text-white text-center py-4 mt-16">
+    <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
   </div>
