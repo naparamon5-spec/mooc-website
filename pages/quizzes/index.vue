@@ -1,13 +1,17 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
     <DashboardHeader :student-name="studentName"  />
-    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 flex-grow">
       <h1 class="text-4xl font-bold text-gray-800 mb-8">Quizzes</h1>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <QuizCard v-for="quiz in quizzes" :key="quiz.id" :quiz="quiz" />
       </div>
     </div>
+    <!-- Footer -->
+    <footer class="bg-primary-600 text-white text-center py-4">
+      <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
+    </footer>
   </div>
 </template>
 

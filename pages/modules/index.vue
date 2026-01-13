@@ -1,15 +1,15 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 flex flex-col">
     <DashboardHeader :student-name="studentName" />
 
-    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 flex-grow">
       <div class="grid grid-cols-1">
         <!-- Main Content -->
         <div class="lg:col-span-4">
           <!-- Modules Grid - Display ALL modules here -->
           <h2 class="text-3xl font-bold text-gray-800 mb-6">All Available Modules</h2>
           <div
-            class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-8"
+            class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5 gap-4 mb-8"
           >
             <ModuleCard
               v-for="(module, index) in allAvailableModules"
@@ -22,10 +22,13 @@
               @click="selectModule(module)"
             />
           </div>
-
-  </div>
-  </div>
-</div>
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <footer class="bg-primary-600 text-white text-center py-4">
+      <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
+    </footer>
   </div>
 </template>
 

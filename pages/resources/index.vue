@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
     <DashboardHeader />
 
-    <main class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+    <main class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 flex-grow">
       <section class="text-center mb-12">
         <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Discover Your Learning Resources</h1>
         <p class="text-lg text-gray-600 max-w-4xl mx-auto">
@@ -40,6 +40,10 @@
         </div>
       </section>
     </main>
+    <!-- Footer -->
+    <footer class="bg-primary-600 text-white text-center py-4">
+      <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
+    </footer>
   </div>
 </template>
 
