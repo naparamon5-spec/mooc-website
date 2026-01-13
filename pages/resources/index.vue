@@ -2,16 +2,16 @@
   <div class="min-h-screen bg-gray-100">
     <DashboardHeader />
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
       <section class="text-center mb-12">
         <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Discover Your Learning Resources</h1>
-        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+        <p class="text-lg text-gray-600 max-w-4xl mx-auto">
           Explore a curated collection of articles, tutorials, tools, and supplementary materials to enhance your learning journey.
         </p>
       </section>
 
       <section class="mb-10">
-        <div class="relative max-w-xl mx-auto">
+        <div class="relative max-w-3xl mx-auto">
           <input
             type="text"
             v-model="searchTerm"
