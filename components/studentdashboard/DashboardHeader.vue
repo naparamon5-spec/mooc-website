@@ -1,52 +1,78 @@
 <template>
   <header class="bg-primary-600 text-white border-b border-gray-200 sticky top-0 z-50">
-    <div class="w-full flex items-center justify-between py-4 px-4 md:px-8 lg:px-12">
-      <NuxtLink to="/" class="flex items-center gap-3">
-        <img src="/assets/logo.png" alt="MIL MOOC" class="h-10 w-auto rounded-md shadow-sm bg-white" />
-        <div class="hidden sm:block">
-          <div class="text-lg font-bold text-white">MIL MOOC</div>
+    <div class="relative w-full flex items-center justify-between py-4 px-4 md:px-8 lg:px-12">
+      <!-- Left side: Mobile menu or Desktop logo -->
+      <div class="flex-shrink-0">
+        <!-- Mobile Menu Button -->
+        <div class="md:hidden">
+          <button @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Open menu" class="p-2 rounded-md text-white">
+            <svg v-if="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      </NuxtLink>
+        <!-- Desktop Logo -->
+        <NuxtLink to="/" class="hidden md:flex items-center gap-3">
+          <img src="/assets/logo.png" alt="MIL MOOC" class="h-10 w-auto rounded-md shadow-sm bg-white" />
+          <div class="hidden sm:block">
+            <div class="text-lg font-bold text-white">MIL MOOC</div>
+          </div>
+        </NuxtLink>
+      </div>
 
-      <nav class="hidden md:flex items-center gap-6">
-        <NuxtLink 
-          to="/" 
-          class="text-sm font-medium transition-colors"
-          :class="currentRoute === '/' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
-        >
-          Home
-        </NuxtLink>
-        <NuxtLink 
-          to="/modules" 
-          class="text-sm font-medium transition-colors"
-          :class="currentRoute === '/modules' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
-        >
-          Modules
-        </NuxtLink>
-        <NuxtLink 
-          to="/quizzes" 
-          class="text-sm font-medium transition-colors"
-          :class="currentRoute === '/quizzes' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
-        >
-          Quizzes
-        </NuxtLink>
-        <NuxtLink 
-          to="/resources" 
-          class="text-sm font-medium transition-colors"
-          :class="currentRoute === '/resources' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
-        >
-          Resource Hub
-        </NuxtLink>
-      </nav>
+      <!-- Center: Mobile logo or Desktop nav -->
+      <div class="absolute inset-x-0 md:relative">
+        <!-- Mobile Logo (Center) -->
+        <div class="md:hidden flex justify-center">
+          <NuxtLink to="/" class="flex items-center">
+            <img src="/assets/logo.png" alt="MIL MOOC" class="h-10 w-auto rounded-md shadow-sm bg-white" />
+          </NuxtLink>
+        </div>
+        <!-- Desktop Nav -->
+        <nav class="hidden md:flex justify-center items-center gap-6">
+          <NuxtLink 
+            to="/" 
+            class="text-sm font-medium transition-colors"
+            :class="currentRoute === '/' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+          >
+            Home
+          </NuxtLink>
+          <NuxtLink 
+            to="/modules" 
+            class="text-sm font-medium transition-colors"
+            :class="currentRoute === '/modules' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+          >
+            Modules
+          </NuxtLink>
+          <NuxtLink 
+            to="/quizzes" 
+            class="text-sm font-medium transition-colors"
+            :class="currentRoute === '/quizzes' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+          >
+            Quizzes
+          </NuxtLink>
+          <NuxtLink 
+            to="/resources" 
+            class="text-sm font-medium transition-colors"
+            :class="currentRoute === '/resources' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+          >
+            Resource Hub
+          </NuxtLink>
+        </nav>
+      </div>
 
-      <div class="flex items-center gap-4">
+      <!-- Right side: Icons & User avatar -->
+      <div class="flex-shrink-0 flex items-center gap-4">
         <!-- Messages Icon -->
-        <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
+        <!-- <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
           <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-        </button>
+        </button> -->
 
         <!-- Notifications Icon -->
         <button class="relative p-2 text-white hover:text-gray-200 transition-colors">
@@ -62,7 +88,7 @@
             <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary-600 text-sm font-semibold">
               {{ userInitials }}
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -74,18 +100,6 @@
             <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
           </div>
         </div>
-      </div>
-
-      <!-- Mobile menu button -->
-      <div class="md:hidden">
-        <button @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Open menu" class="p-2 rounded-md text-white">
-          <svg v-if="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
       </div>
     </div>
 
@@ -102,7 +116,6 @@
     </transition>
   </header>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
