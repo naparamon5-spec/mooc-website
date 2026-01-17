@@ -6,6 +6,12 @@
         <img src="/assets/logo.png" alt="MIL MOOC" class="h-28 w-auto object-contain"/>
       </div>
 
+       <!-- Title -->
+      <div class="text-center mb-4">
+        <h1 class="text-2xl font-bold text-sky-800">Sign to your account</h1>
+        <!-- <p class="text-center text-sky-700 mb-6 text-sm">Join us and start your learning journey!</p> -->
+      </div>
+
       <form @submit.prevent="onSubmit" class="space-y-5">
         <div>
           <label class="block text-sm font-medium text-sky-700 mb-1">Email</label>

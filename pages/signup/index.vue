@@ -13,6 +13,12 @@
         />
       </div>
 
+      <!-- Title -->
+      <div class="text-center mb-4">
+        <h1 class="text-2xl font-bold text-sky-800">Create an Account</h1>
+        <p class="text-center text-sky-700 mb-6 text-sm">Join us and start your learning journey!</p>
+      </div>
+
       <!-- Form -->
       <form @submit.prevent="onSubmit" class="space-y-5">
 
