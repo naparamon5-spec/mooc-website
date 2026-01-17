@@ -8,7 +8,7 @@
         <p class="text-lg text-muted mb-6">Learn to verify facts, spot misinformation, and participate responsibly online — practical skills for every learner.</p>
 
         <div class="flex flex-wrap gap-3">
-          <a href="/signup" class="btn-primary inline-flex items-center gap-2">Enroll for free</a>
+        <NuxtLink to="/signup" class="btn-primary ml-2 font-semibold">Enroll Now</NuxtLink>
           <a href="#about" class="text-sm text-primary-600 underline self-center">Learn more</a>
         </div>
       </div>
