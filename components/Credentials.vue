@@ -27,6 +27,15 @@
           </div>
           <p class="text-blue-900 text-lg">Earn your certificate of completion</p>
         </div>
+                <div class="flex items-center gap-4 mb-6 last:mb-0">
+          <div class="flex-shrink-0">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="#1e3a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <p class="text-blue-900 text-lg">Gain more knowledge and skills</p>
+        </div>
       </div>
     </template>
     </Card>

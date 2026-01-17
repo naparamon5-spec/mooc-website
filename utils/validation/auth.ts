@@ -24,3 +24,10 @@ export const validatePassword = (password: string): string => {
   }
   return '';
 };
+
+export const validateConfirmPassword = (password: string, confirmPassword: string): string => {
+  if (password !== confirmPassword) {
+    return 'Passwords do not match.';
+  }
+  return '';
+};
