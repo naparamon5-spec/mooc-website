@@ -34,9 +34,9 @@
         <!-- Desktop Nav -->
         <nav class="hidden md:flex justify-center items-center gap-6">
           <NuxtLink 
-            to="/" 
+            to="/dashboard" 
             class="text-sm font-medium transition-colors"
-            :class="currentRoute === '/' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
+            :class="currentRoute === '/dashboard' ? 'text-white border-b-2 border-white pb-1' : 'text-white hover:text-gray-200'"
           >
             Home
           </NuxtLink>
@@ -97,7 +97,7 @@
             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
             <hr class="my-2" />
-            <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+            <a href="#" @click.prevent="logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
           </div>
         </div>
       </div>
@@ -123,6 +123,22 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
+
+const nuxtApp = useNuxtApp()
+const supabase = nuxtApp.$supabase
+
+async function logout() {
+  try {
+    if (supabase?.auth?.signOut) {
+      await supabase.auth.signOut()
+    }
+  } catch (e) {
+    // ignore
+  }
+  const refreshCookie = useCookie('sb-refresh-token')
+  refreshCookie.value = null
+  navigateTo('/login')
+}
 
 const props = defineProps({
   studentName: {

@@ -11,9 +11,7 @@
           <label class="block text-sm font-medium text-sky-700 mb-1">Email</label>
           <input v-model="email" type="email" placeholder="Enter your email address"
             :class="[inputClass, errors.email && errorClass]"/>
-          <p v-if="errors.email" class="mt-1 text-sm text-red-600">
-            {{ errors.email }}
-          </p>
+          <p v-if="errors.email" class="mt-1 text-sm text-red-600">{{ errors.email }}</p>
         </div>
 
         <div>
@@ -31,9 +29,7 @@
               </svg>
             </button>
           </div>
-          <p v-if="errors.password" class="mt-1 text-sm text-red-600">
-            {{ errors.password }}
-          </p>
+          <p v-if="errors.password" class="mt-1 text-sm text-red-600">{{ errors.password }}</p>
         </div>
 
         <div class="flex items-center justify-between">
@@ -68,7 +64,6 @@ const password = ref('')
 const remember = ref(false)
 const showPassword = ref(false)
 const loading = ref(false)
-const errorMsg = ref('')
 const toast = useToast()
 
 const errors = ref({
@@ -82,7 +77,7 @@ const inputClass =
 const errorClass =
   'border-red-400 focus:ring-red-300 focus:border-red-400'
 
-const supabase = useNuxtApp().$supabase
+// Obtain Supabase client at runtime inside handlers to avoid server-side plugin timing issues
 
 function validateForm() {
   errors.value.email = validateEmail(email.value)
@@ -95,24 +90,55 @@ async function onSubmit() {
   if (!validateForm()) return
 
   loading.value = true
-  errorMsg.value = ''
+
   try {
-    // Sign in
+    // Sign in with Supabase (get client at runtime)
+    const supabase = useNuxtApp().$supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value
     })
 
+      console.log('signInWithPassword result:', { data, error })
+
     if (error) throw error
 
-    toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Welcome back!', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Welcome back!', life: 3000 })
 
-    // Navigate to dashboard
-    navigateTo('/')
+    // Determine user role and navigate accordingly
+    const userId = data.user?.id ?? data.session?.user?.id
+
+    if (userId) {
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle()
+
+        console.log('fetched profile after login:', { profile, profileError })
+
+        if (profileError) {
+          console.error('Error fetching profile after login:', profileError)
+          return navigateTo('/dashboard')
+        }
+
+        const role = profile && profile.role ? String(profile.role).toLowerCase() : ''
+
+        if (role === 'administrator' || role === 'admin' || role === 'instructor') {
+          return navigateTo('/admin')
+        }
+      } catch (e) {
+        console.error('Login redirect error:', e)
+      }
+    }
+
+    // Default
+    navigateTo('/dashboard')
+
   } catch (err: any) {
     console.log(err)
-    errorMsg.value = err.message || 'Login failed'
-    toast.add({ severity: 'error', summary: 'Login Failed', detail: errorMsg.value, life: 3000 });
+    toast.add({ severity: 'error', summary: 'Login Failed', detail: err.message || 'Login failed', life: 3000 })
   } finally {
     loading.value = false
   }
