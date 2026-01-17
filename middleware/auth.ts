@@ -56,7 +56,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
           // Redirect non-admins trying to access admin area to 404
           if (!isAdmin && to.path.startsWith('/admin')) {
-            return navigateTo('/404')
+            return showError({ statusCode: 403, statusMessage: 'Forbidden' })
           }
         }
       }
