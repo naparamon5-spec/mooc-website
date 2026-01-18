@@ -9,11 +9,9 @@
         <!-- Sidebar -->
         <aside class="xl:col-span-3 space-y-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm text-center">
-            <img
-              src="/module/1.png"
-              alt="Profile Picture"
-              class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-primary-300"
-            />
+            <div class="w-32 h-32 rounded-full mx-auto bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center text-white text-4xl font-bold">
+              {{ studentName.charAt(0) }}
+            </div>
             <h3 class="mt-4 text-xl font-semibold text-gray-800">
               {{ studentName }}
             </h3>
