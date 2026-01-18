@@ -3,6 +3,27 @@
     <!-- Header -->
     <DashboardHeader :activeModuleId="parseInt(moduleId)" />
 
+    <!-- Completion Modal -->
+    <ModuleCompletionModal
+      v-if="!isLastModule && module"
+      :isOpen="showCompletionModal"
+      :moduleName="module?.title || ''"
+      :badgeName="earnedBadgeName"
+      :currentModuleId="parseInt(moduleId)"
+      :totalModules="5"
+      @nextModule="handleNextModule"
+      @backToDashboard="handleBackToDashboard"
+    />
+
+    <!-- Certificate Modal (for last module) -->
+    <CertificateModal
+      v-if="isLastModule && module"
+      :isOpen="showCompletionModal"
+      :studentName="studentName"
+      @nextCourse="handleAdvancedCourse"
+      @backToDashboard="handleBackToDashboard"
+    />
+
     <main
       class="bg-primary-100 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8"
     >
@@ -36,7 +57,7 @@
                   />
                 </svg>
               </a>
-              <ul v-if="mod.id === parseInt(moduleId) && module.content && module.content.length" class="ml-8 mt-2 space-y-1">
+              <ul v-if="mod.id === parseInt(moduleId) && module && module.content && module.content.length" class="ml-8 mt-2 space-y-1">
                 <li v-for="(lesson, index) in module.content" :key="index">
                   <a
                     href="#"
@@ -82,6 +103,7 @@
 
         <!-- Lesson Content -->
         <div
+          v-if="currentLesson"
           class="prose max-w-none mb-8 text-gray-700"
           v-html="currentLesson.htmlContent"
         />
@@ -124,16 +146,39 @@
 </template>
 
 
-<script setup>
-import { ref, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
+import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue';
+import CertificateModal from '~/components/CertificateModal.vue';
+import { useCourseProgress } from '~/composables/useCourseProgress';
 
 const route = useRoute();
-const moduleId = route.params.id;
+const moduleIdRaw = computed(() => {
+  const id = route.params.id;
+  return Array.isArray(id) ? id[0] : id || '1';
+});
+const moduleId = computed(() => moduleIdRaw.value || '1');
 const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
-const completedModules = ref(new Set());
+const showCompletionModal = ref(false);
+const studentName = ref("Student's Name");
+const { completeModule, badgeMapping, isModuleCompleted, getCompletedModules, completeLessonInModule, getTotalProgressPercentage } = useCourseProgress();
+
+// Use computed to get completed modules from the composable
+const completedModules = computed(() => {
+  const modules = getCompletedModules('beginner');
+  return new Set(modules);
+});
+
+const isLastModule = computed(() => {
+  return parseInt(moduleId.value) === 5
+})
+
+const earnedBadgeName = computed(() => {
+  return badgeMapping[parseInt(moduleId.value)] || 'Unknown Badge';
+});
 
 const allModules = [
   {
@@ -193,37 +238,49 @@ const allModules = [
   },
 ];
 
-const selectLesson = (index) => {
+const selectLesson = (index: number) => {
   currentLessonIndex.value = index;
+  // Scroll to top when selecting a lesson
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 const currentLesson = computed(() => {
   if (!module.value || !module.value.content || module.value.content.length === 0) {
-    return { title: 'No lesson selected', htmlContent: '<p>Please select a lesson from the sidebar.</p>' };
+    return null;
   }
-  return module.value.content[currentLessonIndex.value];
+  return module.value.content[currentLessonIndex.value] || null;
 });
 
 
 const goToPreviousLesson = () => {
   if (currentLessonIndex.value > 0) {
     currentLessonIndex.value--;
+    // Scroll to top when navigating to previous lesson
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const goToNextLesson = () => {
   if (module.value && module.value.content && currentLessonIndex.value < module.value.content.length - 1) {
     currentLessonIndex.value++;
+    // Scroll to top when navigating to next lesson
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const progressPercentage = computed(() => {
-  if (!module.value || !module.value.content || module.value.content.length === 0) return 0;
-  return Math.round((completedLessons.value.size / module.value.content.length) * 100);
+  // Use the global progress calculation that includes lesson progress
+  const currentModuleId = parseInt(moduleId.value);
+  const totalLessons = module.value?.content?.length || 0;
+  return getTotalProgressPercentage('beginner', 5, currentModuleId, totalLessons);
 });
 
 const markLessonAsComplete = () => {
   completedLessons.value.add(currentLessonIndex.value);
+  
+  // Save to global state
+  const currentModuleId = parseInt(moduleId.value);
+  completeLessonInModule('beginner', currentModuleId, currentLessonIndex.value);
 
   // Check if all lessons in the current module are completed
   if (module.value && module.value.content) {
@@ -231,9 +288,31 @@ const markLessonAsComplete = () => {
       completedLessons.value.has(index)
     );
     if (allCurrentLessonsCompleted) {
-      completedModules.value.add(parseInt(moduleId));
+      // Award badge and update progress in the global composable
+      completeModule('beginner', parseInt(moduleId.value));
+      // Show the completion modal
+      showCompletionModal.value = true;
     }
   }
+};
+
+const handleNextModule = () => {
+  const nextModuleId = parseInt(moduleId.value) + 1;
+  if (nextModuleId <= 5) {
+    // Scroll to top before navigating
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateTo(`/modules/${nextModuleId}`);
+  }
+};
+
+const handleAdvancedCourse = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  navigateTo('/dashboard?course=advanced');
+};
+
+const handleBackToDashboard = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  navigateTo('/dashboard');
 };
 
 const markLessonAndGoToNext = () => {
@@ -243,18 +322,22 @@ const markLessonAndGoToNext = () => {
   }
 };
 
-const goToModule = (id) => {
+const goToModule = (id: number) => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   navigateTo(`/modules/${id}`);
 };
 
-const isModuleAccessible = (id, index) => {
+const isModuleAccessible = (id: number, index: number) => {
   if (id === 1) { // First module is always accessible
     return true;
   }
   // Check if the previous module is completed
   if (index > 0) {
-    const previousModuleId = allModules[index - 1].id;
-    return completedModules.value.has(previousModuleId);
+    const prevMod = allModules[index - 1];
+    if (prevMod) {
+      const previousModuleId = prevMod.id;
+      return completedModules.value.has(previousModuleId);
+    }
   }
   return false;
 };
@@ -275,16 +358,20 @@ const module = ref({
 
 // In a real application, you would fetch the module data from an API based on moduleId
 onMounted(() => {
-  const selectedModule = allModules.find((m) => m.id === parseInt(moduleId));
+  // Scroll to top when module page loads
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  
+  const selectedModule = allModules.find((m) => m.id === parseInt(moduleId.value));
 
   if (selectedModule) {
     module.value.title = selectedModule.title;
     module.value.description = selectedModule.description;
     module.value.emoji = selectedModule.emoji;
   }
+  
   // Simulating an API call to fetch module data
   setTimeout(() => {
-    const seed = moduleId.replace(/[^0-9]/g, '') || 1;
+    const seed = moduleId.value || '1';
     module.value.content = [
       {
         title: 'Introduction to Media & Information Literacy (MIL)',

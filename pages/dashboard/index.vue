@@ -14,25 +14,38 @@
             :completion-status="currentCourseData.completionStatus"
             :completed-modules="currentCourseData.completedModules"
             :total-modules="currentCourseData.totalModules"
+            :active-course="currentCourseLevel"
+            @switch-course="switchCourseLevel"
           />
         </div>
 
         <!-- Main Content -->
         <div class="lg:col-span-3">
           <!-- Course Level Selector -->
-          <div class="mb-6 flex gap-4">
+          <div class="mb-6 flex gap-4 relative">
             <button
               v-for="level in courseLevels"
               :key="level.id"
               @click="switchCourseLevel(level.id)"
-              class="px-6 py-3 rounded-lg font-semibold transition-colors"
+              :disabled="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+              class="px-6 py-3 rounded-lg font-semibold transition-colors relative group"
               :class="
                 currentCourseLevel === level.id
                   ? 'bg-primary-600 text-white hover:bg-primary-700'
+                  : level.id === 'advanced' && !isBeginnerCourseCompleted()
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               "
             >
               {{ level.name }}
+              <!-- Tooltip for locked advanced course -->
+              <div
+                v-if="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+                class="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded whitespace-nowrap z-10"
+              >
+                Complete the Beginner Course to unlock Advanced
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
           </div>
 
@@ -45,54 +58,15 @@
               :key="`${currentCourseLevel}-${module.id}`"
               :title="module.title"
               :subtitle="module.subtitle"
-              :is-active="module.isActive"
-              :is-restricted="module.isRestricted"
+              :is-active="selectedModule?.id === module.id"
+              :is-restricted="!isModuleAccessible(module.id)"
+              :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
               :emoji="module.emoji"
               @click="selectModule(module)"
             />
           </div>
               <!-- Module Description -->
-          <div
-            v-if="selectedModule"
-            class="bg-white rounded-lg p-6 shadow-sm mb-6"
-          >
-            <h3 class="text-xl font-bold text-gray-800 mb-4">
-              {{ selectedModule.title }}
-            </h3>
-            <p class="text-gray-600 leading-relaxed mb-6">
-              {{ selectedModule.description }}
-            </p>
-
-            <!-- Key Learning Outcomes -->
-            <div>
-              <h4 class="text-lg font-semibold text-gray-800 mb-3">
-                Key Learning Outcomes
-              </h4>
-              <ul class="space-y-2">
-                <li
-                  v-for="(outcome, index) in selectedModule.learningOutcomes"
-                  :key="index"
-                  class="flex items-start gap-3 text-gray-600"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>{{ outcome }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <ModuleDescriptionPanel :module="selectedModule" />
 
           <!-- Footer Buttons -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -123,22 +97,54 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from "vue";
+<script setup lang="ts">
+import { ref, computed, watchEffect, watch } from "vue";
 // Protect this page with the `auth` middleware
 definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
+import ModuleDescriptionPanel from "~/components/studentdashboard/ModuleDescriptionPanel.vue";
+import { useCourseProgress } from "~/composables/useCourseProgress";
+import { useRoute } from 'vue-router';
 
 useHead({
   title: "Dashboard - MIL MOOC",
 });
 
+const route = useRoute();
+
 const studentName = ref("Student's name");
+const { 
+  getCompletedModules, 
+  getEarnedBadges,
+  getAllBadges,
+  getProgressPercentage, 
+  getCompletionStatus,
+  getCurrentModule,
+  getCompletedCount,
+  isBeginnerCourseCompleted,
+  isModuleCompleted,
+  courseProgress,
+  getTotalProgressPercentage
+} = useCourseProgress();
+
+// Watch for progress changes to ensure dashboard updates
+watch(() => courseProgress.value, () => {
+  // This triggers re-computation of currentCourseData
+  // Auto-switch to next module when current is completed
+  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
+  if (selectedModule.value && isModuleCompleted(courseLevel, selectedModule.value.id)) {
+    const nextModuleId = selectedModule.value.id + 1;
+    const nextModule = currentModules.value.find(m => m.id === nextModuleId);
+    if (nextModule && isModuleAccessible(nextModuleId)) {
+      selectedModule.value = nextModule;
+    }
+  }
+}, { deep: true });
 
 // Currently selected module
-const selectedModule = ref(null);
+const selectedModule = ref<any>(null);
 
 // Course levels configuration
 const courseLevels = ref([
@@ -149,26 +155,20 @@ const courseLevels = ref([
 // Current course level
 const currentCourseLevel = ref("beginner");
 
+// Initialize course level from route query if present
+watchEffect(() => {
+  const courseParam = route.query.course as string;
+  if (courseParam === 'advanced' && isBeginnerCourseCompleted()) {
+    currentCourseLevel.value = 'advanced';
+  } else if (courseParam === 'advanced' && !isBeginnerCourseCompleted()) {
+    currentCourseLevel.value = 'beginner';
+  }
+});
+
 // Course data structure - stores data for each course level
 const courseData = ref({
   beginner: {
-    progress: 60,
-    currentModule: "Introduction to Media and Information Literacy",
-    completionStatus: "In progress",
-    completedModules: 0,
     totalModules: 5,
-    badges: [
-      { name: "LITERACY SCHOLAR", earned: true },
-      { name: "MEDIA DEFENDER", earned: true },
-      { name: "DIGITAL LIBRARIAN", earned: true },
-      { name: "FACTS ADVOCATE", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-      { name: "RESPONSIBLE CITIZEN", earned: true },
-    ],
     modules: [
       {
         id: 1,
@@ -192,8 +192,14 @@ const courseData = ref({
         isActive: false,
         isRestricted: true,
         emoji: "🤖",
-        description: "",
-        learningOutcomes: [],
+        description:
+          "This module examines how algorithms shape the media we consume and the information we receive. Learners will understand the mechanics of algorithmic content curation, explore the impact of filter bubbles and echo chambers, and learn how to think critically about algorithm-driven media environments.",
+        learningOutcomes: [
+          "Understand how algorithms curate and prioritize media content.",
+          "Recognize the impact of filter bubbles on information diversity.",
+          "Evaluate the ethical implications of algorithmic media distribution.",
+          "Develop strategies to break free from algorithmic constraints.",
+        ],
       },
       {
         id: 3,
@@ -202,8 +208,14 @@ const courseData = ref({
         isActive: false,
         isRestricted: true,
         emoji: "💬",
-        description: "",
-        learningOutcomes: [],
+        description:
+          "This module focuses on media language and the techniques used to communicate messages. Learners will analyze narrative structures, visual language, sound design, and rhetorical devices used in various media forms. Understanding media language is key to decoding messages and recognizing persuasion techniques.",
+        learningOutcomes: [
+          "Identify and analyze media language techniques and conventions.",
+          "Understand narrative structures in different media formats.",
+          "Recognize visual and audio rhetoric in media content.",
+          "Decode hidden messages and persuasion strategies in media.",
+        ],
       },
       {
         id: 4,
@@ -212,8 +224,14 @@ const courseData = ref({
         isActive: false,
         isRestricted: true,
         emoji: "👥",
-        description: "",
-        learningOutcomes: [],
+        description:
+          "This module explores how media represents different groups, cultures, and perspectives. Learners will examine stereotypes, biases, and representation gaps in media, and understand how media shapes social perceptions. Critical analysis of representation is essential for recognizing and challenging media bias.",
+        learningOutcomes: [
+          "Analyze media representations of diverse groups and cultures.",
+          "Identify stereotypes and biases in media content.",
+          "Understand the impact of media representation on social perception.",
+          "Recognize and challenge underrepresentation in media.",
+        ],
       },
       {
         id: 5,
@@ -222,24 +240,19 @@ const courseData = ref({
         isActive: false,
         isRestricted: true,
         emoji: "🌐",
-        description: "",
-        learningOutcomes: [],
+        description:
+          "This final module brings all concepts together and focuses on becoming a responsible digital citizen. Learners will apply media literacy skills to navigate the digital world responsibly, protect their privacy, engage ethically online, and contribute positively to digital communities.",
+        learningOutcomes: [
+          "Apply media literacy principles to digital environments.",
+          "Protect personal privacy and digital security.",
+          "Engage ethically and respectfully in online communities.",
+          "Contribute to a more informed and responsible digital society.",
+        ],
       },
     ],
   },
   advanced: {
-    progress: 0,
-    currentModule: "Advanced Media Analysis",
-    completionStatus: "Not started",
-    completedModules: 0,
     totalModules: 5,
-    badges: [
-      { name: "ADVANCED ANALYST", earned: false },
-      { name: "CRITICAL THINKER", earned: false },
-      { name: "MEDIA EXPERT", earned: false },
-      { name: "RESEARCH MASTER", earned: false },
-      { name: "DIGITAL LEADER", earned: false },
-    ],
     modules: [
       {
         id: 1,
@@ -302,22 +315,63 @@ const courseData = ref({
 
 // Computed properties for current course data
 const currentCourseData = computed(() => {
-  return courseData.value[currentCourseLevel.value];
+  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
+  const baseData = courseData.value[courseLevel]!
+  
+  // Calculate progress including lessons - use the first incomplete module as current
+  const firstIncompleteModule = baseData.modules.find(m => !isModuleCompleted(courseLevel, m.id))
+  const currentModuleId = firstIncompleteModule?.id || 1
+  const totalLessons = 4 // assuming 4 lessons per module based on the content
+  
+  const advancedProgress = getTotalProgressPercentage(courseLevel, baseData.totalModules, currentModuleId, totalLessons)
+  
+  return {
+    modules: baseData.modules,
+    totalModules: baseData.totalModules,
+    progress: advancedProgress,
+    completionStatus: getCompletionStatus(courseLevel, baseData.totalModules),
+    currentModule: getCurrentModule(courseLevel, baseData.modules),
+    completedModules: getCompletedCount(courseLevel),
+    badges: getAllBadges(courseLevel),
+  }
 });
 
 const currentModules = computed(() => {
-  return courseData.value[currentCourseLevel.value].modules;
+  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
+  return courseData.value[courseLevel]!.modules;
 });
 
-const switchCourseLevel = (levelId) => {
+// Check if a module is accessible
+const isModuleAccessible = (moduleId: number): boolean => {
+  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
+  
+  // Module 1 is always accessible
+  if (moduleId === 1) return true;
+  
+  // Check if previous module is completed
+  return isModuleCompleted(courseLevel, moduleId - 1);
+};
+
+const switchCourseLevel = (levelId: string) => {
+  if (levelId === 'advanced' && !isBeginnerCourseCompleted()) {
+    return; // Prevent switching to advanced if beginner not completed
+  }
   currentCourseLevel.value = levelId;
 };
 
 // Watch for changes in currentCourseData or currentCourseLevel to set initial selectedModule
 watchEffect(() => {
-  if (currentCourseData.value && currentCourseData.value.modules.length > 0) {
-    if (!selectedModule.value || selectedModule.value.id !== currentCourseData.value.modules[0].id) {
+  if (currentCourseData.value?.modules && currentCourseData.value.modules.length > 0) {
+    // Only set initial module if nothing is selected
+    if (!selectedModule.value) {
       selectedModule.value = currentCourseData.value.modules[0];
+    } else {
+      // Check if the selected module still exists in current course
+      const selectedModuleStillExists = currentCourseData.value.modules.find(m => m.id === selectedModule.value.id);
+      if (!selectedModuleStillExists) {
+        // If selected module doesn't exist (course changed), reset to first module
+        selectedModule.value = currentCourseData.value.modules[0];
+      }
     }
   } else {
     selectedModule.value = null;
@@ -325,9 +379,9 @@ watchEffect(() => {
 });
 
 // Select a module
-const selectModule = (module) => {
+const selectModule = (module: any) => {
   selectedModule.value = module;
-  if (!module.isRestricted) {
+  if (isModuleAccessible(module.id)) {
     navigateTo(`/modules/${module.id}`);
   }
 };

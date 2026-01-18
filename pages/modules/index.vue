@@ -17,7 +17,8 @@
               :title="module.title"
               :subtitle="module.subtitle"
               :is-active="module.isActive"
-              :is-restricted="module.isRestricted"
+              :is-restricted="!isModuleAccessible(module.id, index)"
+              :is-completed="isModuleCompleted(getBeginner, module.id)"
               :emoji="module.emoji"
               @click="selectModule(module)"
             />
@@ -36,15 +37,24 @@
 import { ref, computed, watchEffect } from "vue";
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
+import { useCourseProgress } from "~/composables/useCourseProgress";
 
 useHead({
   title: "Modules Dashboard - MIL MOOC",
 });
 
 const studentName = ref("Student's name");
+const { isModuleCompleted, getCompletedModules } = useCourseProgress();
+const getBeginner = 'beginner';
 
 // Currently selected module for description display
 const selectedModule = ref(null);
+
+// Use computed to get completed modules from the composable
+const completedModules = computed(() => {
+  const modules = getCompletedModules('beginner');
+  return new Set(modules);
+});
 
 // Placeholder for course data, for a module dashboard we'll consolidate all modules
 const courseData = ref({
@@ -291,13 +301,25 @@ watchEffect(() => {
   }
 });
 
-// Select a module to display its description
-const selectModule = (module) => {
-  selectedModule.value = module;
+// Module accessibility - first module always accessible, others depend on previous completion
+const isModuleAccessible = (id, index) => {
+  if (id === 1) { // First module is always accessible
+    return true;
+  }
+  // Check if the previous module is completed
+  if (index > 0) {
+    const previousModuleId = allAvailableModules.value[index - 1].id;
+    return isModuleCompleted('beginner', previousModuleId);
+  }
+  return false;
 };
 
-// Navigate to the specific module page (pages/modules/[id].vue)
-const goToModulePage = (id) => {
-  navigateTo(`/modules/${id}`);
+// Select a module and navigate to its page if accessible
+const selectModule = (module) => {
+  selectedModule.value = module;
+  const index = allAvailableModules.value.findIndex(m => m.id === module.id);
+  if (isModuleAccessible(module.id, index)) {
+    navigateTo(`/modules/${module.id}`);
+  }
 };
 </script>

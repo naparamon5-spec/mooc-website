@@ -26,20 +26,18 @@
         <!-- Placeholder for module thumbnail - can be replaced with actual images -->
         <div class="text-4xl">{{ emoji }}</div>
       </div>
-      <div v-if="isActive && !isRestricted" class="absolute top-2 right-2">
-        <div class="bg-green-500 rounded-full p-1">
+      <div v-if="isCompleted" class="absolute top-2 right-2">
+        <div class="bg-green-500 rounded-full p-2 shadow-lg">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+            class="h-5 w-5 text-white"
+            fill="currentColor"
+            viewBox="0 0 20 20"
           >
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
             />
           </svg>
         </div>
@@ -73,6 +71,10 @@ defineProps({
     default: false
   },
   isRestricted: {
+    type: Boolean,
+    default: false
+  },
+  isCompleted: {
     type: Boolean,
     default: false
   },
