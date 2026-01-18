@@ -1,8 +1,8 @@
 <template>
-  <div class="h-screen bg-gray-50 flex flex-col">
+  <div class="bg-gray-50 flex flex-col">
     <DashboardHeader :student-name="studentName" />
 
-    <div class="flex-1 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 overflow-y-auto">
+    <div class="flex-1 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 overflow-y-auto overflow-x-hidden">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
