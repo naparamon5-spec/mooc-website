@@ -3,7 +3,7 @@
     <div
       v-if="module"
       :key="module.id"
-      class="bg-white rounded-xl p-6 shadow-sm mb-6 hover:shadow-md transition-shadow duration-300 border border-gray-100 relative overflow-hidden"
+      class="bg-white rounded-xl p-6 shadow-sm mb-4 hover:shadow-md transition-shadow duration-300 border border-gray-100 relative overflow-hidden"
     >
       <!-- Left Accent Bar -->
       <div class="absolute left-0 top-0 h-full w-1 bg-primary-500 rounded-l-xl"></div>
@@ -16,7 +16,7 @@
         </h3>
 
         <!-- Module Description -->
-        <p class="text-gray-600 leading-relaxed mb-6">
+        <p class="text-gray-600 mb-6">
           {{ module.description }}
         </p>
 
@@ -25,7 +25,7 @@
           <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-1">
             Key Learning Outcomes
           </h4>
-          <ul class="space-y-2">
+          <ul class="space-y-1">
             <li
               v-for="(outcome, index) in module.learningOutcomes"
               :key="index"

@@ -8,28 +8,18 @@
         class="flex flex-col items-center"
       >
         <div
-          class="w-10 h-10 rounded-full flex items-center justify-center"
-          :class="badge.earned ? 'bg-primary-600' : 'bg-gray-200'"
+          class="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2 transition-all"
+          :class="badge.earned ? 'border-primary-600 shadow-md' : 'border-gray-300 opacity-50 grayscale'"
         >
-          <svg
-            v-if="badge.earned"
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+          <img 
+            :src="getBadgeImage(badge.name)"
+            :alt="badge.name"
+            class="w-full h-full object-cover"
+          />
         </div>
         <p
-          class="text-[8px] text-center mt-1 leading-tight"
-          :class="badge.earned ? 'text-gray-800 font-medium' : 'text-gray-400'"
+          class="text-[8px] text-center mt-2 leading-tight font-medium"
+          :class="badge.earned ? 'text-gray-800' : 'text-gray-400'"
         >
           {{ badge.name }}
         </p>
@@ -38,18 +28,39 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+interface Badge {
+  name: string
+  earned: boolean
+}
+
 const props = defineProps({
   badges: {
-    type: Array,
+    type: Array as () => Badge[],
     default: () => [
       { name: 'LITERACY SCHOLAR', earned: true },
-      { name: 'MEDIA DEFENDER', earned: true },
-      { name: 'DIGITAL LIBRARIAN', earned: true },
-      { name: 'FACTS ADVOCATE', earned: true },
+      { name: 'MEDIA SYSTEMS ADEPT', earned: true },
+      { name: 'MEDIA LINGUIST', earned: true },
+      { name: 'EQUITY ADVOCATE', earned: true },
       { name: 'RESPONSIBLE CITIZEN', earned: true }
     ]
   }
 })
-</script>
 
+const badgeImages: Record<string, string> = {
+  'LITERACY SCHOLAR': '/assets/MODULE1.png',
+  'MEDIA SYSTEMS ADEPT': '/assets/MODULE2.png',
+  'MEDIA LINGUIST': '/assets/MODULE3.png',
+  'EQUITY ADVOCATE': '/assets/MODULE4.png',
+  'RESPONSIBLE CITIZEN': '/assets/MODULE5.png',
+  'CYBER GUARDIAN': '/assets/MODULE6.png',
+  'GENERATIVE THINKER': '/assets/MODULE7.png',
+  'DIGITAL MAVEN': '/assets/MODULE8.png',
+  'MEDIA ANALYST': '/assets/MODULE9.png',
+  'ETHICAL MEDIA CREATOR': '/assets/MODULE10.png'
+}
+
+const getBadgeImage = (badgeName: string): string => {
+  return badgeImages[badgeName] || '/assets/default-badge.png'
+}
+</script>

@@ -20,6 +20,7 @@
               :is-restricted="!isModuleAccessible(module.id, index)"
               :is-completed="isModuleCompleted(getBeginner, module.id)"
               :emoji="module.emoji"
+              :module-id="module.id"
               @click="selectModule(module)"
             />
           </div>

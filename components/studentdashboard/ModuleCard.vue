@@ -20,12 +20,14 @@
       </span>
     </div>
 
-    <!-- Module Image/Thumbnail -->
-    <div class="h-32 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center relative overflow-hidden">
-      <div class="absolute inset-0 flex items-center justify-center">
-        <!-- Placeholder for module thumbnail - can be replaced with actual images -->
-        <div class="text-4xl">{{ emoji }}</div>
-      </div>
+    <!-- All Modules - Full Image Display -->
+    <div class="w-full relative">
+      <img 
+        :src="`/assets/${getImageName()}.png`"
+        :alt="title"
+        class="w-full h-full object-cover"
+      />
+      <!-- Completion Badge -->
       <div v-if="isCompleted" class="absolute top-2 right-2">
         <div class="bg-green-500 rounded-full p-2 shadow-lg">
           <svg
@@ -43,21 +45,27 @@
         </div>
       </div>
     </div>
-
-    <!-- Module Info -->
-    <div class="p-4">
-      <h3 class="font-semibold text-sm text-gray-800 mb-1 line-clamp-2">
-        {{ title }}
-      </h3>
-      <p v-if="subtitle" class="text-xs text-gray-600 line-clamp-1">
-        {{ subtitle }}
-      </p>
-    </div>
   </div>
 </template>
 
-<script setup>
-defineProps({
+<script setup lang="ts">
+const numberToWords = (num: number | null): string => {
+  const words: Record<number, string> = {
+    1: 'one',
+    2: 'two',
+    3: 'three',
+    4: 'four',
+    5: 'five',
+    6: 'six',
+    7: 'seven',
+    8: 'eight',
+    9: 'nine',
+    10: 'ten'
+  }
+  return words[num || 0] || `module${num}`
+}
+
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -81,15 +89,25 @@ defineProps({
   emoji: {
     type: String,
     default: '📚'
+  },
+  moduleId: {
+    type: Number,
+    default: null
   }
 })
 
+const getImageName = (): string => {
+  return numberToWords(props.moduleId)
+}
+
 defineEmits(['click'])
 </script>
+
 <style scoped>
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -97,9 +115,8 @@ defineEmits(['click'])
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 </style>
-
-

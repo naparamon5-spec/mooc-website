@@ -84,9 +84,9 @@ const props = defineProps({
     type: Array,
     default: () => [
       { name: 'LITERACY SCHOLAR', earned: true },
-      { name: 'MEDIA DEFENDER', earned: true },
-      { name: 'DIGITAL LIBRARIAN', earned: true },
-      { name: 'FACTS ADVOCATE', earned: true },
+      { name: 'MEDIA SYSTEMS ADEPT', earned: true },
+      { name: 'MEDIA LINGUIST', earned: true },
+      { name: 'EQUITY ADVOCATE', earned: true },
       { name: 'RESPONSIBLE CITIZEN', earned: true }
     ]
   },

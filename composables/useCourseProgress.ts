@@ -17,13 +17,13 @@ const courseProgress = ref({
 // Badge mapping for each module
 const badgeMapping: Record<number, string> = {
   1: 'LITERACY SCHOLAR',
-  2: 'MEDIA DEFENDER',
-  3: 'DIGITAL LIBRARIAN',
-  4: 'FACTS ADVOCATE',
+  2: 'MEDIA SYSTEMS ADEPT',
+  3: 'MEDIA LINGUIST',
+  4: 'EQUITY ADVOCATE',
   5: 'RESPONSIBLE CITIZEN',
 }
 
-const allBadges = ['LITERACY SCHOLAR', 'MEDIA DEFENDER', 'DIGITAL LIBRARIAN', 'FACTS ADVOCATE', 'RESPONSIBLE CITIZEN']
+const allBadges = ['LITERACY SCHOLAR', 'MEDIA SYSTEMS ADEPT', 'MEDIA LINGUIST', 'EQUITY ADVOCATE', 'RESPONSIBLE CITIZEN']
 
 export const useCourseProgress = () => {
   // Get completed modules for a specific course level

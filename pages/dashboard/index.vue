@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="h-screen bg-gray-50 flex flex-col">
     <DashboardHeader :student-name="studentName" />
 
-    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+    <div class="flex-1 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 overflow-y-auto">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
@@ -41,35 +41,34 @@
               <!-- Tooltip for locked advanced course -->
               <div
                 v-if="level.id === 'advanced' && !isBeginnerCourseCompleted()"
-                class="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded whitespace-nowrap z-10"
+                class="invisible group-hover:visible absolute left-full top-1/2 transform -translate-y-1/2 ml-4 px-3 py-2 bg-gray-900 text-white text-sm rounded whitespace-nowrap z-10"
               >
                 Complete the Beginner Course to unlock Advanced
-                <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                <div class="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
               </div>
             </button>
           </div>
 
-          <!-- Modules Grid -->
-          <div
-            class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
-          >
-            <ModuleCard
-              v-for="(module, index) in currentModules"
-              :key="`${currentCourseLevel}-${module.id}`"
-              :title="module.title"
-              :subtitle="module.subtitle"
-              :is-active="selectedModule?.id === module.id"
-              :is-restricted="!isModuleAccessible(module.id)"
-              :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
-              :emoji="module.emoji"
-              @click="selectModule(module)"
-            />
-          </div>
+       <!-- Modules Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+  <ModuleCard
+    v-for="(module, index) in currentModules"
+    :key="`${currentCourseLevel}-${module.id}`"
+    :title="module.title"
+    :subtitle="module.subtitle"
+    :is-active="selectedModule?.id === module.id"
+    :is-restricted="!isModuleAccessible(module.id)"
+    :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
+    :emoji="module.emoji"
+    :module-id="module.id"
+    @click="selectModule(module)"
+  />
+</div>
               <!-- Module Description -->
           <ModuleDescriptionPanel :module="selectedModule" />
 
           <!-- Footer Buttons -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-">
             <button
               class="bg-primary-100 text-primary-600 px-6 py-3 rounded-lg font-medium hover:bg-primary-200 transition-colors"
             >
