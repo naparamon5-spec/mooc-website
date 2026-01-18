@@ -10,7 +10,7 @@
         <aside class="xl:col-span-3 space-y-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm text-center">
             <img
-              src="./../../assets/module/1.png"
+              src="/module/1.png"
               alt="Profile Picture"
               class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-primary-300"
             />
