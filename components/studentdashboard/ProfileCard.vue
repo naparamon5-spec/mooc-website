@@ -21,7 +21,7 @@
           <label class="label">Student ID</label>
           <input
             type="text"
-            v-model="profile.studentId"
+            v-model="profile.student_id"
             class="input readonly"
             readonly
           />
@@ -30,12 +30,12 @@
         <div class="col-span-12 md:col-span-4">
           <label class="label">Full Name</label>
           <div v-if="!isEditing" class="input readonly">
-            {{ profile.fullName }}
+            {{ profile.full_name }}
           </div>
           <input
             v-else
             type="text"
-            v-model="editedProfile.fullName"
+            v-model="profile.full_name"
             class="input editable"
           />
         </div>
@@ -52,10 +52,10 @@
 
         <!-- ROW 2 : 4 FIELDS -->
         <div class="col-span-12 md:col-span-3">
-          <label class="label">Student Level</label>
+          <label class="label">Role</label>
           <input
             type="text"
-            v-model="profile.studentLevel"
+            v-model="profile.role"
             class="input readonly"
             readonly
           />
@@ -65,7 +65,7 @@
           <label class="label">Enrollment Date</label>
           <input
             type="text"
-            v-model="profile.enrollmentDate"
+            v-model="profile.enrollment_date"
             class="input readonly"
             readonly
           />
@@ -79,7 +79,7 @@
           <input
             v-else
             type="text"
-            v-model="editedProfile.language"
+            v-model="profile.language"
             class="input editable"
           />
         </div>
@@ -92,7 +92,7 @@
           <input
             v-else
             type="text"
-            v-model="editedProfile.country"
+            v-model="profile.country"
             class="input editable"
           />
         </div>
@@ -101,12 +101,12 @@
         <div class="col-span-12 md:col-span-3">
           <label class="label">Phone Number</label>
           <div v-if="!isEditing" class="input readonly">
-            {{ profile.phone }}
+            {{ profile.phone || "Not provided" }}
           </div>
           <input
             v-else
             type="text"
-            v-model="editedProfile.phone"
+            v-model="profile.phone"
             class="input editable"
           />
         </div>
@@ -119,7 +119,7 @@
           <input
             v-else
             type="text"
-            v-model="editedProfile.timezone"
+            v-model="profile.timezone"
             class="input editable"
           />
         </div>
@@ -127,12 +127,12 @@
         <div class="col-span-12 md:col-span-3">
           <label class="label">Learning Mode</label>
           <div v-if="!isEditing" class="input readonly">
-            {{ profile.learningMode }}
+            {{ profile.learning_mode }}
           </div>
           <input
             v-else
             type="text"
-            v-model="editedProfile.learningMode"
+            v-model="profile.learning_mode"
             class="input editable"
           />
         </div>
@@ -140,12 +140,12 @@
         <div class="col-span-12 md:col-span-3">
           <label class="label">Notification Preference</label>
           <div v-if="!isEditing" class="input readonly">
-            {{ profile.notificationPreference }}
+            {{ profile.notification_preference }}
           </div>
           <input
             v-else
             type="text"
-            v-model="editedProfile.notificationPreference"
+            v-model="profile.notification_preference"
             class="input editable"
           />
         </div>
@@ -157,67 +157,154 @@
             v-if="!isEditing"
             class="input readonly min-h-[120px]"
           >
-            {{ profile.bio }}
+            {{ profile.bio || "No bio yet" }}
           </div>
           <textarea
             v-else
             rows="4"
-            v-model="editedProfile.bio"
+            v-model="profile.bio"
             class="input editable"
           />
         </div>
       </div>
 
       <!-- ACTIONS -->
-      <div v-if="isEditing" class="mt-8 text-right space-x-2">
-        <button
-          type="button"
-          @click="cancelEditing"
-          class="px-6 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          @click="saveChanges"
-          class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-        >
-          Save
-        </button>
+      <div v-if="isEditing" class="mt-8 space-y-4">
+        <!-- Save Message -->
+        <div v-if="saveMessage" :class="['p-3 rounded text-sm', saveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+          {{ saveMessage.text }}
+        </div>
+        
+        <!-- Buttons -->
+        <div class="text-right space-x-2">
+          <button
+            type="button"
+            @click="cancelEditing"
+            :disabled="saving"
+            class="px-6 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="saveChanges"
+            :disabled="saving"
+            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+          >
+            {{ saving ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
       </div>
     </form>
   </div>
 </template>
 
-<script setup>
-import { ref } from "vue";
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { useUserProfile } from "~/composables/useUserProfile";
+
+const { profile: userProfile, fetchUserProfile } = useUserProfile();
+const { $supabase } = useNuxtApp();
 
 const profile = ref({
-  studentId: "MOOC12345",
-  fullName: "Student Name",
-  email: "student@example.com",
-  studentLevel: "Beginner",
-  enrollmentDate: "2024-01-15",
-  language: "English",
-  country: "Philippines",
-  phone: "+63 912 345 6789",
+  student_id: "",
+  full_name: "",
+  email: "",
+  role: "student",
+  enrollment_date: "",
+  language: "EN",
+  country: "PH",
+  phone: "",
   timezone: "GMT+8",
-  learningMode: "Online",
-  notificationPreference: "Email",
-  bio: "Passionate about media literacy and critical thinking.",
+  learning_mode: "Online",
+  notification_preference: "Email",
+  bio: "",
 });
 
 const isEditing = ref(false);
-const editedProfile = ref({});
+const saving = ref(false);
+const saveMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
+
+// Fetch user profile on mount
+onMounted(async () => {
+  const userData = await fetchUserProfile();
+  if (userData) {
+    // Format enrollment date - use enrollment_date or created_at as fallback
+    let enrollmentDate = "";
+    const dateToFormat = userData.enrollment_date || userData.created_at;
+    if (dateToFormat) {
+      try {
+        enrollmentDate = new Date(dateToFormat).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch (e) {
+        enrollmentDate = dateToFormat;
+      }
+    }
+
+    profile.value = {
+      student_id: userData.student_id || "",
+      full_name: userData.full_name || "",
+      email: userData.email || "",
+      role: userData.role || "student",
+      enrollment_date: enrollmentDate,
+      language: userData.language || "EN",
+      country: userData.country || "PH",
+      phone: userData.phone || "",
+      timezone: userData.timezone || "GMT+8",
+      learning_mode: userData.learning_mode || "Online",
+      notification_preference: userData.notification_preference || "Email",
+      bio: userData.bio || "",
+    };
+  }
+});
 
 const startEditing = () => {
-  editedProfile.value = { ...profile.value };
+  profile.value = { ...profile.value };
   isEditing.value = true;
 };
 
-const saveChanges = () => {
-  profile.value = { ...editedProfile.value };
-  isEditing.value = false;
+const saveChanges = async () => {
+  saving.value = true;
+  saveMessage.value = null;
+
+  try {
+    const { data: { user } } = await $supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    // Update only editable fields
+    const { error } = await $supabase
+      .from('profiles')
+      .update({
+        full_name: profile.value.full_name,
+        language: profile.value.language,
+        country: profile.value.country,
+        phone: profile.value.phone,
+        timezone: profile.value.timezone,
+        learning_mode: profile.value.learning_mode,
+        notification_preference: profile.value.notification_preference,
+        bio: profile.value.bio,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    profile.value = { ...profile.value };
+    isEditing.value = false;
+    saveMessage.value = { type: 'success', text: 'Profile updated successfully!' };
+    
+    setTimeout(() => {
+      saveMessage.value = null;
+    }, 3000);
+  } catch (err: any) {
+    console.error('Update error:', err);
+    saveMessage.value = { type: 'error', text: err.message || 'Failed to update profile' };
+  } finally {
+    saving.value = false;
+  }
 };
 
 const cancelEditing = () => {

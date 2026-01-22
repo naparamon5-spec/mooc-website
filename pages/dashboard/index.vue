@@ -97,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, watch } from "vue";
+import { ref, computed, watchEffect, watch, onMounted } from "vue";
 // Protect this page with the `auth` middleware
 definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
@@ -105,6 +105,7 @@ import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
 import ModuleDescriptionPanel from "~/components/studentdashboard/ModuleDescriptionPanel.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
+import { useUserProfile } from "~/composables/useUserProfile";
 import { useRoute } from 'vue-router';
 
 useHead({
@@ -114,6 +115,16 @@ useHead({
 const route = useRoute();
 
 const studentName = ref("Student's name");
+const { fetchUserProfile } = useUserProfile();
+
+// Fetch user profile on mount
+onMounted(async () => {
+  const userData = await fetchUserProfile();
+  if (userData?.full_name) {
+    studentName.value = userData.full_name;
+  }
+});
+
 const { 
   getCompletedModules, 
   getEarnedBadges,

@@ -236,7 +236,14 @@ async function onSubmit() {
     }, 1000)
 
   } catch (err: any) {
-    alert(err.message)
+    console.error('Signup error details:', {
+      status: err.status,
+      statusCode: err.statusCode,
+      message: err.message,
+      code: err.code,
+      details: err.__internal_cause
+    })
+    alert(`Signup failed: ${err.message}`)
   } finally {
     loading.value = false
   }

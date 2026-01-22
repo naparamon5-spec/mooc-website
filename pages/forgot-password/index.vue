@@ -50,9 +50,8 @@
 
       <!-- Footer -->
       <p class="mt-6 text-sm text-center text-sky-700">
-        Remember your password?
-        <NuxtLink to="/login" class="font-medium text-sky-800 hover:underline">
-          Sign in
+        <NuxtLink to="/login" class="font-light text-sky-700 hover:text-sky-700">
+          Back to log in
         </NuxtLink>
       </p>
     </div>

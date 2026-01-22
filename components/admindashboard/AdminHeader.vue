@@ -136,26 +136,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useUserProfile } from '~/composables/useUserProfile'
 
 const route = useRoute()
 const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
 
-const nuxtApp = useNuxtApp()
-const supabase = nuxtApp.$supabase
-
-async function logout() {
-  try {
-    if (supabase?.auth?.signOut) {
-      await supabase.auth.signOut()
-    }
-  } catch (e) {
-    // ignore
-  }
-  const refreshCookie = useCookie('sb-refresh-token')
-  refreshCookie.value = null
-  navigateTo('/login')
-}
+const { profile, userInitials, logout, fetchUserProfile } = useUserProfile()
 
 const props = defineProps({
   adminName: {
@@ -166,15 +153,11 @@ const props = defineProps({
 
 const currentRoute = computed(() => route.path)
 
-const userInitials = computed(() => {
-  const name = props.adminName.split(' ')
-  if (name.length >= 2) {
-    return (name[0][0] + name[1][0]).toUpperCase()
-  }
-  return props.adminName.substring(0, 2).toUpperCase()
+// Fetch user profile on component mount
+onMounted(async () => {
+  await fetchUserProfile()
 })
 
-// Close dropdown when clicking outside
 const handleClickOutside = (event) => {
   if (dropdownOpen.value && !event.target.closest('.relative')) {
     dropdownOpen.value = false

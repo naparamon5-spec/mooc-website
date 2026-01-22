@@ -65,7 +65,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import MetricCard from '~/components/admindashboard/MetricCard.vue'
 import CourseManagement from '~/components/admindashboard/CourseManagement.vue'
@@ -73,12 +73,24 @@ import ActivityFeed from '~/components/admindashboard/ActivityFeed.vue'
 import EnrollmentAnalytics from '~/components/admindashboard/EnrollmentAnalytics.vue'
 import CourseCompletionRate from '~/components/admindashboard/CourseCompletionRate.vue'
 import SystemHealth from '~/components/admindashboard/SystemHealth.vue'
+import { useUserProfile } from '~/composables/useUserProfile'
+
+definePageMeta({ middleware: 'auth' })
 
 useHead({
   title: 'Admin Dashboard - MIL MOOC',
 })
 
+const { fetchUserProfile } = useUserProfile()
 const adminName = ref("Admin User")
+
+// Fetch user profile on mount
+onMounted(async () => {
+  const userData = await fetchUserProfile();
+  if (userData?.full_name) {
+    adminName.value = userData.full_name;
+  }
+});
 
 const totalEnrolled = ref(1205)
 const activeStudents = ref(956)
