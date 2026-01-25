@@ -1,45 +1,82 @@
 <template>
-  <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between">
-    <div>
-      <h2 class="text-xl font-semibold text-gray-800 mb-2">{{ quiz.title }}</h2>
-      <p class="text-gray-600 text-sm mb-4">{{ quiz.description }}</p>
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
+    <!-- Quiz Header -->
+    <div class="bg-gradient-to-r from-primary-50 to-primary-100 p-4">
+      <h3 class="font-semibold text-gray-900">{{ quiz.title }}</h3>
+      <p class="text-xs text-gray-600 mt-1 line-clamp-2">{{ quiz.description }}</p>
     </div>
-    <div class="mt-auto">
-      <div class="flex items-center text-gray-500 text-xs mb-4">
-        <span class="mr-4">
-          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.546-1.38 2.336-1.42 2.704-.946a1.536 1.536 0 011.026 1.547l-.148 1.48a.74.74 0 00.106.634l.654.785a.74.74 0 00.627.186l1.378-.344c.484-.12.986.136.986.666v1.44a.75.75 0 00.75.75h.75a.75.75 0 00.75-.75v-.31c.42-.51-.157-1.127-.723-1.077-.42.037-.81-.22-.977-.61l-.645-1.55c-.244-.588-.705-.882-1.378-.718l-1.378.344a.74.74 0 00-.627-.186l-.654-.785a.74.74 0 00-.106-.634L11 9.77c-.368-.48-.604-.848-.908-1.503-.312-.66-.99-.958-1.745-.635l-1.192.477c-.45.18-.76-.08-.76-.554V9z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>
-          </svg>
-          {{ quiz.questions }} Questions
-        </span>
-        <span class="mr-4">
-          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          {{ quiz.duration }}
-        </span>
-        <span>
-          <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-          {{ quiz.difficulty }}
+
+    <!-- Quiz Details -->
+    <div class="p-4 space-y-3">
+      <!-- Questions Count -->
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-gray-600">Questions:</span>
+        <span class="font-semibold text-gray-900">{{ quiz.questions?.length || 0 }}</span>
+      </div>
+
+      <!-- Passing Score -->
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-gray-600">Pass Score:</span>
+        <span class="font-semibold text-gray-900">{{ quiz.passing_score || 70 }}%</span>
+      </div>
+
+      <!-- Status Badge -->
+      <div v-if="hasAttempted" class="flex items-center justify-between text-sm">
+        <span class="text-gray-600">Your Score:</span>
+        <span
+          :class="userScore >= (quiz.passing_score || 70) 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'"
+          class="px-3 py-1 rounded-full text-xs font-semibold"
+        >
+          {{ userScore }}%
         </span>
       </div>
-      <button class="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 transition duration-300">
-        Start Quiz
+
+      <!-- Status Text -->
+      <div v-if="hasAttempted" class="text-xs">
+        <span v-if="userPassed" class="text-green-600 font-medium">✓ Passed</span>
+        <span v-else class="text-red-600 font-medium">✗ Failed - Try Again</span>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="border-t border-gray-200 p-4">
+      <button
+        @click="$emit('start-quiz')"
+        :disabled="loading"
+        :class="hasAttempted && userPassed 
+          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+          : 'bg-primary-600 text-white hover:bg-primary-700'"
+        class="w-full py-2 rounded-lg font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ loading ? 'Loading...' : hasAttempted && userPassed ? 'Retake Quiz' : hasAttempted ? 'Retake Quiz' : 'Start Quiz' }}
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+
 const props = defineProps({
   quiz: {
     type: Object,
     required: true,
   },
-});
+  userResult: {
+    type: Object,
+    default: null,
+  },
+})
+
+defineEmits(['start-quiz'])
+
+const loading = ref(false)
+
+const hasAttempted = computed(() => !!props.userResult)
+const userScore = computed(() => props.userResult?.score || 0)
+const userPassed = computed(() => props.userResult?.passed || false)
 </script>
 
 <style scoped>

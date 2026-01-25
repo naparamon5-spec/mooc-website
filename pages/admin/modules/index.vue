@@ -4,7 +4,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="flex-1">
-      <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-8">
+  <div class="max-w-full px-4 md:px-8 lg:px-12 py-8">
         <!-- Header Section -->
         <div class="flex items-center justify-between mb-8">
           <div>
