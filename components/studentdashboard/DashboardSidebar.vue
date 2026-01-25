@@ -44,8 +44,10 @@
     </nav>
 
     <ProgressTracker
-      :progress="progress"
-      :module-name="currentModule"
+      :completed-modules="completedModules"
+      :completed-lessons-in-current-module="completedLessonsInCurrentModule"
+      :total-modules="totalModules"
+      :lessons-per-module="4"
     />
 
     <BadgesDisplay :badges="badges" />
@@ -95,6 +97,10 @@ const props = defineProps({
     default: 'In progress'
   },
   completedModules: {
+    type: Number,
+    default: 0
+  },
+  completedLessonsInCurrentModule: {
     type: Number,
     default: 0
   },

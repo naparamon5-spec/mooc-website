@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white rounded-lg p-4 shadow-sm">
-    <h3 class="text-sm font-semibold text-gray-800 mb-3">Progress Tracker</h3>
+    <h3 class="text-sm font-semibold text-gray-800 mb-3">Overall Progress</h3>
     <div class="flex flex-col items-center">
       <div class="relative w-20 h-20">
         <svg class="transform -rotate-90 w-20 h-20">
@@ -28,7 +28,12 @@
           <span class="text-lg font-bold text-gray-800">{{ progress }}%</span>
         </div>
       </div>
-      <p class="text-xs text-gray-600 mt-2 text-center">{{ moduleName }}</p>
+      <p class="text-xs text-gray-600 mt-2 text-center font-medium">
+        {{ completedModules }} / {{ totalModules }} Modules
+      </p>
+      <p class="text-xs text-gray-500 mt-1 text-center">
+        {{ getProgressDescription }}
+      </p>
     </div>
   </div>
 </template>
@@ -37,21 +42,46 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  progress: {
+  completedModules: {
     type: Number,
-    default: 60
+    default: 0
   },
-  moduleName: {
-    type: String,
-    default: 'Current Module'
+  completedLessonsInCurrentModule: {
+    type: Number,
+    default: 0
+  },
+  totalModules: {
+    type: Number,
+    default: 5
+  },
+  lessonsPerModule: {
+    type: Number,
+    default: 4
   }
 })
 
-const radius = 32
-const circumference = 2 * Math.PI * radius
+// Calculation: Each module = 20%, Each lesson = 5%
+// Total modules: 5 * 20% = 100%
+// Each module has 4 lessons: 4 * 5% = 20%
+const progress = computed(() => {
+  const moduleProgress = props.completedModules * 20
+  const lessonProgress = props.completedLessonsInCurrentModule * 5
+  return Math.min(moduleProgress + lessonProgress, 100)
+})
 
-const offset = computed(() => {
-  return circumference - (props.progress / 100) * circumference
+const radius = 32
+const circumference = computed(() => 2 * Math.PI * radius)
+const offset = computed(() => circumference.value - (progress.value / 100) * circumference.value)
+
+const getProgressDescription = computed(() => {
+  const pct = progress.value;
+  if (pct === 0) return 'Not started';
+  if (pct < 20) return 'Just getting started';
+  if (pct < 40) return '20% complete';
+  if (pct < 60) return '40% complete';
+  if (pct < 80) return '60% complete';
+  if (pct < 100) return '80% complete';
+  return 'Congratulations! Complete!';
 })
 </script>
 

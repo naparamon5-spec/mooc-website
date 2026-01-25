@@ -1,35 +1,37 @@
 <template>
   <div
-    class="relative rounded-lg overflow-hidden border-2 transition-all duration-200"
+    class="relative rounded-xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
     :class="[
       isRestricted
         ? 'border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
         : isActive
-        ? 'border-primary-600 bg-white shadow-lg cursor-pointer hover:shadow-xl'
-        : 'border-gray-200 bg-white cursor-pointer hover:shadow-md'
+        ? 'border-primary-600 bg-white shadow-xl cursor-pointer hover:shadow-2xl ring-2 ring-primary-300'
+        : 'border-gray-200 bg-white cursor-pointer hover:shadow-lg'
     ]"
     @click="!isRestricted && $emit('click')"
   >
     <!-- Restricted Overlay -->
     <div
       v-if="isRestricted"
-      class="absolute inset-0 bg-white/80 flex items-center justify-center z-10"
+      class="absolute inset-0 bg-gradient-to-br from-gray-800/60 to-gray-900/60 flex items-center justify-center z-10"
     >
-      <span class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-semibold">
-        Restricted
-      </span>
+      <div class="text-center">
+        <span class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold block mb-2">🔒 Locked</span>
+        <p class="text-white text-xs">Complete previous module</p>
+      </div>
     </div>
 
-    <!-- All Modules - Full Image Display -->
-    <div class="w-full relative">
+    <!-- Image Only -->
+    <div class="w-full relative overflow-hidden">
       <img 
-        :src="`/assets/${getImageName()}.png`"
+        v-if="imageUrl"
+        :src="imageUrl"
         :alt="title"
-        class="w-full h-full object-cover"
+        class="w-full h-auto object-contain"
       />
       <!-- Completion Badge -->
-      <div v-if="isCompleted" class="absolute top-2 right-2">
-        <div class="bg-green-500 rounded-full p-2 shadow-lg">
+      <div v-if="isCompleted" class="absolute top-2 right-2 z-20">
+        <div class="bg-green-500 rounded-full p-2 shadow-lg animate-pulse">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-5 w-5 text-white"
@@ -49,74 +51,14 @@
 </template>
 
 <script setup lang="ts">
-const numberToWords = (num: number | null): string => {
-  const words: Record<number, string> = {
-    1: 'one',
-    2: 'two',
-    3: 'three',
-    4: 'four',
-    5: 'five',
-    6: 'six',
-    7: 'seven',
-    8: 'eight',
-    9: 'nine',
-    10: 'ten'
-  }
-  return words[num || 0] || `module${num}`
-}
-
 const props = defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  subtitle: {
-    type: String,
-    default: ''
-  },
-  isActive: {
-    type: Boolean,
-    default: false
-  },
-  isRestricted: {
-    type: Boolean,
-    default: false
-  },
-  isCompleted: {
-    type: Boolean,
-    default: false
-  },
-  emoji: {
-    type: String,
-    default: '📚'
-  },
-  moduleId: {
-    type: Number,
-    default: null
-  }
+  isActive: { type: Boolean, default: false },
+  isRestricted: { type: Boolean, default: false },
+  isCompleted: { type: Boolean, default: false },
+  title: { type: String, default: "" },  // optional, used for alt
+  imageUrl: { type: String, default: "" },
+  moduleId: { type: Number, default: null },
 })
-
-const getImageName = (): string => {
-  return numberToWords(props.moduleId)
-}
 
 defineEmits(['click'])
 </script>
-
-<style scoped>
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>

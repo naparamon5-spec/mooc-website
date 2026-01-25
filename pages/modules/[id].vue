@@ -29,84 +29,111 @@
     >
       <!-- Sidebar -->
       <aside class="lg:col-span-1">
-        <nav class="bg-white rounded-lg shadow p-4 top-8">
-          <h2 class="text-xl font-bold text-gray-800 mb-4">Modules</h2>
-          <ul class="space-y-2">
-            <li v-for="(mod, modIndex) in allModules" :key="mod.id">
-              <a
-                href="#"
-                @click.prevent="isModuleAccessible(mod.id, modIndex) ? goToModule(mod.id) : null"
-                class="flex items-center p-2 rounded-md hover:bg-gray-100"
-                :class="{
-                  'bg-primary-100 text-primary-700 font-semibold': mod.id === parseInt(moduleId),
-                  'opacity-50 cursor-not-allowed': !isModuleAccessible(mod.id, modIndex)
-                }"
+        <nav class="bg-white rounded-lg shadow p-4">
+          <h2 class="text-xl font-bold text-gray-800 mb-6">Curriculum</h2>
+          <div class="space-y-2">
+            <div
+              v-for="(mod, moduleIndex) in allBeginnerModules"
+              :key="mod.id"
+              class="space-y-1"
+            >
+              <!-- Module Title -->
+              <div
+                @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), 0)"
+                class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors"
+                :class="[
+                  mod.id === moduleId
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-800 hover:bg-gray-100',
+                  !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50 cursor-not-allowed hover:bg-white'
+                ]"
               >
-                <span class="mr-2 text-xl">{{ mod.emoji }}</span>
+                <span class="mr-2">{{ mod.emoji }}</span>
                 <span>{{ mod.title }}</span>
-                <svg
-                  v-if="completedModules.has(mod.id)"
-                  class="ml-auto h-5 w-5 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+                <span v-if="!isModuleAccessible(String(mod.id), moduleIndex)" class="ml-2 text-xs">🔒</span>
+              </div>
+
+              <!-- Lessons List -->
+              <div v-if="mod.lessons && mod.lessons.length > 0" class="pl-4 space-y-1">
+                <div
+                  v-for="(lesson, lessonIndex) in mod.lessons"
+                  :key="`${mod.id}-${lessonIndex}`"
+                  class="p-2 rounded text-xs transition-colors"
+                  :class="[
+                    mod.id === moduleId && currentLessonIndex === lessonIndex
+                      ? 'bg-primary-500 text-white font-semibold'
+                      : mod.id === moduleId
+                      ? 'text-primary-600 font-medium'
+                      : 'text-gray-600',
+                    !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50'
+                  ]"
                 >
-                  <path
-                    fill-rule="evenodd"
-                    clip-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  />
-                </svg>
-              </a>
-              <ul v-if="mod.id === parseInt(moduleId) && module && module.content && module.content.length" class="ml-8 mt-2 space-y-1">
-                <li v-for="(lesson, index) in module.content" :key="index">
-                  <a
-                    href="#"
-                    @click.prevent="selectLesson(index)"
-                    class="flex items-center p-2 rounded-md hover:bg-gray-100"
-                    :class="{
-                      'bg-primary-100 text-primary-600 font-medium': index === currentLessonIndex,
-                    }"
-                  >
-                    <span class="mr-2 text-primary-600">{{ index + 1 }}.</span>
-                    <span>{{ lesson.title }}</span>
-                    <svg
-                      v-if="completedLessons.has(index)"
-                      class="ml-auto h-5 w-5 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        clip-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      />
-                    </svg>
-                  </a>
-                </li>
-              </ul>
-            </li>
-          </ul>
+                  <span v-if="mod.id === parseInt(moduleId) && currentLessonIndex === lessonIndex" class="mr-2">✓</span>
+                  <span v-else class="mr-2">•</span>
+                  {{ lesson.title }}
+                </div>
+              </div>
+            </div>
+          </div>
         </nav>
       </aside>
 
       <!-- Main Content -->
       <section class="md:col-span-3">
-        <!-- Title & Progress -->
-        <div class="flex justify-between items-center mb-4">
-          <h1 class="text-4xl font-extrabold text-gray-900">
-            {{ module?.title }}
-          </h1>
-          <div class="text-lg font-semibold text-primary-600">
-            {{ progressPercentage }}% Complete
-          </div>
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-12">
+          <p class="text-gray-600">Loading module...</p>
         </div>
 
-        <!-- Lesson Content -->
-        <div
-          v-if="currentLesson"
-          class="prose max-w-none mb-8 text-gray-700"
-          v-html="currentLesson.htmlContent"
-        />
+        <!-- Module Content -->
+        <div v-else-if="module">
+          <!-- Module Banner/Image -->
+          <div v-if="module?.image_url" class="mb-6 rounded-lg overflow-hidden">
+            <img
+              :src="module.image_url"
+              :alt="module.title"
+              class="w-full h-64 object-cover"
+            />
+          </div>
+
+          <!-- Module Description Panel -->
+          <div v-if="module" class="mb-6">
+            <ModuleDescriptionPanel :module="module" />
+          </div>
+
+          <!-- Title & Progress -->
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h1 class="text-4xl font-extrabold text-gray-900 mb-2">
+                {{ module?.emoji }} {{ module?.title }}
+              </h1>
+              <p v-if="module?.subtitle" class="text-lg text-gray-600">
+                {{ module.subtitle }}
+              </p>
+            </div>
+            <div class="text-lg font-semibold text-primary-600">
+              {{ currentLessonIndex + 1 }} / {{ module?.lessons?.length || 0 }}
+            </div>
+          </div>
+
+          <!-- Module Description -->
+          <div v-if="module?.description" class="bg-gray-50 p-4 rounded-lg mb-6 border-l-4 border-primary-600">
+            <p class="text-gray-700">{{ module.description }}</p>
+          </div>
+
+          <!-- Lesson Title -->
+          <div v-if="currentLesson" class="mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">
+              Lesson {{ currentLessonIndex + 1 }}: {{ currentLesson.title }}
+            </h2>
+          </div>
+
+          <!-- Lesson Content -->
+          <div
+            v-if="currentLesson"
+            class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg"
+            v-html="currentLesson.htmlContent"
+          />
 
         <!-- Navigation Buttons -->
         <div class="flex justify-between items-center mt-12">
@@ -115,25 +142,26 @@
             @click="goToPreviousLesson"
             class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200"
           >
-            Previous Lesson
+            ← Previous Lesson
           </button>
 
           <button
+            v-if="currentLessonIndex < (module?.lessons?.length || 0) - 1"
             @click="markLessonAndGoToNext"
-            :disabled="
-              !module ||
-              !module.content ||
-              (currentLessonIndex === module.content.length - 1 && completedLessons.has(currentLessonIndex))
-            "
-            class="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50"
+            class="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700"
             :class="{ 'ml-auto': currentLessonIndex === 0 }"
           >
-            {{
-              completedLessons.has(currentLessonIndex)
-                ? (currentLessonIndex === module.content.length - 1 ? 'Module Completed!' : 'Completed')
-                : (currentLessonIndex === module.content.length - 1 ? 'Finish Module' : 'Mark as Complete')
-            }}
+            Next Lesson →
           </button>
+
+          <button
+            v-else
+            @click="markLessonAsComplete"
+            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto"
+          >
+            Complete Module ✓
+          </button>
+        </div>
         </div>
       </section>
     </main>
@@ -145,14 +173,15 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
+import ModuleDescriptionPanel from '~/components/studentdashboard/ModuleDescriptionPanel.vue';
 import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue';
 import CertificateModal from '~/components/CertificateModal.vue';
 import { useCourseProgress } from '~/composables/useCourseProgress';
+import { useModuleManagement } from '~/composables/useModuleManagement';
 
 const route = useRoute();
 const moduleIdRaw = computed(() => {
@@ -160,148 +189,137 @@ const moduleIdRaw = computed(() => {
   return Array.isArray(id) ? id[0] : id || '1';
 });
 const moduleId = computed(() => moduleIdRaw.value || '1');
+
+// Get lesson parameter from query string
+const lessonParam = computed(() => {
+  const lesson = route.query.lesson;
+  return lesson ? parseInt(lesson as string) : 0;
+});
+
 const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
 const studentName = ref("Student's Name");
-const { completeModule, badgeMapping, isModuleCompleted, getCompletedModules, completeLessonInModule, getTotalProgressPercentage } = useCourseProgress();
+const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage } = useCourseProgress();
+const { fetchModuleById, modules, loading } = useModuleManagement();
 
-// Use computed to get completed modules from the composable
-const completedModules = computed(() => {
-  const modules = getCompletedModules('beginner');
-  return new Set(modules);
-});
+const module = ref<any>(null);
 
 const isLastModule = computed(() => {
-  return parseInt(moduleId.value) === 5
-})
-
-const earnedBadgeName = computed(() => {
-  return badgeMapping[parseInt(moduleId.value)] || 'Unknown Badge';
+  // Check if this is the 5th beginner module (last module)
+  const allBeginnerModules = modules.value.filter(m => m.level === 'beginner');
+  const sortedModules = allBeginnerModules.sort((a, b) => {
+    const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
+    const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
+    return aNum - bNum;
+  });
+  return sortedModules.length > 0 && module.value?.id === sortedModules[sortedModules.length - 1].id;
 });
 
-const allModules = [
-  {
-    id: 1,
-    title: "MODULE 1: Introduction to Media and Information Literacy",
-    subtitle: "",
-    isActive: true,
-    isRestricted: false,
-    emoji: "📱",
-    description:
-      "This module introduces learners to the fundamental concepts of Media and Information Literacy (MIL). It focuses on understanding the role of media in society and recognizing the types of information encountered daily. Learners will explore common challenges in the digital information landscape, including misinformation, disinformation, and malinformation, and understand their social, cultural, and ethical implications.",
-    learningOutcomes: [
-      "Define Media and Information Literacy and its relevance in the digital age.",
-      "Identify the differences between misinformation, disinformation, and malinformation.",
-      "Develop a foundation for responsible and critical engagement with media content.",
-    ],
-  },
-  {
-    id: 2,
-    title: "MODULE 2: Media in the Age of Algorithms",
-    subtitle: "",
-    isActive: false,
-    isRestricted: true,
-    emoji: "🤖",
-    description: "",
-    learningOutcomes: [],
-  },
-  {
-    id: 3,
-    title: "MODULE 3: How the Media talks",
-    subtitle: "",
-    isActive: false,
-    isRestricted: true,
-    emoji: "💬",
-    description: "",
-    learningOutcomes: [],
-  },
-  {
-    id: 4,
-    title: "MODULE 4: Media Representations",
-    subtitle: "",
-    isActive: false,
-    isRestricted: true,
-    emoji: "👥",
-    description: "",
-    learningOutcomes: [],
-  },
-  {
-    id: 5,
-    title: "MODULE 5: Digital Citizenship",
-    subtitle: "",
-    isActive: false,
-    isRestricted: true,
-    emoji: "🌐",
-    description: "",
-    learningOutcomes: [],
-  },
-];
+const earnedBadgeName = computed(() => {
+  const courseLevel = 'beginner' as const;
+  
+  // Find module position in sorted list
+  const sortedModules = allBeginnerModules.value;
+  const modulePosition = sortedModules.findIndex(m => m.id === moduleId.value) + 1; // 1-indexed
+  
+  const courseBadges = badgeMapping[courseLevel];
+  if (courseBadges && modulePosition > 0) {
+    return courseBadges[modulePosition] || 'Unknown Badge';
+  }
+  return 'Unknown Badge';
+});
 
-const selectLesson = (index: number) => {
-  currentLessonIndex.value = index;
-  // Scroll to top when selecting a lesson
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+const allBeginnerModules = computed(() => {
+  return modules.value
+    .filter(m => m.level === 'beginner')
+    .sort((a, b) => {
+      const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
+      const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
+      return aNum - bNum;
+    });
+});
+
+// Fetch all modules on mount to show in sidebar
+onMounted(async () => {
+  await fetchAllModules();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+});
+
+const fetchAllModules = async () => {
+  const { $supabase } = useNuxtApp();
+  const supabase = $supabase;
+  try {
+    const { data, error } = await supabase
+      .from('modules')
+      .select('*')
+      .eq('level', 'beginner')
+      .order('id', { ascending: true });
+    
+    if (error) throw error;
+    if (data) {
+      // Update modules with fetched data
+      modules.value = data;
+    }
+  } catch (err) {
+    console.error('Error fetching all modules:', err);
+  }
 };
 
 const currentLesson = computed(() => {
-  if (!module.value || !module.value.content || module.value.content.length === 0) {
+  if (!module.value || !module.value.lessons || module.value.lessons.length === 0) {
     return null;
   }
-  return module.value.content[currentLessonIndex.value] || null;
+  return module.value.lessons[currentLessonIndex.value] || null;
 });
-
 
 const goToPreviousLesson = () => {
   if (currentLessonIndex.value > 0) {
     currentLessonIndex.value--;
-    // Scroll to top when navigating to previous lesson
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const goToNextLesson = () => {
-  if (module.value && module.value.content && currentLessonIndex.value < module.value.content.length - 1) {
+  if (module.value && module.value.lessons && currentLessonIndex.value < module.value.lessons.length - 1) {
     currentLessonIndex.value++;
-    // Scroll to top when navigating to next lesson
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const progressPercentage = computed(() => {
-  // Use the global progress calculation that includes lesson progress
-  const currentModuleId = parseInt(moduleId.value);
-  const totalLessons = module.value?.content?.length || 0;
-  return getTotalProgressPercentage('beginner', 5, currentModuleId, totalLessons);
+  const totalLessons = module.value?.lessons?.length || 0;
+  return getTotalProgressPercentage('beginner', 5, moduleId.value, totalLessons);
 });
 
 const markLessonAsComplete = () => {
   completedLessons.value.add(currentLessonIndex.value);
-  
-  // Save to global state
-  const currentModuleId = parseInt(moduleId.value);
+  const currentModuleId = moduleId.value; // Use the string ID directly
   completeLessonInModule('beginner', currentModuleId, currentLessonIndex.value);
 
   // Check if all lessons in the current module are completed
-  if (module.value && module.value.content) {
-    const allCurrentLessonsCompleted = module.value.content.every((_, index) =>
+  if (module.value && module.value.lessons) {
+    const allCurrentLessonsCompleted = module.value.lessons.every((lesson: any, index: number) =>
       completedLessons.value.has(index)
     );
     if (allCurrentLessonsCompleted) {
-      // Award badge and update progress in the global composable
-      completeModule('beginner', parseInt(moduleId.value));
-      // Show the completion modal
+      completeModule('beginner', currentModuleId);
       showCompletionModal.value = true;
     }
   }
 };
 
 const handleNextModule = () => {
-  const nextModuleId = parseInt(moduleId.value) + 1;
-  if (nextModuleId <= 5) {
-    // Scroll to top before navigating
+  const nextModuleIndex = allBeginnerModules.value.findIndex(m => m.id === moduleId.value) + 1;
+  if (nextModuleIndex < allBeginnerModules.value.length) {
+    // Close modal first
+    showCompletionModal.value = false;
+    // Reset lesson index and completed lessons for new module
+    currentLessonIndex.value = 0;
+    completedLessons.value.clear();
+    // Navigate
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    navigateTo(`/modules/${nextModuleId}`);
+    navigateTo(`/modules/${allBeginnerModules.value[nextModuleIndex].id}`);
   }
 };
 
@@ -317,162 +335,53 @@ const handleBackToDashboard = () => {
 
 const markLessonAndGoToNext = () => {
   markLessonAsComplete();
-  if (currentLessonIndex.value < module.value.content.length - 1) {
+  if (currentLessonIndex.value < module.value.lessons.length - 1) {
     goToNextLesson();
   }
 };
 
-const goToModule = (id: number) => {
+const goToModule = (id: string, lessonIndex: number = 0) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  navigateTo(`/modules/${id}`);
+  navigateTo(`/modules/${id}?lesson=${lessonIndex}`);
 };
 
-const isModuleAccessible = (id: number, index: number) => {
-  if (id === 1) { // First module is always accessible
+const isModuleAccessible = (moduleId: string, index: number) => {
+  if (index === 0) {
     return true;
   }
-  // Check if the previous module is completed
   if (index > 0) {
-    const prevMod = allModules[index - 1];
+    const prevMod = allBeginnerModules.value[index - 1];
     if (prevMod) {
-      const previousModuleId = prevMod.id;
-      return completedModules.value.has(previousModuleId);
+      return isModuleCompleted('beginner', prevMod.id);
     }
   }
   return false;
 };
 
-// Placeholder module data
-const module = ref({
-  title: 'Loading...',
-  emoji: '', // Initialize emoji
-  images: [], // Images will be handled within lessons or as module banners
-  description: 'Loading module description...',
-  content: [
-    {
-      title: 'Introduction to Module',
-      htmlContent: '<p>Loading lesson content...</p>',
-    },
-  ],
-});
+// Load module data on mount or when moduleId changes
+watch(moduleId, async (newModuleId) => {
+  const moduleData = await fetchModuleById(newModuleId);
+  if (moduleData) {
+    module.value = moduleData;
+    // Set lesson from query param if provided, otherwise start at 0
+    currentLessonIndex.value = lessonParam.value;
+    // Clear completed lessons for this module (user hasn't completed any yet in this view)
+    completedLessons.value.clear();
 
-// In a real application, you would fetch the module data from an API based on moduleId
-onMounted(() => {
-  // Scroll to top when module page loads
-  window.scrollTo({ top: 0, behavior: 'auto' });
-  
-  const selectedModule = allModules.find((m) => m.id === parseInt(moduleId.value));
-
-  if (selectedModule) {
-    module.value.title = selectedModule.title;
-    module.value.description = selectedModule.description;
-    module.value.emoji = selectedModule.emoji;
-  }
-  
-  // Simulating an API call to fetch module data
-  setTimeout(() => {
-    const seed = moduleId.value || '1';
-    module.value.content = [
-      {
-        title: 'Introduction to Media & Information Literacy (MIL)',
-        htmlContent: `
-          <h2>Welcome to Your Journey in MIL!</h2>
-          <p>Welcome to Module ${moduleId}. In this first section, we will cover the foundational principles of Media and Information Literacy (MIL). MIL equips individuals with the critical thinking skills to engage with media and information effectively in an increasingly complex digital world. We'll explore why MIL is more relevant now than ever. The ability to critically analyze and interpret various forms of media is paramount in today's interconnected society.</p>
-          <h3>What is Media Literacy?</h3>
-          <p>Media literacy is the ability to access, analyze, evaluate, create, and act using all forms of communication. It's about understanding how media messages are constructed, why they are constructed, and what effects they have on individuals and society. This includes traditional media like television and newspapers, as well as digital platforms, social media, and online news. Developing media literacy helps you recognize persuasive techniques, identify stereotypes, and understand the influence of media ownership.</p>
-          <img src="https://picsum.photos/seed/${seed}_1/1200/675" alt="Introduction to MIL" class="w-full h-auto object-cover rounded-xl shadow-lg my-4">
-          <h3>What is Information Literacy?</h3>
-          <p>Information literacy is the ability to find, evaluate, organize, and use information from various sources effectively and ethically. It's crucial for academic success, professional development, and informed decision-making in daily life. In an era of information overload, being information literate means you can distinguish reliable sources from unreliable ones, understand different types of information (e.g., scholarly, journalistic, opinion), and use information legally and respectfully, avoiding plagiarism.</p>
-          <blockquote>
-            <p>“The illiterate of the 21st century will not be those who cannot read and write, but those who cannot learn, unlearn, and relearn.” – Alvin Toffler</p>
-          </blockquote>
-          <p>This module aims to provide you with the tools to become a more discerning consumer and a responsible creator of information. We'll build a strong foundation for critical engagement with all forms of content you encounter daily.</p>
-        `,
-      },
-      {
-        title: 'Understanding Misinformation, Disinformation & Malinformation',
-        htmlContent: `
-          <h2>Navigating the Digital Information Landscape</h2>
-          <p>Now that you have a solid foundation in MIL, let's explore one of the most pressing challenges in the digital age: the spread of false and misleading information. Understanding the nuances between misinformation, disinformation, and malinformation is crucial for critical engagement. These three terms are often used interchangeably, but they represent distinct phenomena with different intentions and impacts.</p>
-          <h3>Misinformation</h3>
-          <ul>
-            <li><strong>Definition:</strong> False information that is spread, regardless of intent to mislead. It's often shared unknowingly by individuals who believe it to be true, or without checking its veracity.</li>
-            <li><strong>Example:</strong> Sharing an outdated news article about a flood, genuinely believing it's current and relevant to a new event. Another example could be forwarding a chain message with health advice that isn't medically sound, but you believe it could help someone.</li>
-            <li><strong>Impact:</strong> Can lead to confusion, misplaced trust, and inefficient resource allocation, though typically less harmful than disinformation due to lack of malicious intent.</li>
-          </ul>
-          <img src="https://picsum.photos/seed/${seed}_5/1200/675" alt="Misinformation vs Disinformation" class="w-full h-auto object-cover rounded-xl shadow-lg my-4">
-          <h3>Disinformation</h3>
-          <ul>
-            <li><strong>Definition:</strong> Deliberately false information created and spread to deceive and mislead a target audience. There is malicious intent behind its creation and dissemination, often for political, financial, or personal gain.</li>
-            <li><strong>Example:</strong> A political campaign creating fake news stories to discredit an opponent, knowing the stories are false. State-sponsored propaganda aimed at destabilizing an adversary is also a prime example.</li>
-            <li><strong>Impact:</strong> Can severely damage public trust, manipulate elections, incite violence, and polarize societies, posing significant threats to democracy and social cohesion.</li>
-          </ul>
-          <h3>Malinformation</h3>
-          <ul>
-            <li><strong>Definition:</strong> Information that is based on reality (true information), but used out of context, exaggerated, or selectively presented to mislead, harm, or manipulate.</li>
-            <li><strong>Example:</strong> Leaking private, true information about a person (e.g., their address or medical history) to damage their reputation or put them at risk. Another case could be presenting a genuine quote out of its original context to drastically alter its meaning and incite public outrage.</li>
-            <li><strong>Impact:</strong> Undermines privacy, can lead to harassment, and erode trust in legitimate information, blurring the lines between truth and manipulation.</li>
-          </ul>
-          <p>Distinguishing these forms requires critical analysis of the source, context, and intent behind the information. It's not just about whether the information is true or false, but also about *why* it's being shared and *what effect* it's intended to have.</p>
-          <h4>Further Reading:</h4>
-          <ul>
-            <li><a href="https://www.unesco.org/en/articles/misinformation-disinformation-and-malinformation-what-are-differences" target="_blank">UNESCO: Misinformation, Disinformation, and Malinformation - What are the differences?</a></li>
-            <li><a href="https://firstdraftnews.org/latest/disinformation-misinformation-malinformation-what-is-the-difference/" target="_blank">First Draft: Misinformation, Disinformation, Malinformation: What is the difference?</a></li>
-          </ul>
-        `,
-      },
-      {
-        title: 'Evaluating Information Sources: Fact-Checking & Bias',
-        htmlContent: `
-          <h2>Becoming a Digital Detective</h2>
-          <p>In this section, we will equip you with practical strategies to evaluate the credibility of information sources and identify potential biases. Not all sources are created equal, and a healthy dose of skepticism is your best tool. Developing these skills will empower you to make informed decisions and avoid falling prey to misleading narratives.</p>
-          <h3>The CRAAP Test for Source Evaluation:</h3>
-          <p>A widely used and effective method for evaluating information sources is the CRAAP Test. Each letter represents a key criterion:</p>
-          <ul>
-            <li><strong>C - Currency:</strong> Refers to the timeliness of the information. When was the information published or posted? Has it been revised or updated? Is the information current enough for your topic, or is older information more appropriate (e.g., historical data)?</li>
-            <li><strong>R - Relevance:</strong> Does the information relate directly to your topic or answer your question? Is it appropriate for your level of understanding? Is it too basic, too advanced, or just right? Who is the intended audience?</li>
-            <li><strong>A - Authority:</strong> What are the source's credentials? Who created this content, and what makes them an expert on the subject? Is the author affiliated with a reputable organization? Are their qualifications stated?</li>
-            <li><strong>A - Accuracy:</strong> Can you verify the information with other reliable sources? Is the information supported by evidence? Are there any obvious errors in grammar, spelling, or facts? Does the source appear to be objective or biased?</li>
-            <li><strong>P - Purpose:</strong> Why was the information created? Is the purpose to inform, educate, entertain, persuade, or sell something? Is the content presented objectively, or does it contain propaganda or overt bias? Understanding the purpose helps you identify potential underlying agendas.</li>
-          </ul>
-          <img src="https://picsum.photos/seed/${seed}_6/1200/675" alt="Fact-checking and Bias" class="w-full h-auto object-cover rounded-xl shadow-lg my-4">
-          <h3>Identifying Bias:</h3>
-          <p>Bias can be subtle or overt, and all sources have some degree of perspective. Critical readers learn to recognize different forms of bias:</p>
-          <ul>
-            <li><strong>Omission:</strong> Leaving out facts or perspectives that would contradict the author's viewpoint.</li>
-            <li><strong>Selection and Placement:</strong> Choosing to include certain stories or facts while excluding others, or placing them prominently to emphasize a particular narrative.</li>
-            <li><strong>Loaded Language:</strong> Using words with strong emotional connotations to sway opinion without presenting logical arguments.</li>
-            <li><strong>Spin:</strong> Twisting or reframing a story to present a particular angle, often minimizing negative aspects or exaggerating positive ones.</li>
-            <li><strong>Confirmation Bias:</strong> The tendency to seek out and interpret information in a way that confirms one's existing beliefs, often leading to a disregard for contradictory evidence.</li>
-          </ul>
-          <p>By consistently applying these techniques and being aware of different forms of bias, you can significantly improve your ability to discern reliable information from misleading content and develop a more nuanced understanding of complex issues.</p>
-        `,
-      },
-      {
-        title: 'Conclusion and Responsible Digital Citizenship',
-        htmlContent: `
-          <h2>Your Role as an Informed Citizen</h2>
-          <p>In this final section of the module, we consolidate your learning and focus on practical application, emphasizing the importance of responsible digital citizenship. Becoming media and information literate isn't just about personal skill; it's about contributing positively to the digital community and fostering a healthy information ecosystem for everyone.</p>
-          <h3>Key Takeaways from This Module:</h3>
-          <ul>
-            <li>Media and Information Literacy is a vital skill for navigating the modern world, empowering you to critically engage with vast amounts of information.</li>
-            <li>Understanding the differences between misinformation, disinformation, and malinformation is critical for protecting yourself and others from manipulation and harm.</li>
-            <li>Employing tools like the CRAAP test helps in evaluating information sources, ensuring you rely on credible and accurate information.</li>
-            <li>Recognizing and analyzing various forms of bias is essential for a balanced perspective.</li>
-          </ul>
-          <img src="https://picsum.photos/seed/${seed}_7/1200/675" alt="Responsible Digital Citizen" class="w-full h-auto object-cover rounded-xl shadow-lg my-4">
-          <h3>What is Responsible Digital Citizenship?</h3>
-          <p>It encompasses safe, ethical, and legal participation in digital society. This includes respecting intellectual property (e.g., citing sources, avoiding plagiarism), protecting personal data and privacy online, engaging in constructive online discourse rather than aggressive or inflammatory communication, and actively combating the spread of false information by reporting it and promoting accurate sources. A responsible digital citizen is aware of their digital footprint and strives to use technology for positive societal impact.</p>
-          <p>Your journey in MIL is ongoing. The digital landscape constantly evolves, and so should your critical thinking skills. Keep questioning, keep evaluating, and always strive to be a positive force in the information ecosystem. The skills you've gained here are foundational for lifelong learning and active participation in the digital age. When you are ready, click the button below to mark this module as complete.</p>
-        `,
-      },
-    ];
     if (module.value) {
       useHead({
         title: `${module.value.title} - MIL MOOC`,
-      })
+      });
     }
-  }, 300);
+  }
+}, { immediate: true });
+
+// Watch for lesson parameter changes
+watch(lessonParam, (newLessonParam) => {
+  if (newLessonParam !== currentLessonIndex.value && newLessonParam >= 0) {
+    currentLessonIndex.value = newLessonParam;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 });
 </script>
 

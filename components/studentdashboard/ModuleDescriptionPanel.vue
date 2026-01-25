@@ -3,37 +3,53 @@
     <div
       v-if="module"
       :key="module.id"
-      class="bg-white rounded-xl p-6 shadow-sm mb-4 hover:shadow-md transition-shadow duration-300 border border-gray-100 relative overflow-hidden"
+      class="bg-gradient-to-br from-white to-primary-50
+             rounded-xl p-4 shadow-lg hover:shadow-xl
+             transition-shadow duration-300
+             border-2 border-primary-200
+             relative overflow-hidden"
     >
-      <!-- Left Accent Bar -->
-      <div class="absolute left-0 top-0 h-full w-1 bg-primary-500 rounded-l-xl"></div>
+      <!-- Decorative accent -->
+      <div
+        class="absolute top-0 right-0 w-28 h-28 bg-primary-100
+               rounded-full -mr-14 -mt-14 opacity-20"
+      ></div>
 
-      <!-- Module Content -->
-      <div class="relative">
-        <!-- Module Title -->
-        <h3 class="text-xl font-bold text-gray-800 mb-4">
+      <div class="relative z-10">
+        <!-- Title -->
+        <h3 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+          <span class="text-2xl">{{ module.emoji || '📚' }}</span>
           {{ module.title }}
         </h3>
 
-        <!-- Module Description -->
-        <p class="text-gray-600 mb-6">
+        <!-- Description -->
+        <p class="text-gray-700 mb-3 leading-relaxed text-base">
           {{ module.description }}
         </p>
 
-        <!-- Key Learning Outcomes -->
-        <div>
-          <h4 class="text-lg font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-1">
+        <!-- Outcomes -->
+        <div v-if="outcomesList.length">
+          <h4
+            class="text-sm font-semibold text-gray-800 mb-2
+                   flex items-center gap-1.5"
+          >
+            <span class="text-base">🎯</span>
             Key Learning Outcomes
           </h4>
+
           <ul class="space-y-1">
             <li
-              v-for="(outcome, index) in module.learningOutcomes"
+              v-for="(outcome, index) in outcomesList"
               :key="index"
-              class="flex items-start gap-3 text-gray-600"
+              class="flex items-start gap-2
+                     text-gray-700
+                     p-1 rounded-md
+                     transition-colors
+                     text-sm"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 text-primary-500 flex-shrink-0 mt-0.5"
+                class="h-4 w-4 text-primary-600 flex-shrink-0 mt-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -54,13 +70,22 @@
   </Transition>
 </template>
 
+
 <script setup lang="ts">
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   module: {
     type: Object,
     default: null
   }
 });
+
+// Handle both learning_outcomes (snake_case from DB) and learningOutcomes (camelCase)
+const outcomesList = computed(() => {
+  if (!props.module) return []
+  return props.module.learning_outcomes || props.module.learningOutcomes || []
+})
 </script>
 
 <style scoped>
