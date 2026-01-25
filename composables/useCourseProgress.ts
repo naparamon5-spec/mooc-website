@@ -60,17 +60,41 @@ export const useCourseProgress = () => {
   const { $supabase } = useNuxtApp()
   const supabase = $supabase
 
+  // Clear all progress data (for logout or user switch)
+  const clearProgress = () => {
+    console.log('Clearing all progress data')
+    courseProgress.value = {
+      beginner: {
+        completedModules: new Set<string>(),
+        earnedBadges: new Set<string>(),
+        completedLessons: new Map<string, Set<number>>(),
+      },
+      advanced: {
+        completedModules: new Set<string>(),
+        earnedBadges: new Set<string>(),
+        completedLessons: new Map<string, Set<number>>(),
+      },
+    }
+  }
+
   // Load progress from Supabase for the current user
   const loadProgressFromSupabase = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        console.warn('No authenticated user found')
+        return
+      }
+
+      console.log('Loading progress for user:', user.id)
 
       // Load completed lessons
-      const { data: lessonsData } = await supabase
+      const { data: lessonsData, error: lessonsError } = await supabase
         .from('user_progress')
         .select('*')
         .eq('user_id', user.id)
+
+      console.log('Lessons data fetched:', lessonsData?.length ?? 0, 'records', lessonsError ? `Error: ${lessonsError.message}` : '')
 
       if (lessonsData) {
         lessonsData.forEach((record: any) => {
@@ -86,25 +110,30 @@ export const useCourseProgress = () => {
       }
 
       // Load completed modules
-      const { data: modulesData } = await supabase
+      const { data: modulesData, error: modulesError } = await supabase
         .from('module_completion')
         .select('*')
         .eq('user_id', user.id)
+
+      console.log('Completed modules fetched:', modulesData?.length ?? 0, 'records', modulesError ? `Error: ${modulesError.message}` : '')
 
       if (modulesData) {
         modulesData.forEach((record: any) => {
           const courseLevel = record.course_level as 'beginner' | 'advanced'
           const moduleId = record.module_id // Keep as string (UUID)
 
+          console.log(`Module completed: ${moduleId} (${courseLevel})`)
           courseProgress.value[courseLevel].completedModules.add(moduleId)
         })
       }
 
       // Load earned badges
-      const { data: badgesData } = await supabase
+      const { data: badgesData, error: badgesError } = await supabase
         .from('badges_earned')
         .select('*')
         .eq('user_id', user.id)
+
+      console.log('Badges earned fetched:', badgesData?.length ?? 0, 'records', badgesError ? `Error: ${badgesError.message}` : '')
 
       if (badgesData) {
         badgesData.forEach((record: any) => {
@@ -198,6 +227,40 @@ export const useCourseProgress = () => {
     }
   }
 
+  // Save certificate when course is completed
+  const saveCertificateToSupabase = async (
+    courseLevel: 'beginner' | 'advanced'
+  ) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Check if certificate already exists
+      const { data: existingCert } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('course_level', courseLevel)
+        .single()
+
+      if (!existingCert) {
+        const { error } = await supabase
+          .from('certificates')
+          .insert({
+            student_id: user.id,
+            course_level: courseLevel,
+            issued_at: new Date().toISOString(),
+          })
+
+        if (error) {
+          console.error('Error saving certificate:', error)
+        }
+      }
+    } catch (err) {
+      console.error('Error saving certificate to Supabase:', err)
+    }
+  }
+
   // Get completed modules for a specific course level
   const getCompletedModules = (courseLevel: 'beginner' | 'advanced'): string[] => {
     return Array.from(courseProgress.value[courseLevel].completedModules)
@@ -237,6 +300,11 @@ export const useCourseProgress = () => {
     
     // Save to Supabase
     saveModuleToSupabase(courseLevel, moduleId)
+
+    // If all 5 modules completed, save certificate
+    if (modulePosition === 5) {
+      saveCertificateToSupabase(courseLevel)
+    }
   }
 
   // Check if a module is completed
@@ -323,5 +391,6 @@ export const useCourseProgress = () => {
     getTotalProgressPercentage,
     badgeMapping,
     loadProgressFromSupabase,
+    clearProgress,
   }
 }

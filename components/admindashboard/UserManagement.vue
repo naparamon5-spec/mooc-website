@@ -20,6 +20,45 @@
       </button>
     </div>
 
+    <!-- Search and Filter Bar -->
+    <div class="flex flex-col md:flex-row gap-4 mb-6">
+      <!-- Search Input -->
+      <div class="flex-1">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search by name or email..."
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+      </div>
+
+      <!-- Status Filter Dropdown -->
+      <div class="w-full md:w-40">
+        <select
+          v-model="statusFilter"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+        >
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+
+      <!-- Clear Filters Button -->
+      <button
+        v-if="searchQuery || statusFilter"
+        @click="clearFilters"
+        class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+      >
+        Clear Filters
+      </button>
+    </div>
+
+    <!-- Results Count -->
+    <div v-if="filteredUsers.length > 0" class="mb-4 text-sm text-gray-600">
+      Showing {{ filteredUsers.length }} of {{ users?.length || 0 }} students
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-8">
       <p class="text-gray-600">Loading users...</p>
@@ -38,6 +77,12 @@
       <p class="text-sm">Click "Create Account" to add new student accounts to the system.</p>
     </div>
 
+    <!-- No Results State -->
+    <div v-else-if="filteredUsers.length === 0" class="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded mb-4">
+      <p class="font-semibold">No Results Found</p>
+      <p class="text-sm">No students match your search or filter criteria.</p>
+    </div>
+
     <!-- User Table -->
     <div v-else class="overflow-x-auto">
       <table class="w-full">
@@ -52,7 +97,7 @@
         </thead>
         <tbody>
           <tr 
-            v-for="(user, index) in (users || [])" 
+            v-for="(user, index) in filteredUsers" 
             :key="index"
             class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
           >
@@ -90,11 +135,6 @@
               </div>
             </td>
           </tr>
-          <tr v-if="!(users && users.length > 0)">
-            <td colspan="5" class="py-8 text-center text-gray-500">
-              No users found
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
@@ -102,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 interface UserItem {
   id: string
@@ -115,12 +155,6 @@ interface UserItem {
   updatedAt: string
 }
 
-defineProps<{
-  users?: UserItem[]
-  loading?: boolean
-  error?: string
-}>()
-
 const emit = defineEmits(['action', 'refresh'])
 
 const showCreateModal = ref(false)
@@ -128,6 +162,32 @@ const showEditModal = ref(false)
 const selectedUser = ref(null)
 const loading = ref(false)
 const error = ref('')
+const searchQuery = ref('')
+const statusFilter = ref('')
+
+// Computed property for filtered users
+const filteredUsers = computed(() => {
+  if (!props.users) return []
+  
+  return props.users.filter(user => {
+    // Search filter - check name and email
+    const searchLower = searchQuery.value.toLowerCase()
+    const matchesSearch = searchLower === '' || 
+      user.name.toLowerCase().includes(searchLower) || 
+      user.email.toLowerCase().includes(searchLower)
+    
+    // Status filter
+    const matchesStatus = statusFilter.value === '' || user.status === statusFilter.value
+    
+    return matchesSearch && matchesStatus
+  })
+})
+
+const props = defineProps<{
+  users?: UserItem[]
+  loading?: boolean
+  error?: string
+}>()
 
 const getStatusClass = (status: string) => {
   return status === 'Active'
@@ -159,6 +219,11 @@ const handleDelete = (userId: string) => {
 
 const handleExport = () => {
   emit('action', 'export')
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = ''
 }
 </script>
 

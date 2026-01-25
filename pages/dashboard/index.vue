@@ -151,6 +151,9 @@ const { fetchUserProfile } = useUserProfile();
 // Fetch user profile and modules on mount
 onMounted(async () => {
   try {
+    // Clear any previous user's progress first
+    clearProgress();
+    
     const userData = await fetchUserProfile();
     if (userData?.full_name) {
       studentName.value = userData.full_name;
@@ -161,7 +164,7 @@ onMounted(async () => {
       await fetchModules();
     }
 
-    // Load progress from Supabase
+    // Load progress from Supabase for current user
     await loadProgressFromSupabase();
   } finally {
     isLoading.value = false;
@@ -184,7 +187,8 @@ const {
   getCompletedLessons,
   badgeMapping,
   completeModule,
-  loadProgressFromSupabase
+  loadProgressFromSupabase,
+  clearProgress,
 } = useCourseProgress();
 
 const { fetchModuleById, modules, fetchModules } = useModuleManagement();

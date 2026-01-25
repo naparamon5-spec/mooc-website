@@ -74,6 +74,8 @@ import EnrollmentAnalytics from '~/components/admindashboard/EnrollmentAnalytics
 import CourseCompletionRate from '~/components/admindashboard/CourseCompletionRate.vue'
 import SystemHealth from '~/components/admindashboard/SystemHealth.vue'
 import { useUserProfile } from '~/composables/useUserProfile'
+import { useAdminMetrics } from '~/composables/useAdminMetrics'
+import { useUserManagement } from '~/composables/useUserManagement'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -82,29 +84,27 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
+const { totalEnrolled, activeStudents, pendingEnrollments, completed, fetchMetrics } = useAdminMetrics()
+const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
 
-// Fetch user profile on mount
+// Fetch user profile and metrics on mount
 onMounted(async () => {
-  const userData = await fetchUserProfile();
-  if (userData?.full_name) {
-    adminName.value = userData.full_name;
+  try {
+    const userData = await fetchUserProfile();
+    if (userData?.full_name) {
+      adminName.value = userData.full_name;
+    }
+    
+    // Fetch enrollment metrics from Supabase
+    await fetchMetrics();
+    
+    // Fetch users from database
+    await fetchUsers();
+  } catch (err) {
+    console.error('Error loading admin data:', err);
   }
 });
-
-const totalEnrolled = ref(1205)
-const activeStudents = ref(956)
-const pendingEnrollments = ref(67)
-const completed = ref(247)
-
-const users = ref([
-  { name: 'Jessica Santos', email: 'jessica.s@gmail...', status: 'Inactive' },
-  { name: 'Joricka Brub', email: 'brub.joric@gmail...', status: '80%' },
-  { name: 'Mark Newtor', email: 'new.mark@gmail...', status: '98%' },
-  { name: 'Jame Wat', email: 'james.w2@gmail...', status: '67%' },
-  { name: 'Bert Chan', email: 'chan.bert@gmail...', status: '52%' },
-  { name: 'Dane White', email: 'white.dane@gmail...', status: 'Inactive' }
-])
 
 const activities = ref([
   { 

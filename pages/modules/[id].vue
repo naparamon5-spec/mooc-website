@@ -200,7 +200,7 @@ const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
 const studentName = ref("Student's Name");
-const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage } = useCourseProgress();
+const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage, clearProgress, loadProgressFromSupabase } = useCourseProgress();
 const { fetchModuleById, modules, loading } = useModuleManagement();
 
 const module = ref<any>(null);
@@ -375,6 +375,16 @@ watch(moduleId, async (newModuleId) => {
     }
   }
 }, { immediate: true });
+
+// Load progress and modules on component mount
+onMounted(async () => {
+  try {
+    clearProgress();
+    await loadProgressFromSupabase();
+  } catch (err) {
+    console.error('Error loading progress:', err);
+  }
+});
 
 // Watch for lesson parameter changes
 watch(lessonParam, (newLessonParam) => {
