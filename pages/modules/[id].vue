@@ -41,11 +41,11 @@
               <!-- Module Title -->
               <div
                 @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), 0)"
-                class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors"
+                class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors border-b-2"
                 :class="[
                   mod.id === moduleId
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-800 hover:bg-gray-100',
+                    ? 'bg-primary-600 text-white border-b-primary-700'
+                    : 'text-gray-800 hover:bg-gray-100 border-b-transparent',
                   !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50 cursor-not-allowed hover:bg-white'
                 ]"
               >
@@ -59,8 +59,10 @@
                 <div
                   v-for="(lesson, lessonIndex) in mod.lessons"
                   :key="`${mod.id}-${lessonIndex}`"
+                  @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), lessonIndex)"
                   class="p-2 rounded text-xs transition-colors"
                   :class="[
+                    isModuleAccessible(String(mod.id), moduleIndex) ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed',
                     mod.id === moduleId && currentLessonIndex === lessonIndex
                       ? 'bg-primary-500 text-white font-semibold'
                       : mod.id === moduleId
@@ -69,7 +71,7 @@
                     !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50'
                   ]"
                 >
-                  <span v-if="mod.id === parseInt(moduleId) && currentLessonIndex === lessonIndex" class="mr-2">✓</span>
+                  <span v-if="mod.id === parseInt(moduleId) && currentLessonIndex === lessonIndex" class="mr-2">▶️</span>
                   <span v-else class="mr-2">•</span>
                   {{ lesson.title }}
                 </div>
@@ -156,11 +158,33 @@
           </button>
 
           <button
-            v-else
+            v-else-if="!isCurrentModuleCompleted"
             @click="markLessonAsComplete"
-            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto"
+            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
           >
-            Complete Module ✓
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            Complete Module
+          </button>
+
+          <button
+            v-else-if="isCurrentModuleCompleted && hasNextModule"
+            @click="handleNextModule"
+            class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 ml-auto flex items-center gap-2"
+          >
+            Next Module →
+          </button>
+
+          <button
+            v-else-if="isCurrentModuleCompleted && !hasNextModule"
+            @click="handleBackToDashboard"
+            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            Return to Dashboard
           </button>
         </div>
         </div>
@@ -285,6 +309,10 @@ const currentLesson = computed(() => {
   return module.value.lessons[currentLessonIndex.value] || null;
 });
 
+const isCurrentModuleCompleted = computed(() => {
+  return isModuleCompleted('beginner', moduleId.value);
+});
+
 const goToPreviousLesson = () => {
   if (currentLessonIndex.value > 0) {
     currentLessonIndex.value--;
@@ -298,6 +326,11 @@ const goToNextLesson = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
+
+const hasNextModule = computed(() => {
+  const currentIndex = allBeginnerModules.value.findIndex(m => m.id === moduleId.value);
+  return currentIndex < allBeginnerModules.value.length - 1;
+});
 
 const progressPercentage = computed(() => {
   const totalLessons = module.value?.lessons?.length || 0;

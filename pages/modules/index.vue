@@ -4,8 +4,8 @@
     <DashboardHeader :student-name="studentName" />
 
     <!-- Main Content -->
-    <main class="flex-1 w-full px-4 md:px-8 lg:px-12 py-4 flex flex-col">
-      <h2 class="text-3xl font-bold text-gray-800 mb-6">All Available Modules</h2>
+    <main class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 flex-grow">
+      <h2 class="text-4xl font-bold text-gray-800 mb-8">All Available Modules</h2>
 
       <!-- Loading / Error -->
       <div v-if="loading" class="text-center py-6 flex-1 flex items-center justify-center">
@@ -25,9 +25,9 @@
           :key="module.id"
           :title="module.title"
           :subtitle="module.subtitle"
-          :is-active="module.level === 'beginner'"
+          :is-active="true"
           :is-restricted="!isModuleAccessible(module.id, index)"
-          :is-completed="isModuleCompleted('beginner', module.id)"
+          :is-completed="isModuleCompleted(module.level, module.id)"
           :emoji="module.emoji"
           :module-id="module.id"
           :image-url="module.image_url"
@@ -62,11 +62,30 @@ const router = useRouter();
 
 const completedModules = computed(() => {
   return new Set(
-    modules.value.filter(m => isModuleCompleted("beginner", m.id)).map(m => m.id)
+    modules.value.filter(m => isModuleCompleted(m.level, m.id)).map(m => m.id)
   );
 });
 
-const allAvailableModules = computed(() => modules.value);
+const allAvailableModules = computed(() => {
+  // Group modules by level and sort
+  const beginnerModules = modules.value
+    .filter(m => m.level === 'beginner')
+    .sort((a, b) => {
+      const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
+      const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
+      return aNum - bNum;
+    });
+  
+  const advancedModules = modules.value
+    .filter(m => m.level === 'advanced')
+    .sort((a, b) => {
+      const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
+      const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
+      return aNum - bNum;
+    });
+  
+  return [...beginnerModules, ...advancedModules];
+});
 
 watch(
   () => allAvailableModules.value,
@@ -79,9 +98,22 @@ watch(
 );
 
 const isModuleAccessible = (moduleId, index) => {
+  // First module of beginner level is always accessible
   if (index === 0) return true;
+  
+  const currentModule = allAvailableModules.value[index];
   const previousModule = allAvailableModules.value[index - 1];
-  return isModuleCompleted("beginner", previousModule.id);
+  
+  // If switching from beginner to advanced, require all beginner modules completed
+  if (previousModule.level === 'beginner' && currentModule.level === 'advanced') {
+    const allBeginnerCompleted = modules.value
+      .filter(m => m.level === 'beginner')
+      .every(m => isModuleCompleted('beginner', m.id));
+    return allBeginnerCompleted;
+  }
+  
+  // Otherwise, previous module must be completed
+  return isModuleCompleted(previousModule.level, previousModule.id);
 };
 
 const selectModule = (module) => {
@@ -94,6 +126,6 @@ const selectModule = (module) => {
 
 onMounted(async () => {
   document.title = "Modules Dashboard - MIL MOOC";
-  await fetchModules("beginner");
+  await fetchModules();
 });
 </script>
