@@ -27,7 +27,16 @@
           </button>
           <div class="relative">
             <button @click="dropdownOpen = !dropdownOpen" class="flex items-center gap-2 p-2 text-white hover:text-gray-200 transition-colors">
-              <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary-600 text-sm font-semibold">
+              <img 
+                v-if="profile?.profile_pic_url"
+                :src="profile.profile_pic_url"
+                alt="Profile"
+                class="h-8 w-8 rounded-full object-cover border border-white"
+              />
+              <div 
+                v-else
+                class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary-600 text-sm font-semibold"
+              >
                 {{ userInitials }}
               </div>
             </button>
@@ -94,7 +103,16 @@
           </button>
           <div class="relative">
             <button @click="dropdownOpen = !dropdownOpen" class="flex items-center gap-2 p-2 text-white hover:text-gray-200 transition-colors">
-              <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary-600 text-sm font-semibold">
+              <img 
+                v-if="profile?.profile_pic_url"
+                :src="profile.profile_pic_url"
+                alt="Profile"
+                class="h-8 w-8 rounded-full object-cover border border-white"
+              />
+              <div 
+                v-else
+                class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-primary-600 text-sm font-semibold"
+              >
                 {{ userInitials }}
               </div>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,14 +144,15 @@
     </transition>
   </header>
 </template>
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserProfile } from '~/composables/useUserProfile'
 
 const route = useRoute()
 const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
+const profilePicUrl = ref<string | null>(null)
 
 const { profile, userInitials, logout, fetchUserProfile } = useUserProfile()
 
@@ -148,10 +167,23 @@ const currentRoute = computed(() => route.path)
 
 const isModulesRoute = computed(() => route.path.startsWith('/modules'))
 
+// Watch for profile changes to update avatar in real-time with deep watching
+watch(
+  profile,
+  (newProfile) => {
+    if (newProfile?.profile_pic_url) {
+      profilePicUrl.value = newProfile.profile_pic_url
+    }
+  },
+  { deep: true }
+)
 
 // Fetch user profile on component mount
 onMounted(async () => {
   await fetchUserProfile()
+  if (profile.value?.profile_pic_url) {
+    profilePicUrl.value = profile.value.profile_pic_url
+  }
 })
 
 // Close dropdown when clicking outside

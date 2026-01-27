@@ -4,7 +4,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="w-full px-4 sm:px-6 lg:px-10 py-6 flex-grow">
-      <div class="max-w-6xl mx-auto">
+      <div class="mx-auto">
         <!-- Page Title -->
         <div class="mb-8">
           <h1 class="text-3xl font-bold text-gray-800 mb-2">My Certificates</h1>
