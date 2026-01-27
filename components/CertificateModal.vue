@@ -1,8 +1,8 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg max-w-2xl w-full shadow-2xl animate-fade-in">
+    <div class="bg-white rounded-lg w-96 shadow-2xl animate-fade-in overflow-hidden flex flex-col max-h-[90vh]">
       <!-- Certificate -->
-      <div class="bg-gradient-to-br from-primary-50 to-primary-100 p-12 relative border-8 border-primary-600">
+      <div class="bg-gradient-to-br from-primary-50 to-primary-100 p-6 relative border-4 border-primary-600 overflow-y-auto">
         <!-- Decorative corners -->
         <div class="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-primary-600"></div>
         <div class="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-primary-600"></div>
@@ -11,56 +11,56 @@
 
         <div class="text-center">
           <!-- Badge Icon -->
-          <div class="flex justify-center mb-6">
-            <div class="w-24 h-24 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <div class="flex justify-center mb-3">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
           </div>
 
           <!-- Certificate Title -->
-          <h1 class="text-4xl font-bold text-primary-600 mb-2">Certificate of Completion</h1>
-          <p class="text-gray-600 text-lg mb-8">Media and Information Literacy Beginner Course</p>
+          <h1 class="text-2xl font-bold text-primary-600 mb-1">Certificate of Completion</h1>
+          <p class="text-gray-600 text-sm mb-4">Media and Information Literacy Beginner Course</p>
 
           <!-- Decorative Line -->
-          <div class="w-48 h-1 bg-gradient-to-r from-transparent via-primary-600 to-transparent mx-auto mb-8"></div>
+          <div class="w-32 h-0.5 bg-gradient-to-r from-transparent via-primary-600 to-transparent mx-auto mb-4"></div>
 
           <!-- Certificate Text -->
-          <div class="mb-8">
-            <p class="text-gray-700 text-lg mb-4">This certifies that</p>
-            <p class="text-3xl font-bold text-primary-600 mb-4">{{ studentName }}</p>
-            <p class="text-gray-700 text-lg mb-4">has successfully completed all modules of the</p>
-            <p class="text-2xl font-semibold text-gray-800 mb-6">Media and Information Literacy (MIL) Beginner Course</p>
+          <div class="mb-4">
+            <p class="text-gray-700 text-xs mb-2">This certifies that</p>
+            <p class="text-lg font-bold text-primary-600 mb-2">{{ studentName }}</p>
+            <p class="text-gray-700 text-xs mb-2">has successfully completed all modules of the</p>
+            <p class="text-sm font-semibold text-gray-800">Media and Information Literacy (MIL) Beginner Course</p>
           </div>
 
           <!-- Decorative Line -->
-          <div class="w-48 h-1 bg-gradient-to-r from-transparent via-primary-600 to-transparent mx-auto mb-8"></div>
+          <div class="w-32 h-0.5 bg-gradient-to-r from-transparent via-primary-600 to-transparent mx-auto mb-4"></div>
 
           <!-- Date -->
-          <p class="text-gray-600 mb-8">
+          <p class="text-gray-600 mb-4 text-xs">
             Completed on: <span class="font-semibold text-gray-800">{{ completionDate }}</span>
           </p>
 
           <!-- Signature -->
-          <div class="flex justify-around mb-4 px-8">
+          <div class="flex justify-around mb-2 px-4">
             <div class="text-center">
-              <div class="h-12 mb-2"></div>
-              <p class="text-gray-700 font-semibold">MIL MOOC</p>
-              <p class="text-sm text-gray-600">Platform</p>
+              <div class="h-6 mb-1"></div>
+              <p class="text-gray-700 font-semibold text-xs">MIL MOOC</p>
+              <p class="text-xs text-gray-600">Platform</p>
             </div>
           </div>
 
           <!-- Certificate ID -->
-          <p class="text-xs text-gray-500 mt-4">Certificate ID: {{ certificateId }}</p>
+          <p class="text-xs text-gray-500 mt-2">Certificate ID: {{ certificateId }}</p>
         </div>
       </div>
 
       <!-- Action Buttons -->
-      <div class="bg-gray-50 px-8 py-6 flex flex-col sm:flex-row gap-4">
+      <div class="bg-gray-50 px-4 py-4 flex flex-col gap-2">
         <button
           @click="downloadCertificate"
-          class="flex-1 bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+          class="w-full bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 text-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -69,13 +69,13 @@
         </button>
         <button
           @click="handleNextModule"
-          class="flex-1 bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-semibold hover:bg-blue-200 transition-colors"
+          class="w-full bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-semibold hover:bg-blue-200 transition-colors text-sm"
         >
           Continue to Advanced Course
         </button>
         <button
           @click="handleBackToDashboard"
-          class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+          class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm"
         >
           Back to Dashboard
         </button>

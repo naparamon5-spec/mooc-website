@@ -18,6 +18,7 @@
       <!-- Module Name -->
       <p class="text-center text-gray-600 mb-6">
         {{ moduleName }}
+        <span v-if="studentName" class="block text-sm text-gray-500 mt-1">Completed by {{ studentName }}</span>
       </p>
 
       <!-- Badge Display -->
@@ -57,6 +58,7 @@ interface Props {
   isOpen: boolean;
   moduleName: string;
   badgeName: string;
+  studentName?: string;
   currentModuleId: number;
   totalModules: number;
 }

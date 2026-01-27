@@ -9,6 +9,7 @@
       :isOpen="showCompletionModal"
       :moduleName="module?.title || ''"
       :badgeName="earnedBadgeName"
+      :studentName="studentName"
       :currentModuleId="parseInt(moduleId)"
       :totalModules="5"
       @nextModule="handleNextModule"
@@ -182,6 +183,7 @@ import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue';
 import CertificateModal from '~/components/CertificateModal.vue';
 import { useCourseProgress } from '~/composables/useCourseProgress';
 import { useModuleManagement } from '~/composables/useModuleManagement';
+import { useUserProfile } from '~/composables/useUserProfile';
 
 const route = useRoute();
 const moduleIdRaw = computed(() => {
@@ -199,9 +201,10 @@ const lessonParam = computed(() => {
 const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
-const studentName = ref("Student's Name");
+const studentName = ref("Student Name");
 const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage, clearProgress, loadProgressFromSupabase } = useCourseProgress();
 const { fetchModuleById, modules, loading } = useModuleManagement();
+const { fetchUserProfile } = useUserProfile();
 
 const module = ref<any>(null);
 
@@ -242,8 +245,17 @@ const allBeginnerModules = computed(() => {
 
 // Fetch all modules on mount to show in sidebar
 onMounted(async () => {
-  await fetchAllModules();
-  window.scrollTo({ top: 0, behavior: 'auto' });
+  try {
+    // Fetch user profile to get full_name
+    const userData = await fetchUserProfile();
+    if (userData?.full_name) {
+      studentName.value = userData.full_name;
+    }
+    await fetchAllModules();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  } catch (err) {
+    console.error('Error on mount:', err);
+  }
 });
 
 const fetchAllModules = async () => {
