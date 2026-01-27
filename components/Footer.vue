@@ -9,8 +9,7 @@
       <div>
         <h4 class="font-semibold">Explore</h4>
         <ul class="mt-3 space-y-2 text-sm">
-          <li><a href="#courses" class="text-white/90 hover:underline">Courses</a></li>
-          <li><a href="#outcomes" class="text-white/90 hover:underline">Outcomes</a></li>
+          <li><a href="#courses" class="text-white/90 hover:underline">Sign Up Now</a></li>
           <li><a href="#about" class="text-white/90 hover:underline">About</a></li>
         </ul>
       </div>
