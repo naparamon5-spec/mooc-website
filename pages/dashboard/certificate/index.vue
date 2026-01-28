@@ -51,11 +51,7 @@
             <div class="bg-gradient-to-br from-primary-50 to-primary-100 p-8 relative border-t-4 border-primary-600">
               <!-- Badge Icon -->
               <div class="flex justify-center mb-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                </div>
+                <img src="/assets/logo.png" alt="MIL MOOC" class="h-16 w-20border-primary-600" />
               </div>
 
               <!-- Certificate Info -->
@@ -260,101 +256,88 @@ const viewCertificate = (cert: any) => {
   showCertificateModal.value = true;
 };
 
-// Download certificate
-const downloadCertificate = (cert: any) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1200;
-  canvas.height = 800;
-  const ctx = canvas.getContext('2d')!;
+// Download certificate as PDF
+const downloadCertificate = async (cert: any) => {
+  const { jsPDF } = await import('jspdf');
+  const html2canvas = (await import('html2canvas')).default;
 
-  // Background gradient
-  const gradient = ctx.createLinearGradient(0, 0, 1200, 800);
-  gradient.addColorStop(0, '#f0f9ff');
-  gradient.addColorStop(1, '#e0f2fe');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 1200, 800);
+  // Create a temporary div with certificate content
+  const tempDiv = document.createElement('div');
+  tempDiv.style.width = '8.5in';
+  tempDiv.style.height = '11in';
+  tempDiv.style.position = 'absolute';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.backgroundColor = '#f0f9ff';
+  tempDiv.style.padding = '40px';
+  tempDiv.style.fontFamily = 'Arial, sans-serif';
+  tempDiv.style.boxSizing = 'border-box';
+  tempDiv.style.border = '8px solid #0c3a66';
 
-  // Border
-  ctx.strokeStyle = '#0c3a66';
-  ctx.lineWidth = 12;
-  ctx.strokeRect(20, 20, 1160, 760);
+  tempDiv.innerHTML = `
+    <div style="text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+      <div style="margin-bottom: 30px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(to bottom right, #0c3a66, #0a2d52); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+          <svg style="width: 40px; height: 40px; color: white;" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        </div>
+      </div>
 
-  // Decorative corners
-  ctx.fillStyle = '#0c3a66';
-  const cornerSize = 30;
-  ctx.fillRect(20, 20, cornerSize, 2);
-  ctx.fillRect(20, 20, 2, cornerSize);
-  ctx.fillRect(1180 - cornerSize, 20, cornerSize, 2);
-  ctx.fillRect(1180, 20, 2, cornerSize);
-  ctx.fillRect(20, 780, cornerSize, 2);
-  ctx.fillRect(20, 780 - cornerSize, 2, cornerSize);
-  ctx.fillRect(1180 - cornerSize, 780, cornerSize, 2);
-  ctx.fillRect(1180, 780 - cornerSize, 2, cornerSize);
+      <h1 style="font-size: 36px; color: #083358; margin: 0 0 10px 0; font-weight: bold;">Certificate of Achievement</h1>
+      
+      <h2 style="font-size: 24px; color: #0c3a66; margin: 0 0 20px 0; font-weight: bold;">${cert.badgeName}</h2>
 
-  // Title
-  ctx.font = 'bold 48px Arial';
-  ctx.fillStyle = '#083358';
-  ctx.textAlign = 'center';
-  ctx.fillText('Certificate of Achievement', 600, 120);
+      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
 
-  // Badge name
-  ctx.font = 'bold 36px Arial';
-  ctx.fillStyle = '#0c3a66';
-  ctx.fillText(cert.badgeName, 600, 190);
+      <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">This certifies that</p>
 
-  // Decorative line
-  ctx.strokeStyle = '#083358';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(300, 240);
-  ctx.lineTo(900, 240);
-  ctx.stroke();
+      <h3 style="font-size: 28px; color: #083358; margin: 0 0 15px 0; font-weight: bold;">${studentName.value}</h3>
 
-  // Certificate text
-  ctx.font = '20px Arial';
-  ctx.fillStyle = '#374151';
-  ctx.fillText('This certifies that', 600, 320);
+      <p style="font-size: 16px; color: #374151; margin: 0 0 5px 0;">has successfully completed all modules of the</p>
 
-  ctx.font = 'bold 36px Arial';
-  ctx.fillStyle = '#083358';
-  ctx.fillText(studentName.value, 600, 390);
+      <p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0; font-weight: bold;">${cert.badgeName}</p>
 
-  ctx.font = '20px Arial';
-  ctx.fillStyle = '#374151';
-  ctx.fillText('has successfully completed all modules of the', 600, 450);
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 30px 0;">${cert.courseLevel === 'beginner' ? 'Beginner' : 'Advanced'} Level Course</p>
 
-  ctx.font = 'bold 28px Arial';
-  ctx.fillStyle = '#1f2937';
-  ctx.fillText(cert.badgeName, 600, 510);
+      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
 
-  // Course level info
-  ctx.font = '18px Arial';
-  ctx.fillStyle = '#6b7280';
-  ctx.fillText(`${cert.courseLevel === 'beginner' ? 'Beginner' : 'Advanced'} Level Course`, 600, 570);
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 10px 0;">Earned on: <strong>${formatDate(cert.earnedAt)}</strong></p>
 
-  // Decorative line
-  ctx.strokeStyle = '#083358';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(300, 620);
-  ctx.lineTo(900, 620);
-  ctx.stroke();
+      <p style="font-size: 11px; color: #9ca3af; margin: 0;">Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}</p>
+    </div>
+  `;
 
-  // Date
-  ctx.font = '18px Arial';
-  ctx.fillStyle = '#6b7280';
-  ctx.fillText(`Earned on: ${formatDate(cert.earnedAt)}`, 600, 690);
+  document.body.appendChild(tempDiv);
 
-  // Certificate ID
-  ctx.font = '12px Arial';
-  ctx.fillStyle = '#9ca3af';
-  ctx.fillText(`Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}`, 600, 750);
+  try {
+    // Convert HTML to canvas
+    const canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#f0f9ff'
+    });
 
-  // Download
-  const link = document.createElement('a');
-  link.href = canvas.toDataURL('image/png');
-  link.download = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.png`;
-  link.click();
+    // Create PDF from canvas (A4 size)
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+    // Download PDF
+    const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`;
+    pdf.save(fileName);
+  } finally {
+    // Clean up temporary div
+    document.body.removeChild(tempDiv);
+  }
 };
 
 // Navigation handlers

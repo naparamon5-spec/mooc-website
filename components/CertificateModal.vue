@@ -44,20 +44,7 @@
         <div class="text-center">
           <!-- Badge Icon -->
           <div class="flex justify-center mb-3">
-            <div
-              class="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-8 w-8 text-white"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-                />
-              </svg>
-            </div>
+            <img src="/assets/logo.png" alt="MIL MOOC" class="h-16 w-20 border-primary-600" />
           </div>
 
           <!-- Title -->
@@ -173,8 +160,83 @@ const certificateId = computed(() => {
   return `MIL-${timestamp}-${random}`
 })
 
-const downloadCertificate = () => {
-  // unchanged — same logic as before
+const downloadCertificate = async () => {
+  const { jsPDF } = await import('jspdf')
+  const html2canvas = (await import('html2canvas')).default
+
+  // Create a temporary div with certificate content
+  const tempDiv = document.createElement('div')
+  tempDiv.style.width = '8.5in'
+  tempDiv.style.height = '11in'
+  tempDiv.style.position = 'absolute'
+  tempDiv.style.left = '-9999px'
+  tempDiv.style.top = '0'
+  tempDiv.style.backgroundColor = '#f0f9ff'
+  tempDiv.style.padding = '40px'
+  tempDiv.style.fontFamily = 'Arial, sans-serif'
+  tempDiv.style.boxSizing = 'border-box'
+  tempDiv.style.border = '8px solid #0c3a66'
+
+  tempDiv.innerHTML = `
+    <div style="text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+      <div style="margin-bottom: 30px;">
+        <img src="/assets/logo.png" alt="MIL MOOC" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; object-fit: cover; border: 3px solid #0c3a66;" />
+      </div>
+
+      <h1 style="font-size: 36px; color: #083358; margin: 0 0 10px 0; font-weight: bold;">Certificate of Achievement</h1>
+      
+      <h2 style="font-size: 24px; color: #0c3a66; margin: 0 0 20px 0; font-weight: bold;">Media and Information Literacy (MIL) Beginner Course</h2>
+
+      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
+
+      <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">This certifies that</p>
+
+      <h3 style="font-size: 28px; color: #083358; margin: 0 0 15px 0; font-weight: bold;">${props.studentName}</h3>
+
+      <p style="font-size: 16px; color: #374151; margin: 0 0 5px 0;">has successfully completed all modules of the</p>
+
+      <p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0; font-weight: bold;">Media and Information Literacy (MIL) Beginner Course</p>
+
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 30px 0;">Beginner Level Course</p>
+
+      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
+
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 10px 0;">Earned on: <strong>${completionDate.value}</strong></p>
+
+      <p style="font-size: 11px; color: #9ca3af; margin: 0;">Certificate ID: ${certificateId.value}</p>
+    </div>
+  `
+
+  document.body.appendChild(tempDiv)
+
+  try {
+    // Convert HTML to canvas
+    const canvas = await html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#f0f9ff'
+    })
+
+    // Create PDF from canvas (A4 size)
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = pdf.internal.pageSize.getHeight()
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+
+    // Download PDF
+    const fileName = `Certificate-${props.studentName.replace(/\s+/g, '-')}.pdf`
+    pdf.save(fileName)
+  } finally {
+    // Clean up temporary div
+    document.body.removeChild(tempDiv)
+  }
 }
 
 const handleNextModule = () => emit('nextCourse')
