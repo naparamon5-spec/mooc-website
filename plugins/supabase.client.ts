@@ -5,7 +5,12 @@ export default defineNuxtPlugin(() => {
 
   const supabase = createClient(
     config.public.supabaseUrl,
-    config.public.supabaseAnonKey
+    config.public.supabaseAnonKey,
+    {
+      auth: {
+        detectSessionInUrl: false,
+      },
+    }
   )
 
   return {
