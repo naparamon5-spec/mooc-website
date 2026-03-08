@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-const supabase = useSupabaseClient()
+const { $supabase: supabase } = useNuxtApp()
 const router = useRouter()
 const route = useRoute()
 
