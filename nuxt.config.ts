@@ -2,6 +2,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
+  nitro: {
+    prerender: {
+      routes: [
+        '/auth/confirm',
+      ]
+    }
+  },
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
@@ -26,5 +33,6 @@ export default defineNuxtConfig({
   },
   build: {
     transpile: ['primevue']
-  }
+  },
+  ssr: false
 })
