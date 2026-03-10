@@ -216,6 +216,7 @@ async function onSubmit() {
       email: email.value,
       password: password.value,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
         data: {
           full_name: name.value
         }

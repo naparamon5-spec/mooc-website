@@ -59,7 +59,7 @@
                 <div
                   v-for="(lesson, lessonIndex) in mod.lessons"
                   :key="`${mod.id}-${lessonIndex}`"
-                  @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), lessonIndex)"
+                  @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), Number(lessonIndex))"
                   class="p-2 rounded text-xs transition-colors"
                   :class="[
                     isModuleAccessible(String(mod.id), moduleIndex) ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed',

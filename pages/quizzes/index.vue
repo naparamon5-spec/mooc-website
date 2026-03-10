@@ -1,14 +1,54 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex flex-col">
-    <DashboardHeader :student-name="studentName"  />
-    <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 flex-grow">
-      <h1 class="text-4xl font-bold text-gray-800 mb-8">Quizzes</h1>
+  <div class="min-h-screen bg-gray-50 flex flex-col">
+    <DashboardHeader :student-name="studentName" />
+    
+    <main class="flex-grow">
+      <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-8">All Available Quizzes</h1>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <QuizCard v-for="quiz in quizzes" :key="quiz.id" :quiz="quiz" />
+        <!-- Loading State -->
+        <div v-if="loading" class="flex items-center justify-center py-20">
+          <div class="text-center">
+            <svg class="w-12 h-12 text-primary-600 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-gray-600 mt-4 text-lg">Loading quizzes...</p>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="!quizzes || quizzes.length === 0" class="flex items-center justify-center py-20">
+          <div class="text-center max-w-md mx-auto">
+            <div class="mb-4">
+              <svg class="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">No Quizzes Available</h2>
+            <p class="text-gray-500 mb-6">
+              There are no quizzes available at the moment. Check back later or continue with your modules.
+            </p>
+            <router-link 
+              to="/dashboard" 
+              class="inline-block bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+            >
+              Go to Dashboard
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Quizzes Grid -->
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <QuizCard
+            v-for="quiz in quizzes"
+            :key="quiz.id"
+            :quiz="quiz"
+          />
+        </div>
       </div>
-    </div>
-    <!-- Footer -->
+    </main>
+
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
@@ -16,58 +56,20 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import QuizCard from '~/components/QuizCard.vue';
+import { ref, onMounted } from 'vue';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
+import QuizCard from '~/components/QuizCard.vue';
+import { useQuizManagement } from '~/composables/useQuizManagement'
+import { useRouter } from 'vue-router'
 
-const quizzes = ref([
-  {
-    id: 1,
-    title: 'Introduction to Web Development',
-    description: 'Test your knowledge on the basics of HTML, CSS, and JavaScript.',
-    questions: 10,
-    duration: '15 min',
-    difficulty: 'Beginner',
-  },
-  {
-    id: 2,
-    title: 'Advanced JavaScript Concepts',
-    description: 'Challenge yourself with advanced topics like closures, prototypes, and async/await.',
-    questions: 15,
-    duration: '25 min',
-    difficulty: 'Intermediate',
-  },
-  {
-    id: 3,
-    title: 'Vue.js Fundamentals',
-    description: 'Assess your understanding of Vue.js core concepts, components, and reactivity.',
-    questions: 12,
-    duration: '20 min',
-    difficulty: 'Intermediate',
-  },
-  {
-    id: 4,
-    title: 'Nuxt.js for Modern Web Apps',
-    description: 'Explore server-side rendering, routing, and state management in Nuxt.js.',
-    questions: 10,
-    duration: '18 min',
-    difficulty: 'Advanced',
-  },
-  {
-    id: 5,
-    title: 'Understanding CSS Grid and Flexbox',
-    description: 'Deep dive into modern CSS layout techniques.',
-    questions: 8,
-    duration: '10 min',
-    difficulty: 'Beginner',
-  },
-]);
+const { quizzes, loading, fetchQuizzes } = useQuizManagement()
+const router = useRouter()
 
-// You might want to fetch quizzes from an API in a real application
-// onMounted(async () => {
-//   const response = await fetch('/api/quizzes');
-//   quizzes.value = await response.json();
-// });
+const studentName = ref('')
+
+onMounted(async () => {
+  await fetchQuizzes()
+})
 </script>
 
 <style scoped>

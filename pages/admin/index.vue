@@ -53,7 +53,7 @@
 
       <!-- System Health -->
       <div class="mb-8">
-        <SystemHealth :metrics="systemMetrics" />
+        <SystemHealth :metrics="moduleMetrics" />
       </div>
     </div>
 
@@ -64,8 +64,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import MetricCard from '~/components/admindashboard/MetricCard.vue'
 import CourseManagement from '~/components/admindashboard/CourseManagement.vue'
@@ -84,7 +84,7 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
-const { totalEnrolled, activeStudents, pendingEnrollments, completed, fetchMetrics } = useAdminMetrics()
+const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, fetchMetrics, fetchModuleCompletionStats } = useAdminMetrics()
 const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
 
@@ -98,6 +98,8 @@ onMounted(async () => {
     
     // Fetch enrollment metrics from Supabase
     await fetchMetrics();
+    // Fetch module completion stats (last 2 weeks)
+    await fetchModuleCompletionStats();
     
     // Fetch users from database
     await fetchUsers();
@@ -148,28 +150,30 @@ const completionData = ref([
   { year: '2029', percentage: 40 }
 ])
 
-const systemMetrics = ref([
-  { label: 'Server Load', status: 'Low', value: null },
-  { label: 'Storage Usage', status: 'Warning', value: '89%' },
-  { label: 'API Uptime', status: 'Good', value: '91%' },
-  { label: 'Security Status', status: 'Good', value: null },
-  { label: 'Error Logs', status: 'Warning', value: null },
-  { label: 'Network and Bandwidth', status: 'Good', value: null },
-  { label: 'Server Performance', status: 'Good', value: null },
-  { label: 'Database Health', status: 'Good', value: null }
-])
+// module completion counts used to illustrate how quickly each module is being finished
+// (data pulled from the last 14 days)
+const moduleMetrics = ref<Array<{ label: string, status?: string, value: number | null }>>([])
 
-const handleUserAction = (actionType) => {
+// whenever moduleCompletionStats changes we rebuild moduleMetrics
+watch(moduleCompletionStats, (newStats) => {
+  moduleMetrics.value = newStats.map(s => ({
+    label: s.title,
+    status: '',
+    value: s.completions
+  }))
+}, { immediate: true })
+
+const handleUserAction = (actionType: string) => {
   console.log('User action:', actionType)
   // Handle user management actions
 }
 
-const handleCourseAction = (actionType) => {
+const handleCourseAction = (actionType: string) => {
   console.log('Course action:', actionType)
   // Handle course management actions
 }
 
-const handleRetry = (activity) => {
+const handleRetry = (activity: any) => {
   console.log('Retry activity:', activity)
   // Handle retry logic
 }

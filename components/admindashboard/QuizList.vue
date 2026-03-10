@@ -77,9 +77,9 @@
           Are you sure you want to delete "<strong>{{ quizToDelete?.title }}</strong>"? This action cannot be undone.
         </p>
         <div class="flex gap-3">
-          <button
-            @click="deleteQuiz"
-            :disabled="loading"
+<button
+              @click="deleteQuizAction"
+              :disabled="loading"
             class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
           >
             {{ loading ? 'Deleting...' : 'Delete' }}

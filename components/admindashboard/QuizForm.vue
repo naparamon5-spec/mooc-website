@@ -32,6 +32,22 @@
         ></textarea>
       </div>
 
+      <!-- Module -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Assign to Module
+        </label>
+        <select
+          v-model="formData.moduleId"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="">Select a module (optional)</option>
+          <option v-for="module in modules" :key="module.id" :value="module.id">
+            {{ module.title }}
+          </option>
+        </select>
+      </div>
+
       <!-- Level -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -217,8 +233,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive } from 'vue'
+import { ref, watch, reactive, onMounted } from 'vue'
 import { useQuizManagement, type Quiz, type QuizQuestion } from '~/composables/useQuizManagement'
+import { useModuleManagement } from '~/composables/useModuleManagement'
 
 const props = defineProps({
   quiz: {
@@ -234,6 +251,7 @@ const props = defineProps({
 const emit = defineEmits(['save', 'cancel'])
 
 const { createQuiz, updateQuiz, loading, error } = useQuizManagement()
+const { fetchModules, modules } = useModuleManagement()
 
 const formData = reactive<Quiz>({
   title: props.quiz?.title || '',
@@ -242,6 +260,10 @@ const formData = reactive<Quiz>({
   level: props.quiz?.level || 'beginner',
   questions: props.quiz?.questions || [],
   passingScore: props.quiz?.passing_score || 70,
+})
+
+onMounted(async () => {
+  await fetchModules()
 })
 
 // Watch for changes to props

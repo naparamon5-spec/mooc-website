@@ -118,10 +118,11 @@ const startEditQuiz = (quiz) => {
   showForm.value = true
 }
 
-const handleQuizSaved = () => {
+const handleQuizSaved = async () => {
   showForm.value = false
   selectedQuiz.value = null
   isEditMode.value = false
+  await fetchQuizzes()
 }
 
 const handleCancel = () => {

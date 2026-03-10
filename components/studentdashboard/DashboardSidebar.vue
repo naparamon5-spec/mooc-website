@@ -10,6 +10,15 @@
     <nav class="bg-white rounded-lg shadow p-4">
       <h3 class="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide">Courses</h3>
       <ul class="space-y-2">
+        <!-- <li>
+          <NuxtLink
+            to="/quizzes"
+            class="flex items-center p-2 rounded-md hover:bg-gray-100 transition-colors text-gray-700"
+          >
+            <span class="mr-2 text-lg">📝</span>
+            <span>Quizzes</span>
+          </NuxtLink>
+        </li> -->
         <li>
           <a
             href="#"
