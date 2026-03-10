@@ -165,7 +165,7 @@ export const useCourseProgress = () => {
           course_level: courseLevel,
           module_id: moduleId,
           lesson_index: lessonIndex,
-        })
+        }, { onConflict: 'user_id,course_level,module_id,lesson_index' })
 
       if (error) {
         console.error('Error saving lesson progress:', error)

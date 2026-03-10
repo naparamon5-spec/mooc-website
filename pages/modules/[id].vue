@@ -34,7 +34,7 @@
           <h2 class="text-xl font-bold text-gray-800 mb-6">Curriculum</h2>
           <div class="space-y-2">
             <div
-              v-for="(mod, moduleIndex) in allBeginnerModules"
+              v-for="(mod, moduleIndex) in allModules"
               :key="mod.id"
               class="space-y-1"
             >
@@ -43,7 +43,7 @@
                 @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), 0)"
                 class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors border-b-2"
                 :class="[
-                  mod.id === moduleId
+                  String(mod.id) === moduleId
                     ? 'bg-primary-600 text-white border-b-primary-700'
                     : 'text-gray-800 hover:bg-gray-100 border-b-transparent',
                   !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50 cursor-not-allowed hover:bg-white'
@@ -63,9 +63,9 @@
                   class="p-2 rounded text-xs transition-colors"
                   :class="[
                     isModuleAccessible(String(mod.id), moduleIndex) ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed',
-                    mod.id === moduleId && currentLessonIndex === lessonIndex
+                    String(mod.id) === moduleId && currentLessonIndex === lessonIndex
                       ? 'bg-primary-500 text-white font-semibold'
-                      : mod.id === moduleId
+                      : String(mod.id) === moduleId
                       ? 'text-primary-600 font-medium'
                       : 'text-gray-600',
                     !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50'
@@ -165,7 +165,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
-            Complete Module
+            Take Quiz
           </button>
 
           <button
@@ -191,6 +191,51 @@
       </section>
     </main>
 
+    <!-- Quiz Prompt Dialog -->
+    <div
+      v-if="showQuizDialog"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Module Quiz</h2>
+        <p class="text-gray-600 mb-4">
+          Before you can complete this module, you need to pass the quiz.
+        </p>
+
+        <div v-if="quizLoading" class="text-gray-600 py-4">
+          Loading quiz information...
+        </div>
+
+        <div v-else-if="quizError" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4">
+          {{ quizError }}
+        </div>
+
+        <div v-else-if="quizInfo" class="space-y-2 mb-4">
+          <p><span class="font-semibold">Topic:</span> {{ quizInfo.title }}</p>
+          <p><span class="font-semibold">Number of items:</span> {{ quizInfo.questions?.length || 0 }}</p>
+          <p><span class="font-semibold">Passing score:</span> {{ quizInfo.passing_score || 70 }}%</p>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-4">
+          <button
+            type="button"
+            @click="showQuizDialog = false"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="goToQuiz"
+            :disabled="!quizInfo || !!quizError"
+            class="px-4 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Take Quiz
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
@@ -207,6 +252,7 @@ import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue';
 import CertificateModal from '~/components/CertificateModal.vue';
 import { useCourseProgress } from '~/composables/useCourseProgress';
 import { useModuleManagement } from '~/composables/useModuleManagement';
+import { useQuizManagement } from '~/composables/useQuizManagement';
 import { useUserProfile } from '~/composables/useUserProfile';
 
 const route = useRoute();
@@ -225,47 +271,52 @@ const lessonParam = computed(() => {
 const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
+const showQuizDialog = ref(false);
+const quizInfo = ref<any | null>(null);
+const quizLoading = ref(false);
+const quizError = ref<string | null>(null);
 const studentName = ref("Student Name");
 const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage, clearProgress, loadProgressFromSupabase } = useCourseProgress();
-const { fetchModuleById, modules, loading } = useModuleManagement();
+const { fetchModuleById, fetchModules, modules, loading } = useModuleManagement();
+const { fetchQuizForModule } = useQuizManagement();
 const { fetchUserProfile } = useUserProfile();
 
 const module = ref<any>(null);
 
 const isLastModule = computed(() => {
-  // Check if this is the 5th beginner module (last module)
-  const allBeginnerModules = modules.value.filter(m => m.level === 'beginner');
-  const sortedModules = allBeginnerModules.sort((a, b) => {
-    const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
-    const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
-    return aNum - bNum;
-  });
-  return sortedModules.length > 0 && module.value?.id === sortedModules[sortedModules.length - 1].id;
+  const sortedModules = allModules.value;
+  if (!sortedModules.length || !module.value) return false;
+  const lastId = String(sortedModules[sortedModules.length - 1].id);
+  return String(module.value.id) === lastId;
 });
 
 const earnedBadgeName = computed(() => {
-  const courseLevel = 'beginner' as const;
+  const courseLevel = module.value?.level || 'beginner';
   
   // Find module position in sorted list
-  const sortedModules = allBeginnerModules.value;
-  const modulePosition = sortedModules.findIndex(m => m.id === moduleId.value) + 1; // 1-indexed
+  const sortedModules = allModules.value.filter(m => m.level === courseLevel);
+  const modulePosition = sortedModules.findIndex(m => String(m.id) === String(moduleId.value)) + 1; // 1-indexed
   
-  const courseBadges = badgeMapping[courseLevel];
+  const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping];
   if (courseBadges && modulePosition > 0) {
     return courseBadges[modulePosition] || 'Unknown Badge';
   }
   return 'Unknown Badge';
 });
 
-const allBeginnerModules = computed(() => {
+const allModules = computed(() => {
   return modules.value
-    .filter(m => m.level === 'beginner')
-    .sort((a, b) => {
-      const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
-      const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
+    .slice()
+    .sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10);
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10);
       return aNum - bNum;
     });
 });
+
+const allBeginnerModules = computed(() =>
+  allModules.value.filter((m: any) => m.level === 'beginner'),
+);
 
 // Fetch all modules on mount to show in sidebar
 onMounted(async () => {
@@ -283,23 +334,42 @@ onMounted(async () => {
 });
 
 const fetchAllModules = async () => {
-  const { $supabase } = useNuxtApp();
-  const supabase = $supabase;
   try {
-    const { data, error } = await supabase
-      .from('modules')
-      .select('*')
-      .eq('level', 'beginner')
-      .order('id', { ascending: true });
-    
-    if (error) throw error;
-    if (data) {
-      // Update modules with fetched data
-      modules.value = data;
+    if (!modules.value.length) {
+      await fetchModules();
     }
   } catch (err) {
     console.error('Error fetching all modules:', err);
   }
+};
+
+const openQuizDialog = async () => {
+  if (!module.value) return;
+  quizLoading.value = true;
+  quizError.value = null;
+  quizInfo.value = null;
+
+  try {
+    const data = await fetchQuizForModule(String(module.value.id));
+    if (!data) {
+      quizError.value = 'No quiz is configured for this module yet.';
+      return;
+    }
+    quizInfo.value = data as any;
+    showQuizDialog.value = true;
+  } catch (err) {
+    console.error('Error opening quiz dialog:', err);
+    quizError.value = 'Failed to load quiz information.';
+  } finally {
+    quizLoading.value = false;
+  }
+};
+
+const goToQuiz = () => {
+  if (!quizInfo.value?.id) return;
+  showQuizDialog.value = false;
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  navigateTo(`/quizzes/${quizInfo.value.id}`);
 };
 
 const currentLesson = computed(() => {
@@ -328,13 +398,17 @@ const goToNextLesson = () => {
 };
 
 const hasNextModule = computed(() => {
-  const currentIndex = allBeginnerModules.value.findIndex(m => m.id === moduleId.value);
-  return currentIndex < allBeginnerModules.value.length - 1;
+  const currentIndex = allModules.value.findIndex(
+    (m: any) => String(m.id) === moduleId.value,
+  );
+  return currentIndex >= 0 && currentIndex < allModules.value.length - 1;
 });
 
 const progressPercentage = computed(() => {
+  const level = module.value?.level || 'beginner';
+  const totalModules = allModules.value.filter(m => m.level === level).length;
   const totalLessons = module.value?.lessons?.length || 0;
-  return getTotalProgressPercentage('beginner', 5, moduleId.value, totalLessons);
+  return getTotalProgressPercentage(level, totalModules, moduleId.value, totalLessons);
 });
 
 const markLessonAsComplete = () => {
@@ -348,15 +422,18 @@ const markLessonAsComplete = () => {
       completedLessons.value.has(index)
     );
     if (allCurrentLessonsCompleted) {
-      completeModule('beginner', currentModuleId);
-      showCompletionModal.value = true;
+      // All lessons done – require quiz before marking module as completed
+      openQuizDialog();
     }
   }
 };
 
 const handleNextModule = () => {
-  const nextModuleIndex = allBeginnerModules.value.findIndex(m => m.id === moduleId.value) + 1;
-  if (nextModuleIndex < allBeginnerModules.value.length) {
+  const currentIndex = allBeginnerModules.value.findIndex(
+    (m: any) => String(m.id) === moduleId.value,
+  );
+  const nextModuleIndex = currentIndex + 1;
+  if (currentIndex >= 0 && nextModuleIndex < allBeginnerModules.value.length) {
     // Close modal first
     showCompletionModal.value = false;
     // Reset lesson index and completed lessons for new module
@@ -391,13 +468,15 @@ const goToModule = (id: string, lessonIndex: number = 0) => {
 };
 
 const isModuleAccessible = (moduleId: string, index: number) => {
+  // Modules are ordered consistently in allModules; unlock sequentially
   if (index === 0) {
     return true;
   }
+
   if (index > 0) {
-    const prevMod = allBeginnerModules.value[index - 1];
+    const prevMod = allModules.value[index - 1] as any;
     if (prevMod) {
-      return isModuleCompleted('beginner', prevMod.id);
+      return isModuleCompleted(prevMod.level || 'beginner', String(prevMod.id));
     }
   }
   return false;
@@ -430,6 +509,15 @@ onMounted(async () => {
     console.error('Error loading progress:', err);
   }
 });
+
+// When coming back from a passed quiz, automatically show completion modal
+const fromQuiz = computed(() => route.query.fromQuiz === '1');
+
+watch(fromQuiz, (val) => {
+  if (val && module.value) {
+    showCompletionModal.value = true;
+  }
+}, { immediate: true });
 
 // Watch for lesson parameter changes
 watch(lessonParam, (newLessonParam) => {

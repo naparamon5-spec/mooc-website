@@ -173,6 +173,15 @@
               </button>
             </div>
           </div>
+
+          <!-- Success Modal for Passed Quiz -->
+          <SuccessModal
+            v-if="result?.passed && showSuccessModal"
+            :title="'Quiz Passed!'"
+            :message="`Congratulations! You passed the quiz and earned the ${earnedBadgeName} badge.`"
+            :buttonText="'Continue to Module'"
+            @close="handleSuccessModalClose"
+          />
         </div>
       </div>
     </main>
@@ -187,13 +196,18 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue'
+import SuccessModal from '~/components/SuccessModal.vue'
 import { useQuizManagement } from '~/composables/useQuizManagement'
+import { useCourseProgress } from '~/composables/useCourseProgress'
+import { useModuleManagement } from '~/composables/useModuleManagement'
 
 const route = useRoute()
 const router = useRouter()
 const quizId = computed(() => route.params.id as string)
 
 const { fetchQuizById, submitQuizAnswers } = useQuizManagement()
+const { completeModule, badgeMapping } = useCourseProgress()
+const { fetchModules, modules } = useModuleManagement()
 
 const quiz = ref<any>(null)
 const loading = ref(false)
@@ -202,6 +216,7 @@ const answers = ref<Record<number, string | number>>({})
 const result = ref<any>(null)
 const submitting = ref(false)
 const currentQuestionIndex = ref(0)
+const showSuccessModal = ref(false)
 
 const currentQuestion = computed(() => quiz.value?.questions[currentQuestionIndex.value])
 
@@ -228,6 +243,31 @@ const progress = computed(() => {
 
 const isAnswered = (idx: number) => answers.value[idx] !== undefined
 
+const earnedBadgeName = computed(() => {
+  if (!quiz.value?.level || !quiz.value?.module_id) return 'Unknown Badge'
+  
+  const courseLevel = quiz.value.level
+  const moduleId = quiz.value.module_id
+  
+  // Find module position in sorted list
+  const sortedModules = modules.value
+    .filter((m: any) => m.level === courseLevel)
+    .slice()
+    .sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+      return aNum - bNum
+    })
+  
+  const modulePosition = sortedModules.findIndex(m => String(m.id) === String(moduleId)) + 1 // 1-indexed
+  
+  const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping]
+  if (courseBadges && modulePosition > 0) {
+    return courseBadges[modulePosition] || 'Unknown Badge'
+  }
+  return 'Unknown Badge'
+})
+
 onMounted(async () => {
   loading.value = true
   error.value = ''
@@ -241,6 +281,9 @@ onMounted(async () => {
     } else {
       error.value = 'Quiz not found.'
     }
+    
+    // Fetch modules to determine badge
+    await fetchModules()
   } catch (err) {
     error.value = 'Failed to load quiz.'
     console.error('Error:', err)
@@ -256,6 +299,12 @@ const submitQuiz = async () => {
     const res = await submitQuizAnswers(quizId.value, answers.value)
     if (res) {
       result.value = res
+
+      // If user passed, mark the linked module as completed and show success modal
+      if (res.passed && quiz.value?.module_id && quiz.value?.level) {
+        completeModule(quiz.value.level, String(quiz.value.module_id))
+        showSuccessModal.value = true
+      }
     }
   } catch (err) {
     console.error('Error submitting quiz', err)
@@ -268,6 +317,11 @@ const retakeQuiz = () => {
   result.value = null
   answers.value = {}
   currentQuestionIndex.value = 0
+}
+
+const handleSuccessModalClose = () => {
+  showSuccessModal.value = false
+  goBack()
 }
 
 const goBack = () => {

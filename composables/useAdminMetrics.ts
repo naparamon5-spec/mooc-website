@@ -8,6 +8,7 @@ export const useAdminMetrics = () => {
   const activeStudents = ref(0)
   const pendingEnrollments = ref(0)
   const completed = ref(0)
+  const moduleCompletionStats = ref<Array<{ title: string, completions: number }>>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -115,13 +116,44 @@ export const useAdminMetrics = () => {
     }
   }
 
+  // Fetch module completion stats for the last 14 days
+  const fetchModuleCompletionStats = async () => {
+    try {
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+
+      const { data, error: fetchError } = await supabase
+        .from('module_completion')
+        .select('module_title, created_at')
+        .gte('created_at', fourteenDaysAgo.toISOString())
+
+      if (fetchError) throw fetchError
+
+      // Group by module_title
+      const stats: { [key: string]: number } = {}
+      data?.forEach((item: any) => {
+        stats[item.module_title] = (stats[item.module_title] || 0) + 1
+      })
+
+      moduleCompletionStats.value = Object.entries(stats).map(([title, completions]) => ({
+        title,
+        completions
+      }))
+    } catch (err: any) {
+      console.error('Error fetching module completion stats:', err)
+      moduleCompletionStats.value = []
+    }
+  }
+
   return {
     totalEnrolled,
     activeStudents,
     pendingEnrollments,
     completed,
+    moduleCompletionStats,
     isLoading,
     error,
-    fetchMetrics
+    fetchMetrics,
+    fetchModuleCompletionStats
   }
 }

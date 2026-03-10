@@ -244,17 +244,17 @@ const currentCourseData = computed(() => {
 
 const currentModules = computed(() => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-  
-  // Get modules from database filtered by level, sorted by creation date
+
+  // Keep module order consistent (Module 1, Module 2, etc.)
   const dbModules = modules.value
     .filter(m => m.level === courseLevel)
+    .slice()
     .sort((a, b) => {
-      // Sort by created_at to maintain consistent order
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
-      return dateA - dateB;
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10);
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10);
+      return aNum - bNum;
     });
-  
+
   return dbModules;
 });
 

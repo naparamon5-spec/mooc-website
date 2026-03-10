@@ -42,7 +42,11 @@
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">Select a module (optional)</option>
-          <option v-for="module in modules" :key="module.id" :value="module.id">
+          <option
+            v-for="module in filteredModules"
+            :key="module.id"
+            :value="module.id"
+          >
             {{ module.title }}
           </option>
         </select>
@@ -233,7 +237,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive, onMounted } from 'vue'
+import { ref, watch, reactive, onMounted, computed } from 'vue'
 import { useQuizManagement, type Quiz, type QuizQuestion } from '~/composables/useQuizManagement'
 import { useModuleManagement } from '~/composables/useModuleManagement'
 
@@ -264,6 +268,26 @@ const formData = reactive<Quiz>({
 
 onMounted(async () => {
   await fetchModules()
+})
+
+// Filter modules by selected course level so it's easier to assign quizzes
+const filteredModules = computed(() => {
+  if (!formData.level) return modules.value
+  return modules.value.filter((m: any) => m.level === formData.level)
+})
+
+// Identify the 5th beginner module (Module 5) based on numeric part in title
+const fifthBeginnerModuleId = computed(() => {
+  const beginnerModules = modules.value
+    .filter((m: any) => m.level === 'beginner')
+    .slice()
+    .sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+      return aNum - bNum
+    })
+
+  return beginnerModules[4]?.id || null // 0-based index → 5th module
 })
 
 // Watch for changes to props
@@ -320,6 +344,17 @@ const submitForm = async () => {
 
   if (formData.questions.length === 0) {
     alert('Please add at least one question')
+    return
+  }
+
+  // Special rule: Beginner Module 5 quiz must have exactly 20 questions
+  if (
+    formData.level === 'beginner' &&
+    fifthBeginnerModuleId.value &&
+    formData.moduleId === fifthBeginnerModuleId.value &&
+    formData.questions.length !== 20
+  ) {
+    alert('The quiz for Beginner Module 5 must have exactly 20 questions.')
     return
   }
 

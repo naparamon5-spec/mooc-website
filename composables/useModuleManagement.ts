@@ -7,6 +7,14 @@ export const useModuleManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Helper: consistently sort modules by the numeric part in their title
+  // e.g. "Module 1", "Module 2" so that Module 1 always appears first
+  const sortByModuleNumber = (a: any, b: any) => {
+    const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+    const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+    return aNum - bNum
+  }
+
   // Normalize module data from Supabase
   const normalizeModule = (module: any) => {
     return {
@@ -58,7 +66,7 @@ export const useModuleManagement = () => {
 
       if (fetchError) throw fetchError
 
-      modules.value = (data || []).map(normalizeModule)
+      modules.value = (data || []).map(normalizeModule).sort(sortByModuleNumber)
       return modules.value
     } catch (err: any) {
       error.value = err.message
@@ -240,11 +248,17 @@ export const useModuleManagement = () => {
 
   // Computed properties
   const beginnerModules = computed(() => {
-    return modules.value.filter(m => m.level === 'beginner')
+    return modules.value
+      .filter(m => m.level === 'beginner')
+      .slice()
+      .sort(sortByModuleNumber)
   })
 
   const advancedModules = computed(() => {
-    return modules.value.filter(m => m.level === 'advanced')
+    return modules.value
+      .filter(m => m.level === 'advanced')
+      .slice()
+      .sort(sortByModuleNumber)
   })
 
   const totalModules = computed(() => {

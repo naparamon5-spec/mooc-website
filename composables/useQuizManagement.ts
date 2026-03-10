@@ -83,6 +83,31 @@ export const useQuizManagement = () => {
     }
   }
 
+  // Fetch quiz linked to a specific module (1 quiz per module)
+  const fetchQuizForModule = async (moduleId: string) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('module_id', moduleId)
+        .limit(1)
+        .maybeSingle()
+
+      if (fetchError) throw fetchError
+
+      return data
+    } catch (err: any) {
+      error.value = err.message
+      console.error('Error fetching quiz for module:', err)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   // Create a new quiz
   const createQuiz = async (quiz: Quiz) => {
     loading.value = true
@@ -208,13 +233,13 @@ export const useQuizManagement = () => {
       // Save quiz result
       const { data, error: saveError } = await supabase
         .from('quiz_results')
-        .insert({
+        .upsert({
           user_id: user.id,
           quiz_id: quizId,
           score: score,
           passed: passed,
           answers: answers,
-        })
+        }, { onConflict: 'user_id,quiz_id' })
         .select()
 
       if (saveError) throw saveError
@@ -240,6 +265,7 @@ export const useQuizManagement = () => {
     error,
     fetchQuizzes,
     fetchQuizById,
+    fetchQuizForModule,
     createQuiz,
     updateQuiz,
     deleteQuiz,
