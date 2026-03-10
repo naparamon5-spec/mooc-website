@@ -74,10 +74,25 @@ const route = useRoute()
 
 const status = ref('loading') // 'loading' | 'success' | 'error'
 
-function getHashParams() {
+function parseHashParams() {
   if (import.meta.server) return null
-  const hash = (window.location.hash || '').replace(/^#/, '')
-  return hash.includes('access_token=')
+  const rawHash = (window.location.hash || '').replace(/^#/, '')
+  if (!rawHash) return null
+
+  const params = new URLSearchParams(rawHash)
+  if (!params.get('access_token')) return null
+
+  return {
+    access_token: params.get('access_token') || '',
+    refresh_token: params.get('refresh_token') || '',
+    type: params.get('type') || '',
+  }
+}
+
+function clearHashFromUrl() {
+  if (typeof window !== 'undefined') {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }
 }
 
 function goToLogin() {
@@ -87,19 +102,16 @@ function goToLogin() {
 onMounted(async () => {
   const token_hash = route.query.token_hash
   const type = route.query.type
-  const hashParams = getHashParams()
+  const hash = parseHashParams()
 
-  // Flow 1: Supabase redirected with tokens in the URL hash (e.g. after "Verify" in email)
-  // Show "Email verified" and "Go to Login" — we do not set session
-  if (hashParams) {
+  // Flow 1: Normal email confirmation / magic link with hash tokens
+  if (hash) {
     status.value = 'success'
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', window.location.pathname)
-    }
+    clearHashFromUrl()
     return
   }
 
-  // Flow 2: Magic link / OTP with token_hash in query
+  // Flow 2: Other OTP flows (e.g. signup) using token_hash + type
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,

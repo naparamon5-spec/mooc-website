@@ -118,6 +118,7 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const { $supabase } = useNuxtApp()
+const route = useRoute()
 
 const inputClass =
   'mt-1 block w-full rounded-lg border border-sky-200 bg-white px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400 pr-10'
@@ -142,6 +143,22 @@ function validate() {
 }
 
 onMounted(async () => {
+  const token_hash = route.query.token_hash as string | undefined
+  const type = route.query.type as string | undefined
+
+  // If the reset link contains token_hash and type=recovery, verify it first.
+  if (token_hash && type === 'recovery') {
+    const { error: otpError } = await $supabase.auth.verifyOtp({
+      token_hash,
+      type: 'recovery'
+    })
+
+    if (otpError) {
+      error.value = 'Invalid or expired reset link.'
+      return
+    }
+  }
+
   const { data, error: sessionError } = await $supabase.auth.getSession()
   if (sessionError || !data.session) {
     error.value = 'Invalid or expired reset link.'
