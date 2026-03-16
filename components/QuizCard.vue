@@ -1,7 +1,7 @@
 <template>
   <div
     class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-primary-200 transition cursor-pointer flex flex-col h-full"
-    @click="startQuiz"
+    @click="handleCardClick"
   >
     <!-- Quiz Header -->
     <div class="p-4 pb-3">
@@ -38,7 +38,7 @@
               : 'bg-red-100 text-red-800'"
             class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
           >
-            {{ userScore }}%
+            {{ userScore }}% / {{ quiz.passing_score || 70 }}%
           </span>
         </div>
         <p class="text-[11px]">
@@ -80,7 +80,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['start-quiz'])
+const emit = defineEmits(['start-quiz', 'show-result'])
 
 const router = useRouter()
 const loading = ref(false)
@@ -88,6 +88,14 @@ const loading = ref(false)
 const hasAttempted = computed(() => !!props.userResult)
 const userScore = computed(() => props.userResult?.score || 0)
 const userPassed = computed(() => props.userResult?.passed || false)
+
+const handleCardClick = () => {
+  if (hasAttempted.value) {
+    emit('show-result', { quiz: props.quiz, result: props.userResult })
+    return
+  }
+  startQuiz()
+}
 
 const startQuiz = () => {
   loading.value = true

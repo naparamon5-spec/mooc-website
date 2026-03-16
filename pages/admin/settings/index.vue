@@ -9,7 +9,7 @@
         <!-- FULL WIDTH CONTENT -->
         <section class="col-span-12 space-y-6">
           <SecuritySettings />
-          <NotificationSettings />
+          <!-- <NotificationSettings /> -->
         </section>
 
       </div>
@@ -26,7 +26,7 @@
 import { ref, onMounted } from "vue";
 import AdminHeader from "~/components/admindashboard/AdminHeader.vue";
 import SecuritySettings from "~/components/studentdashboard/SecuritySettings.vue";
-import NotificationSettings from "~/components/studentdashboard/NotificationSettings.vue";
+// import NotificationSettings from "~/components/studentdashboard/NotificationSettings.vue";
 import { useUserProfile } from "~/composables/useUserProfile";
 
 definePageMeta({ middleware: "auth" });

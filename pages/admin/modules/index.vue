@@ -4,7 +4,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="flex-1">
-  <div class="max-w-full px-4 md:px-8 lg:px-12 py-8">
+      <div class="max-w-full px-4 md:px-8 lg:px-12 py-8">
         <!-- Header Section -->
         <div class="flex items-center justify-between mb-8">
           <div>
@@ -14,7 +14,7 @@
             </p>
           </div>
           <button
-            @click="openCreateModal"
+            @click="openCreateModal()"
             class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center gap-2 shadow-sm"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,7 +34,7 @@
           {{ error }}
         </div>
 
-        <!-- Tabs for Beginner and Advanced -->
+        <!-- Tabs -->
         <div v-else class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
           <!-- Tab Buttons -->
           <div class="flex border-b border-gray-200">
@@ -112,47 +112,124 @@
       </div>
     </main>
 
-    <!-- Module Form Modal (Advanced with Content Editing) -->
-    <ModuleFormAdvanced
-      :isOpen="showModuleForm"
-      :module="selectedModuleForEdit"
-      :loading="formLoading"
-      @close="closeModal"
-      @submit="handleFormSubmit"
-    />
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">Delete Module?</h3>
-        <p class="text-gray-600 mb-6">
-          Are you sure you want to delete "<strong>{{ moduleToDelete?.title }}</strong>"? This action cannot be undone.
-        </p>
-        <div class="flex items-center justify-end gap-3">
-          <button
-            @click="showDeleteConfirm = false"
-            class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="confirmDelete"
-            :disabled="formLoading"
-            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ formLoading ? 'Deleting...' : 'Delete' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- FOOTER -->
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
+
+    <!-- ── Module Form Modal ── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showModuleForm"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          @click.self="closeModal"
+        >
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="closeModal" />
+
+          <!-- Panel -->
+          <div class="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] ring-1 ring-gray-200">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 shrink-0">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 leading-tight">
+                  {{ selectedModuleForEdit ? 'Edit Module' : 'Create New Module' }}
+                </h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  {{ selectedModuleForEdit ? 'Update module details and content' : 'Fill in the details to add a new module' }}
+                </p>
+              </div>
+              <button
+                @click="closeModal"
+                class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Scrollable body -->
+            <div class="overflow-y-auto flex-1 px-6 py-5">
+              <ModuleFormAdvanced
+                :isOpen="showModuleForm"
+                :module="selectedModuleForEdit"
+                :loading="formLoading"
+                @close="closeModal"
+                @submit="handleFormSubmit"
+              />
+            </div>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Delete Confirmation Modal ── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showDeleteConfirm"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          @click.self="showDeleteConfirm = false"
+        >
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showDeleteConfirm = false" />
+
+          <!-- Panel -->
+          <div class="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md ring-1 ring-gray-200">
+
+            <!-- Header -->
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+              <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 leading-tight">Delete Module</h3>
+                <p class="text-xs text-gray-400 mt-0.5">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-5">
+              <p class="text-sm text-gray-600">
+                Are you sure you want to delete
+                <span class="font-semibold text-gray-900">"{{ moduleToDelete?.title }}"</span>?
+                All content inside this module will be permanently removed.
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+              <button
+                @click="showDeleteConfirm = false"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                @click="confirmDelete"
+                :disabled="formLoading"
+                class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg v-if="formLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                {{ formLoading ? 'Deleting...' : 'Delete Module' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
-
 
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -165,13 +242,14 @@ useHead({
   title: 'Manage Modules - Admin - MIL MOOC',
 })
 
-const adminName = ref("Admin User")
+const adminName = ref('Admin User')
 const activeTab = ref('beginner')
 const showModuleForm = ref(false)
 const showDeleteConfirm = ref(false)
 const selectedModuleForEdit = ref(null)
 const moduleToDelete = ref(null)
 const formLoading = ref(false)
+const preselectedLevel = ref(null)
 
 const {
   modules,
@@ -186,18 +264,14 @@ const {
   totalModules
 } = useModuleManagement()
 
-// Load modules on mount
 onMounted(async () => {
   await fetchModules()
 })
 
 const openCreateModal = (level = null) => {
   selectedModuleForEdit.value = null
+  preselectedLevel.value = level
   showModuleForm.value = true
-  // Pre-select level if provided
-  if (level && selectedModuleForEdit.value) {
-    selectedModuleForEdit.value.level = level
-  }
 }
 
 const editModule = (module) => {
@@ -208,17 +282,16 @@ const editModule = (module) => {
 const closeModal = () => {
   showModuleForm.value = false
   selectedModuleForEdit.value = null
+  preselectedLevel.value = null
 }
 
 const handleFormSubmit = async (formData) => {
   formLoading.value = true
   try {
     if (selectedModuleForEdit.value?.id) {
-      // Update existing module
       await updateModule(selectedModuleForEdit.value.id, formData)
     } else {
-      // Create new module
-      await createModule(formData)
+      await createModule({ ...formData, level: formData.level || preselectedLevel.value })
     }
     closeModal()
   } catch (err) {
@@ -235,7 +308,6 @@ const deleteModule = (module) => {
 
 const confirmDelete = async () => {
   if (!moduleToDelete.value?.id) return
-
   formLoading.value = true
   try {
     await deleteModuleApi(moduleToDelete.value.id)
@@ -249,3 +321,25 @@ const confirmDelete = async () => {
 }
 </script>
 
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-active .relative,
+.modal-leave-active .relative {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-from .relative {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
+}
+.modal-leave-to .relative {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
+}
+</style>

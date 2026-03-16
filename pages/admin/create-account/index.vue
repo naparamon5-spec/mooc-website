@@ -3,235 +3,294 @@
     <!-- Header -->
     <AdminHeader :admin-name="adminName" />
 
-    <div class="max-w-4xl mx-auto px-4 md:px-8 lg:px-12 py-12">
+    <div class="max-w-6xl mx-auto px-4 md:px-8 lg:px-12 py-12">
       <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 md:p-12">
-        <!-- Title -->
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900">Create Instructor Account</h1>
-          <p class="text-gray-600 mt-2">Add a new instructor to the platform</p>
+        <!-- Title and Create Button -->
+        <div class="flex justify-between items-center mb-8">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Manage Accounts</h1>
+            <p class="text-gray-600 mt-2">View and create instructor and admin accounts</p>
+          </div>
+          <button
+            @click="openModal"
+            class="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+          >
+            Create Account
+          </button>
         </div>
 
-        <!-- Form -->
-        <form @submit.prevent="onSubmit" class="space-y-6">
-          <!-- Row 1: Full Name and Email -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Full Name -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Full Name <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.fullName"
-                type="text"
-                placeholder="John Doe"
-                :class="[
-                  'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                  errors.fullName ? 'border-red-500' : 'border-gray-300'
-                ]"
-              />
-              <p v-if="errors.fullName" class="mt-1 text-sm text-red-600">
-                {{ errors.fullName }}
-              </p>
-            </div>
+        <!-- Users List -->
+        <div v-if="usersLoading" class="text-center py-8">
+          <p class="text-gray-600">Loading users...</p>
+        </div>
+        <div v-else-if="usersError" class="text-center py-8">
+          <p class="text-red-600">{{ usersError }}</p>
+        </div>
+        <div v-else-if="users.length === 0" class="text-center py-8">
+          <p class="text-gray-600">No instructors or admins found.</p>
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="user in users" :key="user.id">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.email }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="[
+                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                    user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                  ]">
+                    {{ user.role }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="[
+                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                    user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  ]">
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.phone || '-' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ new Date(user.createdAt).toLocaleDateString() }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <button
+                    @click="toggleUserStatus(user)"
+                    :disabled="togglingUserId === user.id"
+                    :class="[
+                      'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed',
+                      user.isActive
+                        ? 'border-red-200 text-red-700 bg-red-50 hover:bg-red-100'
+                        : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+                    ]"
+                  >
+                    <svg v-if="togglingUserId === user.id" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                    </svg>
+                    <svg v-else-if="user.isActive" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    {{ togglingUserId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-            <!-- Email -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Email Address <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.email"
-                type="email"
-                placeholder="instructor@example.com"
-                :class="[
-                  'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                ]"
-              />
-              <p v-if="errors.email" class="mt-1 text-sm text-red-600">
-                {{ errors.email }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Row 2: Password and Confirm Password -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Password -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Password <span class="text-red-500">*</span>
-              </label>
-              <div class="relative">
-                <input
-                  v-model="form.password"
-                  :type="showPassword ? 'text' : 'password'"
-                  placeholder="••••••••"
-                  :class="[
-                    'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                    errors.password ? 'border-red-500' : 'border-gray-300'
-                  ]"
-                />
-                <button
-                  type="button"
-                  @click="showPassword = !showPassword"
-                  class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.176-3.568M6.18 6.18A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.98 9.98 0 01-4.043 5.19M6.18 6.18L3 3m3.18 3.18L21 21" />
-                  </svg>
-                </button>
-              </div>
-              <p v-if="errors.password" class="mt-1 text-sm text-red-600">
-                {{ errors.password }}
-              </p>
-            </div>
-
-            <!-- Confirm Password -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.confirmPassword"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                placeholder="••••••••"
-                :class="[
-                  'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                ]"
-              />
-              <p v-if="errors.confirmPassword" class="mt-1 text-sm text-red-600">
-                {{ errors.confirmPassword }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Row 3: Department and Phone -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Role Selection -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Role <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="form.role"
-                :class="[
-                  'w-full px-4 py-2 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                  'border-gray-300'
-                ]"
-              >
-                <option value="instructor">Instructor</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-
-            <!-- Department/Subject -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Department / Subject Area
-              </label>
-              <input
-                v-model="form.department"
-                type="text"
-                placeholder="e.g., Media Literacy, Digital Arts"
-                :class="[
-                  'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                  'border-gray-300'
-                ]"
-              />
-            </div>
-          </div>
-
-          <!-- Row 4: Phone -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number (Optional)
-            </label>
-            <input
-              v-model="form.phone"
-              type="tel"
-              placeholder="+1 (555) 123-4567"
-              :class="[
-                'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
-                'border-gray-300'
-              ]"
-            />
-          </div>
-
-          <!-- Row 5: Permissions (Full Width) -->
-          <div class="space-y-4 pt-4">
-            <!-- Can Create Courses Toggle -->
-            <div class="flex items-center gap-3">
-              <input
-                v-model="form.canCreateCourses"
-                type="checkbox"
-                id="canCreateCourses"
-                class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-              />
-              <label for="canCreateCourses" class="text-sm font-medium text-gray-700">
-                Allow this instructor to create and manage courses
-              </label>
-            </div>
-
-            <!-- Can Manage Users Toggle -->
-            <div class="flex items-center gap-3">
-              <input
-                v-model="form.canManageUsers"
-                type="checkbox"
-                id="canManageUsers"
-                class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-              />
-              <label for="canManageUsers" class="text-sm font-medium text-gray-700">
-                Allow this instructor to manage users
-              </label>
-            </div>
-          </div>
-
-          <!-- Error Message -->
-          <div v-if="generalError" class="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-sm text-red-700">{{ generalError }}</p>
-          </div>
-
-          <!-- Success Message -->
-          <div v-if="successMessage" class="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p class="text-sm text-green-700">{{ successMessage }}</p>
-          </div>
-
-          <!-- Buttons -->
-          <div class="flex gap-4 pt-4">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="flex-1 bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {{ loading ? 'Creating account...' : 'Create Instructor Account' }}
-            </button>
-            <NuxtLink
-              to="/admin"
-              class="flex-1 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-300 transition text-center"
-            >
-              Cancel
-            </NuxtLink>
-          </div>
-        </form>
+        <!-- Toggle error -->
+        <div v-if="toggleError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm text-red-700">{{ toggleError }}</p>
+        </div>
       </div>
     </div>
+
+    <!-- Modal — fixed overlay, flex-centered -->
+    <Teleport to="body">
+      <div
+        v-if="showModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
+        @click.self="closeModal"
+      >
+        <div class="relative w-full max-w-lg bg-white rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div class="p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="text-lg font-semibold text-gray-900">Create New Account</h3>
+              <button @click="closeModal" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="onSubmit" class="space-y-5">
+              <!-- Row 1: Full Name and Email -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Full Name <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    v-model="form.fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    :class="[
+                      'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
+                      errors.fullName ? 'border-red-500' : 'border-gray-300'
+                    ]"
+                  />
+                  <p v-if="errors.fullName" class="mt-1 text-sm text-red-600">{{ errors.fullName }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email Address <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    v-model="form.email"
+                    type="email"
+                    placeholder="instructor@example.com"
+                    :class="[
+                      'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
+                      errors.email ? 'border-red-500' : 'border-gray-300'
+                    ]"
+                  />
+                  <p v-if="errors.email" class="mt-1 text-sm text-red-600">{{ errors.email }}</p>
+                </div>
+              </div>
+
+              <!-- Row 2: Password and Confirm Password -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Password <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      v-model="form.password"
+                      :type="showPassword ? 'text' : 'password'"
+                      placeholder="••••••••"
+                      :class="[
+                        'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
+                        errors.password ? 'border-red-500' : 'border-gray-300'
+                      ]"
+                    />
+                    <button
+                      type="button"
+                      @click="showPassword = !showPassword"
+                      class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                    >
+                      <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.176-3.568M6.18 6.18A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.98 9.98 0 01-4.043 5.19M6.18 6.18L3 3m3.18 3.18L21 21"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <p v-if="errors.password" class="mt-1 text-sm text-red-600">{{ errors.password }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Confirm Password <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      v-model="form.confirmPassword"
+                      :type="showConfirmPassword ? 'text' : 'password'"
+                      placeholder="••••••••"
+                      :class="[
+                        'w-full px-4 py-2 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition',
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                      ]"
+                    />
+                    <button
+                      type="button"
+                      @click="showConfirmPassword = !showConfirmPassword"
+                      class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                    >
+                      <svg v-if="!showConfirmPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.176-3.568M6.18 6.18A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.98 9.98 0 01-4.043 5.19M6.18 6.18L3 3m3.18 3.18L21 21"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <p v-if="errors.confirmPassword" class="mt-1 text-sm text-red-600">{{ errors.confirmPassword }}</p>
+                </div>
+              </div>
+
+              <!-- Row 3: Role and Phone -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Role <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    v-model="form.role"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+                  >
+                    <option value="instructor">Instructor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phone Number <span class="text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    v-model="form.phone"
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
+                  />
+                </div>
+              </div>
+
+              <!-- Error / Success -->
+              <div v-if="generalError" class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm text-red-700">{{ generalError }}</p>
+              </div>
+              <div v-if="successMessage" class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p class="text-sm text-green-700">{{ successMessage }}</p>
+              </div>
+
+              <!-- Buttons -->
+              <div class="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  :disabled="loading"
+                  class="flex-1 bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {{ loading ? 'Creating account...' : 'Create Account' }}
+                </button>
+                <button
+                  type="button"
+                  @click="closeModal"
+                  class="flex-1 bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
-import { validateEmail, validatePassword } from '~/utils/validation/auth'
+import { validateEmail, validatePassword, validateConfirmPassword } from '~/utils/validation/auth'
+import { useAdminUserManagement } from '~/composables/useAdminUserManagement'
 
 definePageMeta({ middleware: 'auth' })
 
 useHead({
-  title: 'Create Instructor Account - MIL MOOC',
+  title: 'Create Account - MIL MOOC',
 })
 
 const adminName = ref('Admin')
@@ -240,6 +299,13 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const generalError = ref('')
 const successMessage = ref('')
+const showModal = ref(false)
+
+// Toggle state
+const togglingUserId = ref<string | null>(null)
+const toggleError = ref('')
+
+const { users, loading: usersLoading, error: usersError, fetchUsers } = useAdminUserManagement()
 
 const form = ref({
   fullName: '',
@@ -260,111 +326,124 @@ const errors = ref({
   confirmPassword: ''
 })
 
+onMounted(() => {
+  fetchUsers()
+})
+
 const validateForm = (): boolean => {
-  errors.value = {
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  }
+  errors.value = { fullName: '', email: '', password: '', confirmPassword: '' }
   generalError.value = ''
 
   if (!form.value.fullName.trim()) {
     errors.value.fullName = 'Full name is required'
+    return false
   }
 
-  if (!form.value.email.trim()) {
-    errors.value.email = 'Email is required'
-  } else if (!validateEmail(form.value.email)) {
-    errors.value.email = 'Please enter a valid email address'
-  }
+  const emailErr = validateEmail(form.value.email)
+  if (emailErr) { errors.value.email = emailErr; return false }
 
-  if (!form.value.password) {
-    errors.value.password = 'Password is required'
-  } else if (!validatePassword(form.value.password)) {
-    errors.value.password = 'Password must be at least 8 characters long'
-  }
+  const pwdErr = validatePassword(form.value.password)
+  if (pwdErr) { errors.value.password = pwdErr; return false }
 
-  if (!form.value.confirmPassword) {
-    errors.value.confirmPassword = 'Please confirm your password'
-  } else if (form.value.password !== form.value.confirmPassword) {
-    errors.value.confirmPassword = 'Passwords do not match'
-  }
+  const confirmErr = validateConfirmPassword(form.value.password, form.value.confirmPassword)
+  if (confirmErr) { errors.value.confirmPassword = confirmErr; return false }
 
-  return !Object.values(errors.value).some(error => error)
+  return true
 }
 
 const onSubmit = async () => {
-  if (!validateForm()) {
-    return
-  }
+  if (!validateForm()) return
 
   loading.value = true
   generalError.value = ''
   successMessage.value = ''
 
   try {
-    const nuxtApp = useNuxtApp()
-    const supabase = nuxtApp.$supabase
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.value.email,
-      password: form.value.password
-    })
-
-    if (authError) {
-      generalError.value = authError.message || 'Failed to create account'
+    const { $supabase } = useNuxtApp()
+    const { data: { session } } = await $supabase.auth.getSession()
+    if (!session?.access_token) {
+      generalError.value = 'Session expired. Please sign in again.'
       return
     }
 
-    if (authData.user) {
-      // Create profile with selected role
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          full_name: form.value.fullName,
-          email: form.value.email,
-          role: form.value.role,
-          department: form.value.department || null,
-          phone: form.value.phone || null,
-          can_create_courses: form.value.canCreateCourses,
-          can_manage_users: form.value.canManageUsers,
-          is_active: true,
-          created_at: new Date().toISOString()
-        })
-
-      if (profileError) {
-        generalError.value = profileError.message || 'Failed to create instructor profile'
-        return
+    const result = await $fetch<{ success: boolean; userId?: string }>('/api/admin/create-account', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: {
+        fullName: form.value.fullName.trim(),
+        email: form.value.email.trim(),
+        password: form.value.password,
+        role: form.value.role,
+        phone: form.value.phone?.trim() || undefined,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token ?? ''
       }
+    })
 
-      successMessage.value = `Instructor account created successfully! Welcome, ${form.value.fullName}.`
-      
-      // Reset form
+    if (result?.success) {
+      successMessage.value = `Account created successfully. ${form.value.fullName} can sign in now.`
       form.value = {
-        fullName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        role: 'instructor',
-        department: '',
-        phone: '',
-        canCreateCourses: true,
-        canManageUsers: false
+        fullName: '', email: '', password: '', confirmPassword: '',
+        role: 'instructor', department: '', phone: '',
+        canCreateCourses: true, canManageUsers: false
       }
-
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigateTo('/admin')
-      }, 2000)
+      showModal.value = false
+      fetchUsers()
     }
   } catch (err: any) {
-    generalError.value = err.message || 'An unexpected error occurred'
-    console.error('Error creating instructor account:', err)
+    generalError.value = err?.data?.statusMessage || err?.message || 'Failed to create account'
+    console.error('Error creating account:', err)
   } finally {
     loading.value = false
   }
+}
+
+// Toggle active/inactive
+const toggleUserStatus = async (user: any) => {
+  if (togglingUserId.value) return
+  toggleError.value = ''
+  togglingUserId.value = user.id
+
+  try {
+    const { $supabase } = useNuxtApp()
+    const { data: { session } } = await $supabase.auth.getSession()
+    if (!session?.access_token) {
+      toggleError.value = 'Session expired. Please sign in again.'
+      return
+    }
+
+    await $fetch('/api/admin/toggle-user-status', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: {
+        userId: user.id,
+        isActive: !user.isActive
+      }
+    })
+
+    // Optimistically update local state
+    user.isActive = !user.isActive
+  } catch (err: any) {
+    toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to update account status'
+    console.error('Error toggling user status:', err)
+  } finally {
+    togglingUserId.value = null
+  }
+}
+
+const openModal = () => {
+  showModal.value = true
+  generalError.value = ''
+  successMessage.value = ''
+}
+
+const closeModal = () => {
+  showModal.value = false
+  form.value = {
+    fullName: '', email: '', password: '', confirmPassword: '',
+    role: 'instructor', department: '', phone: '',
+    canCreateCourses: true, canManageUsers: false
+  }
+  errors.value = { fullName: '', email: '', password: '', confirmPassword: '' }
 }
 </script>

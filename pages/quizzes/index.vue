@@ -44,10 +44,62 @@
             v-for="quiz in quizzes"
             :key="quiz.id"
             :quiz="quiz"
+            :user-result="quizResultsById[String(quiz.id)] || null"
+            @show-result="openResultModal"
           />
         </div>
       </div>
     </main>
+
+    <!-- Result Modal -->
+    <div
+      v-if="showResultModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
+      @click.self="closeResultModal"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-gray-100">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">
+          Your score
+        </h2>
+        <p class="text-gray-700 mb-4">
+          <span class="font-semibold">{{ selectedQuizTitle }}</span>
+        </p>
+
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-gray-600">Score</span>
+          <span
+            class="px-3 py-1 rounded-full text-sm font-semibold"
+            :class="selectedResult?.passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+          >
+            {{ selectedResult?.score ?? 0 }}%
+          </span>
+        </div>
+
+        <p
+          class="text-sm font-medium mb-6"
+          :class="selectedResult?.passed ? 'text-green-700' : 'text-red-700'"
+        >
+          {{ selectedResult?.passed ? 'Passed' : 'Not passed — you can try again' }}
+        </p>
+
+        <div class="flex gap-3 justify-end">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            @click="closeResultModal"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
+            @click="retakeSelectedQuiz"
+          >
+            Retake
+          </button>
+        </div>
+      </div>
+    </div>
 
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
@@ -55,7 +107,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
 import QuizCard from '~/components/QuizCard.vue';
@@ -66,10 +118,64 @@ const { quizzes, loading, fetchQuizzes } = useQuizManagement()
 const router = useRouter()
 
 const studentName = ref('')
+const quizResultsById = ref<Record<string, any>>({})
+
+const showResultModal = ref(false)
+const selectedResult = ref<any | null>(null)
+const selectedQuizId = ref<string | null>(null)
+const selectedQuizTitle = ref<string>('')
 
 onMounted(async () => {
   await fetchQuizzes()
+  await fetchQuizResults()
 })
+
+const fetchQuizResults = async () => {
+  try {
+    const { $supabase } = useNuxtApp()
+    const { data: { user } } = await $supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await $supabase
+      .from('quiz_results')
+      .select('quiz_id, score, passed, created_at')
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Error loading quiz results:', error)
+      return
+    }
+
+    const map: Record<string, any> = {}
+    ;(data || []).forEach((row: any) => {
+      map[String(row.quiz_id)] = row
+    })
+    quizResultsById.value = map
+  } catch (e) {
+    console.error('Error loading quiz results:', e)
+  }
+}
+
+const openResultModal = ({ quiz, result }: any) => {
+  selectedQuizId.value = String(quiz?.id ?? '')
+  selectedQuizTitle.value = quiz?.title || 'Quiz'
+  selectedResult.value = result || null
+  showResultModal.value = true
+}
+
+const closeResultModal = () => {
+  showResultModal.value = false
+  selectedResult.value = null
+  selectedQuizId.value = null
+  selectedQuizTitle.value = ''
+}
+
+const retakeSelectedQuiz = () => {
+  if (!selectedQuizId.value) return
+  const id = selectedQuizId.value
+  closeResultModal()
+  router.push(`/quizzes/${id}`)
+}
 </script>
 
 <style scoped>

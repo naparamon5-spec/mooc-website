@@ -8,15 +8,27 @@
           </svg>
         </div>
         <h3 class="text-xl font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <div v-if="imageSrc" class="mb-4 flex justify-center">
+          <img :src="imageSrc" alt="badge" class="h-24 w-24 object-contain" />
+        </div>
         <p class="text-gray-600 mb-6">
           {{ message }}
         </p>
-        <button 
-          @click="$emit('close')" 
-          class="w-full inline-flex justify-center rounded-lg bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm"
-        >
-          {{ buttonText }}
-        </button>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button 
+            @click="$emit('close')" 
+            class="flex-1 inline-flex justify-center rounded-lg bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 sm:text-sm"
+          >
+            {{ buttonText }}
+          </button>
+          <button
+            v-if="secondaryButtonText"
+            @click="$emit('secondary')"
+            class="flex-1 inline-flex justify-center rounded-lg bg-gray-200 px-4 py-2 text-base font-medium text-gray-800 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 sm:text-sm"
+          >
+            {{ secondaryButtonText }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -39,8 +51,16 @@ defineProps({
   buttonText: {
     type: String,
     default: 'Continue'
+  },
+  secondaryButtonText: {
+    type: String,
+    default: ''
+  },
+  imageSrc: {
+    type: String,
+    default: ''
   }
 })
 
-defineEmits(['close'])
+defineEmits(['close', 'secondary'])
 </script>

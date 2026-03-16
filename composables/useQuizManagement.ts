@@ -13,7 +13,8 @@ export interface Quiz {
   id?: string
   title: string
   description: string
-  moduleId?: string
+  // may be null if not associated with a module
+  moduleId?: string | null
   level: 'beginner' | 'advanced'
   questions: QuizQuestion[]
   passingScore: number
@@ -122,7 +123,8 @@ export const useQuizManagement = () => {
         .insert({
           title: quiz.title,
           description: quiz.description,
-          module_id: quiz.moduleId,
+          // convert empty or undefined moduleId to null for the DB
+          module_id: quiz.moduleId || null,
           level: quiz.level,
           questions: quiz.questions,
           passing_score: quiz.passingScore,
@@ -155,7 +157,7 @@ export const useQuizManagement = () => {
         .update({
           title: quiz.title,
           description: quiz.description,
-          module_id: quiz.moduleId,
+          module_id: quiz.moduleId || null,
           level: quiz.level,
           questions: quiz.questions,
           passing_score: quiz.passingScore,
@@ -204,7 +206,7 @@ export const useQuizManagement = () => {
   }
 
   // Submit quiz answers
-  const submitQuizAnswers = async (quizId: string, answers: { [questionId: string]: string | number }) => {
+  const submitQuizAnswers = async (quizId: string, answers: { [questionId: string]: string | number | undefined }) => {
     loading.value = true
     error.value = null
 
@@ -220,15 +222,18 @@ export const useQuizManagement = () => {
       let correctAnswers = 0
       const totalQuestions = quiz.questions.length
 
-      quiz.questions.forEach((q: QuizQuestion, index: number) => {
-        const userAnswer = answers[index]
-        if (userAnswer.toString() === q.correctAnswer.toString()) {
+      quiz.questions.forEach((q: QuizQuestion | undefined, index: number) => {
+        if (!q) return // defensive – should never happen
+        // determine the key used by the caller; prefer question.id if available
+        const key = q.id ?? String(index)
+        const userAnswer = answers[key]
+        if (userAnswer != null && userAnswer.toString() === q.correctAnswer.toString()) {
           correctAnswers++
         }
       })
 
       const score = Math.round((correctAnswers / totalQuestions) * 100)
-      const passed = score >= quiz.passing_score
+      const passed = score >= (quiz.passing_score ?? 0)
 
       // Save quiz result
       const { data, error: saveError } = await supabase

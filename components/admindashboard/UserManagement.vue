@@ -6,12 +6,12 @@
     
     <!-- Action Buttons -->
     <div class="flex flex-wrap gap-3 mb-6">
-      <button 
+      <!-- <button 
         @click="openCreateModal"
         class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
       >
         Create Account
-      </button>
+      </button> -->
       <button 
         @click="handleExport"
         class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"

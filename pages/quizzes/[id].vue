@@ -18,7 +18,10 @@
 
       <div v-else-if="quiz" class="flex w-full flex-col lg:flex-row gap-6 lg:gap-8">
         <!-- Sidebar with question numbers -->
-        <aside class="w-full lg:w-1/4 xl:w-1/5 bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24 self-start max-h-[70vh] overflow-y-auto">
+        <aside
+          v-if="!isReviewOnly"
+          class="w-full lg:w-1/4 xl:w-1/5 bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24 self-start max-h-[70vh] overflow-y-auto"
+        >
           <h3 class="text-lg font-semibold mb-4">Questions</h3>
           <ul class="space-y-2">
             <li
@@ -49,7 +52,7 @@
               {{ quiz.description }}
             </p>
 
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div v-if="!isReviewOnly" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div class="text-sm text-gray-600">
                 Question
                 <span class="font-semibold">
@@ -72,7 +75,75 @@
             </div>
           </div>
 
-          <div v-if="!result">
+          <!-- Review-only mode (already taken): show score + ONLY selected answers -->
+          <div v-if="isReviewOnly" class="bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-2xl font-semibold mb-2">Quiz already taken</h2>
+            <p class="text-gray-700 mb-4">
+              Your score: <span class="font-semibold">{{ existingResult?.score ?? 0 }}%</span>
+              <span class="text-gray-500">/ {{ quiz.passing_score || 70 }}%</span>
+            </p>
+            <p
+              class="font-medium mb-6"
+              :class="existingResult?.passed ? 'text-green-600' : 'text-red-600'"
+            >
+              {{ existingResult?.passed ? 'Passed' : 'Not passed — you can try again' }}
+            </p>
+
+            <!-- Badge earned (only if passed and linked to a module) -->
+            <div
+              v-if="existingResult?.passed && quiz?.module_id"
+              class="mb-8 flex items-center gap-4 p-4 rounded-xl border border-green-100 bg-green-50"
+            >
+              <img
+                :src="badgeImage"
+                :alt="earnedBadgeName"
+                class="w-16 h-16 object-contain"
+              />
+              <div class="min-w-0">
+                <p class="text-sm text-green-800 font-semibold">Badge earned</p>
+                <p class="text-lg font-bold text-green-900 truncate">
+                  {{ earnedBadgeName }}
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-6">
+              <div
+                v-for="(q, idx) in quiz.questions"
+                :key="`review-${idx}`"
+                class="border border-gray-100 rounded-xl p-4"
+              >
+                <p class="font-semibold text-gray-900 mb-2">
+                  {{ idx + 1 }}. {{ q.question }}
+                </p>
+                <div class="text-sm text-gray-700">
+                  <span class="font-medium text-gray-600">Your answer:</span>
+                  <span class="ml-2">
+                    {{ getSelectedAnswerText(q, idx) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 flex flex-wrap gap-3 justify-end">
+              <button
+                type="button"
+                class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
+                @click="goBack"
+              >
+                Back to Module
+              </button>
+              <button
+                type="button"
+                class="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
+                @click="startRetake"
+              >
+                Retake Quiz
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="!result">
             <div v-if="currentQuestion" class="mb-10 bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[260px] flex flex-col justify-between">
               <p class="font-semibold mb-6 text-xl leading-relaxed">
                 {{ currentQuestionIndex + 1 }}. {{ currentQuestion.question }}
@@ -174,14 +245,7 @@
             </div>
           </div>
 
-          <!-- Success Modal for Passed Quiz -->
-          <SuccessModal
-            v-if="result?.passed && showSuccessModal"
-            :title="'Quiz Passed!'"
-            :message="`Congratulations! You passed the quiz and earned the ${earnedBadgeName} badge.`"
-            :buttonText="'Continue to Module'"
-            @close="handleSuccessModalClose"
-          />
+
         </div>
       </div>
     </main>
@@ -189,11 +253,24 @@
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
+
+    <!-- Success Modal for Passed Quiz -->
+    <SuccessModal
+      v-if="result?.passed && showSuccessModal"
+      :isOpen="showSuccessModal"
+      :title="'Quiz Passed!'"
+      :message="`Congratulations! You passed the quiz and earned the ${earnedBadgeName} badge.`"
+      :buttonText="continueButtonText"
+      :secondary-button-text="'Back to Dashboard'"
+      :image-src="badgeImage"
+      @close="handleSuccessModalClose"
+      @secondary="handleSecondaryAction"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue'
 import SuccessModal from '~/components/SuccessModal.vue'
@@ -214,9 +291,39 @@ const loading = ref(false)
 const error = ref('')
 const answers = ref<Record<number, string | number>>({})
 const result = ref<any>(null)
+const existingResult = ref<any | null>(null)
+const isRetaking = ref(false)
 const submitting = ref(false)
 const currentQuestionIndex = ref(0)
 const showSuccessModal = ref(false)
+
+const isReviewOnly = computed(() => {
+  return !!existingResult.value && !isRetaking.value && !result.value
+})
+
+// compute next module if available
+const nextModuleId = computed(() => {
+  if (!quiz.value?.level || !quiz.value?.module_id || !modules.value.length) return null
+  const courseLevel = quiz.value.level
+  const sorted = modules.value
+    .filter((m: any) => m.level === courseLevel)
+    .slice()
+    .sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+      return aNum - bNum
+    })
+  const idx = sorted.findIndex(m => String(m.id) === String(quiz.value.module_id))
+  if (idx >= 0 && idx < sorted.length - 1) {
+    return String(sorted[idx + 1].id)
+  }
+  return null
+})
+
+const continueButtonText = computed(() => {
+  return nextModuleId.value ? 'Continue to Next Module' : 'Back to Dashboard'
+})
+
 
 const currentQuestion = computed(() => quiz.value?.questions[currentQuestionIndex.value])
 
@@ -268,6 +375,23 @@ const earnedBadgeName = computed(() => {
   return 'Unknown Badge'
 })
 
+// compute an image url for the badge to display in the modal
+const badgeImage = computed(() => {
+  const map: Record<string,string> = {
+    'LITERACY SCHOLAR':'/assets/MODULE1.png',
+    'MEDIA SYSTEMS ADEPT':'/assets/MODULE2.png',
+    'MEDIA LINGUIST':'/assets/MODULE3.png',
+    'EQUITY ADVOCATE':'/assets/MODULE4.png',
+    'RESPONSIBLE CITIZEN':'/assets/MODULE5.png',
+    'CYBER GUARDIAN':'/assets/MODULE6.png',
+    'GENERATIVE THINKER':'/assets/MODULE7.png',
+    'DIGITAL MAVEN':'/assets/MODULE8.png',
+    'MEDIA ANALYST':'/assets/MODULE9.png',
+    'ETHICAL MEDIA CREATOR':'/assets/MODULE10.png',
+  }
+  return map[earnedBadgeName.value] || '/assets/default-badge.png'
+})
+
 onMounted(async () => {
   loading.value = true
   error.value = ''
@@ -284,6 +408,9 @@ onMounted(async () => {
     
     // Fetch modules to determine badge
     await fetchModules()
+
+    // If already attempted, load saved score + answers for review-only display
+    await fetchExistingResult()
   } catch (err) {
     error.value = 'Failed to load quiz.'
     console.error('Error:', err)
@@ -291,6 +418,58 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const fetchExistingResult = async () => {
+  try {
+    const { $supabase } = useNuxtApp()
+    const { data: { user } } = await $supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await $supabase
+      .from('quiz_results')
+      .select('score, passed, answers, created_at')
+      .eq('user_id', user.id)
+      .eq('quiz_id', quizId.value)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error fetching existing quiz result:', error)
+      return
+    }
+
+    existingResult.value = data || null
+  } catch (e) {
+    console.error('Error fetching existing quiz result:', e)
+  }
+}
+
+const getSelectedAnswerText = (question: any, idx: number) => {
+  const saved = existingResult.value?.answers
+  const raw = saved ? (saved[String(idx)] ?? saved[idx]) : undefined
+  if (raw === undefined || raw === null) return 'No answer'
+
+  if (question?.type === 'multiple_choice') {
+    const oi = typeof raw === 'number' ? raw : parseInt(String(raw), 10)
+    if (Number.isFinite(oi) && Array.isArray(question.options) && question.options[oi] != null) {
+      return question.options[oi]
+    }
+    return 'Answer recorded'
+  }
+
+  if (question?.type === 'true_false') {
+    return String(raw)
+  }
+
+  return String(raw)
+}
+
+const startRetake = () => {
+  isRetaking.value = true
+  existingResult.value = null
+  result.value = null
+  answers.value = {}
+  currentQuestionIndex.value = 0
+}
 
 const submitQuiz = async () => {
   if (!quiz.value) return
@@ -300,10 +479,12 @@ const submitQuiz = async () => {
     if (res) {
       result.value = res
 
-      // If user passed, mark the linked module as completed and show success modal
-      if (res.passed && quiz.value?.module_id && quiz.value?.level) {
-        completeModule(quiz.value.level, String(quiz.value.module_id))
-        showSuccessModal.value = true
+      // If user passed, mark the linked module as completed
+      if (res.passed) {
+        // mark module completed if we have enough data
+        if (quiz.value?.module_id && quiz.value?.level) {
+          completeModule(quiz.value.level, String(quiz.value.module_id))
+        }
       }
     }
   } catch (err) {
@@ -313,6 +494,13 @@ const submitQuiz = async () => {
   }
 }
 
+// automatically open success modal when a passing result appears
+watch(result, (val) => {
+  if (val && val.passed) {
+    showSuccessModal.value = true
+  }
+}, { immediate: true })
+
 const retakeQuiz = () => {
   result.value = null
   answers.value = {}
@@ -321,7 +509,16 @@ const retakeQuiz = () => {
 
 const handleSuccessModalClose = () => {
   showSuccessModal.value = false
-  goBack()
+  if (nextModuleId.value) {
+    router.push(`/modules/${nextModuleId.value}`)
+  } else {
+    router.push('/dashboard')
+  }
+}
+
+const handleSecondaryAction = () => {
+  showSuccessModal.value = false
+  router.push('/dashboard')
 }
 
 const goBack = () => {

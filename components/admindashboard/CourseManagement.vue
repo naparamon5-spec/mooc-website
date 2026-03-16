@@ -35,11 +35,11 @@ defineProps({
       { label: 'Download course report', type: 'download-report' },
       { label: 'Upload resources', type: 'upload-resources' },
       { label: 'Edit Course Details', type: 'edit-details' },
-      { label: 'Create Announcements', type: 'create-announcements' },
+      // { label: 'Create Announcements', type: 'create-announcements' },
       { label: 'Update content', type: 'update-content' },
-      { label: 'Schedule announcements', type: 'schedule-announcements' },
+      // { label: 'Schedule announcements', type: 'schedule-announcements' },
       { label: 'Upload course policies', type: 'upload-policies' },
-      { label: 'Track announcement reach and views', type: 'track-announcements' }
+      // { label: 'Track announcement reach and views', type: 'track-announcements' }
     ]
   }
 })
@@ -78,13 +78,13 @@ const groupedActions = computed(() => {
         { label: 'Upload course policies', type: 'upload-policies' }
       ]
     },
-    {
-      title: 'Create Announcements',
-      options: [
-        { label: 'Schedule announcements', type: 'schedule-announcements' },
-        { label: 'Track announcement reach and views', type: 'track-announcements' }
-      ]
-    }
+    // {
+    //   title: 'Create Announcements',
+    //   options: [
+    //     { label: 'Schedule announcements', type: 'schedule-announcements' },
+    //     { label: 'Track announcement reach and views', type: 'track-announcements' }
+    //   ]
+    // }
   ]
 
   return defaultGroups

@@ -39,11 +39,31 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     try {
       const userId = session.user?.id
       if (userId) {
-        const { data: profile, error } = await $supabase
+        let { data: profile, error } = await $supabase
           .from('profiles')
           .select('role')
           .eq('id', userId)
           .single()
+
+        // If profile doesn't exist, create it
+        if (error && error.code === 'PGRST116') {
+          console.log('Profile not found in middleware, creating for user:', userId)
+          const { data: newProfile, error: createError } = await $supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: session.user.user_metadata?.full_name || '',
+              email: session.user.email || '',
+              role: 'student'
+            })
+            .select('role')
+            .single()
+
+          if (!createError && newProfile) {
+            profile = newProfile
+            error = null
+          }
+        }
 
         if (!error && profile?.role) {
           const role = String(profile.role).toLowerCase()

@@ -35,6 +35,9 @@
                 :class="quiz.level === 'beginner' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'">
                 {{ quiz.level === 'beginner' ? 'Beginner' : 'Advanced' }}
               </span>
+              <span v-if="getModuleTitle(quiz.moduleId)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                Module: {{ getModuleTitle(quiz.moduleId) }}
+              </span>
               <span class="text-xs text-gray-500">
                 {{ quiz.questions?.length || 0 }} questions
               </span>
@@ -97,8 +100,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useQuizManagement, type Quiz } from '~/composables/useQuizManagement'
+import { useModuleManagement } from '~/composables/useModuleManagement'
 
 defineProps({
   quizzes: {
@@ -114,9 +118,14 @@ defineProps({
 const emit = defineEmits(['edit', 'deleted'])
 
 const { deleteQuiz, loading } = useQuizManagement()
+const { fetchModules, modules } = useModuleManagement()
 
 const showDeleteConfirm = ref(false)
 const quizToDelete = ref<Quiz | null>(null)
+
+onMounted(async () => {
+  await fetchModules()
+})
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -124,6 +133,12 @@ const formatDate = (dateString: string) => {
     month: 'short',
     day: 'numeric',
   })
+}
+
+const getModuleTitle = (moduleId: string) => {
+  if (!moduleId) return null
+  const module = modules.value.find(m => m.id === moduleId)
+  return module?.title || null
 }
 
 const confirmDelete = (quiz: Quiz) => {

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative rounded-xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+    class="module-card relative rounded-xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 h-[240px] flex flex-col"
     :class="[
       isRestricted
         ? 'border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
@@ -17,17 +17,17 @@
     >
       <div class="text-center">
         <span class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold block mb-2">🔒 Locked</span>
-        <p class="text-white text-xs">Complete previous module</p>
+        <p class="text-white text-xs">{{ restrictionMessage }}</p>
       </div>
     </div>
 
-    <!-- Image Only -->
-    <div class="w-full relative overflow-hidden">
+    <!-- Image area: fixed height so all cards align -->
+    <div class="w-full h-[220px] relative overflow-hidden flex items-center justify-center bg-gray-50/80">
       <img 
         v-if="imageUrl"
         :src="imageUrl"
         :alt="title"
-        class="w-full h-auto object-contain"
+        class="w-full h-full object-contain"
       />
       <!-- Completion Badge -->
       <div v-if="isCompleted" class="absolute top-2 right-2 z-20">
@@ -55,9 +55,10 @@ const props = defineProps({
   isActive: { type: Boolean, default: false },
   isRestricted: { type: Boolean, default: false },
   isCompleted: { type: Boolean, default: false },
-  title: { type: String, default: "" },  // optional, used for alt
+  restrictionMessage: { type: String, default: 'Complete previous module' },
+  title: { type: String, default: "" },
   imageUrl: { type: String, default: "" },
-  moduleId: { type: Number, default: null },
+  moduleId: { type: String, default: null },
 })
 
 defineEmits(['click'])

@@ -14,8 +14,8 @@
           :value="activeStudents"
         />
         <MetricCard
-          title="Pending Enrollments"
-          :value="pendingEnrollments"
+          title="Inactive Students"
+          :value="inactiveStudents"
         />
         <MetricCard
           title="Completed"
@@ -33,12 +33,9 @@
           />
         </div>
 
-        <!-- Activity Feed -->
+        <!-- System Health -->
         <div class="lg:col-span-1">
-          <ActivityFeed
-            :activities="activities"
-            @retry="handleRetry"
-          />
+          <SystemHealth :metrics="moduleMetrics" />
         </div>
       </div>
 
@@ -51,10 +48,15 @@
         <CourseCompletionRate :data="completionData" />
       </div>
 
-      <!-- System Health -->
+      <!-- 2-Week Course Agreement Management -->
       <div class="mb-8">
-        <SystemHealth :metrics="moduleMetrics" />
+        <CourseAgreementManagement />
       </div>
+
+      <!-- Test Console -->
+      <!-- <div class="mb-8">
+        <NoticeSystemTestConsole />
+      </div> -->
     </div>
 
     <!-- Footer -->
@@ -73,6 +75,8 @@ import ActivityFeed from '~/components/admindashboard/ActivityFeed.vue'
 import EnrollmentAnalytics from '~/components/admindashboard/EnrollmentAnalytics.vue'
 import CourseCompletionRate from '~/components/admindashboard/CourseCompletionRate.vue'
 import SystemHealth from '~/components/admindashboard/SystemHealth.vue'
+import CourseAgreementManagement from '~/components/admindashboard/CourseAgreementManagement.vue'
+import NoticeSystemTestConsole from '~/components/admindashboard/NoticeSystemTestConsole.vue'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useAdminMetrics } from '~/composables/useAdminMetrics'
 import { useUserManagement } from '~/composables/useUserManagement'
@@ -87,6 +91,10 @@ const { fetchUserProfile } = useUserProfile()
 const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, fetchMetrics, fetchModuleCompletionStats } = useAdminMetrics()
 const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
+const inactiveStudents = ref(0)
+
+const { $supabase } = useNuxtApp()
+const supabase = $supabase
 
 // Fetch user profile and metrics on mount
 onMounted(async () => {
@@ -103,6 +111,14 @@ onMounted(async () => {
     
     // Fetch users from database
     await fetchUsers();
+    
+    // Fetch inactive students count
+    const { count } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', false)
+    
+    inactiveStudents.value = count || 0
   } catch (err) {
     console.error('Error loading admin data:', err);
   }
@@ -170,7 +186,11 @@ const handleUserAction = (actionType: string) => {
 
 const handleCourseAction = (actionType: string) => {
   console.log('Course action:', actionType)
-  // Handle course management actions
+  if (actionType === 'upload-resources') {
+    navigateTo('/admin/resources')
+  } else {
+    // Handle other course management actions
+  }
 }
 
 const handleRetry = (activity: any) => {

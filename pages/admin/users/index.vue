@@ -112,7 +112,8 @@ const handleUserAction = async (actionType: string, payload?: any) => {
 
 const handleModalSuccess = () => {
   showUserModal.value = false
-  // Users are automatically refreshed by the composable
+  // Refresh users list after successful update
+  fetchUsers()
 }
 
 const exportUsers = () => {

@@ -2,6 +2,37 @@
   <div class="bg-gray-50 flex flex-col min-h-screen">
     <DashboardHeader :student-name="studentName" />
 
+    <!-- Course Agreement Modal (fallback; inline card used after "Click here!") -->
+    <CourseAgreementModal
+      :isOpen="showAgreementModal"
+      :allowCancel="false"
+      @agree="handleAgreementAccepted"
+      @decline="handleAgreementDeclined"
+    />
+
+    <!-- Instructor Character Modal for Onboarding -->
+    <InstructorCharacter
+      :isOpen="showCharacterModal"
+      mode="onboarding"
+      title="Welcome to Your Learning Journey!"
+      :messages="[
+        `Hello ${studentName}! 👋 I'm Alex, your personal learning guide.`,
+        'I\'m here to help you navigate through this course and make sure you get the most out of every lesson.',
+        'Complete modules in order, earn badges, and track your progress on your dashboard. Whenever you start a new module, I\'ll be here to guide you!',
+      ]"
+      :tips="[
+        'Complete all modules in order to unlock advanced content',
+        'Take quizzes to test your knowledge and earn badges',
+        'Visit your dashboard to track your progress',
+        'Reach out from the about us section if you need any help!'
+      ]"
+      buttonText="Got it, Let's Start!"
+      :showSkip="true"
+      characterName="Alex"
+      @close="handleCharacterClose"
+      @skip="handleCharacterSkip"
+    />
+
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="text-center">
         <div class="inline-block mb-2">
@@ -14,7 +45,17 @@
       </div>
     </div>
 
-    <div v-else class="flex-1 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 overflow-y-auto overflow-x-hidden">
+    <div v-else class="flex-1 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-1 overflow-x-hidden">
+
+      <!-- ── Phase / Overdue notice banner (only shown after agreement) ── -->
+      <div class="pt-2">
+        <NoticesCard
+          :key="'notices-' + noticeCardKey"
+          :show-welcome-step="false"
+          @open-agreement="onOpenAgreement"
+        />
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
@@ -33,68 +74,77 @@
 
         <!-- Main Content -->
         <div class="lg:col-span-3">
-          <!-- Course Level Selector -->
- <div class="mb-4">
-  <div class="flex gap-4 relative items-start">
-    <button
-      v-for="level in courseLevels"
-      :key="level.id"
-      @click="switchCourseLevel(level.id)"
-      :disabled="level.id === 'advanced' && !isBeginnerCourseCompleted()"
-      class="px-6 py-2 rounded-lg min-w-[160px] font-semibold transition-all duration-200
-             relative group whitespace-nowrap"
-      :class="
-        currentCourseLevel === level.id
-          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg'
-          : level.id === 'advanced' && !isBeginnerCourseCompleted()
-          ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-60'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-      "
-    >
-      {{ level.name }}
+          <!-- After "Click here!": only agreement card; modules and description hidden -->
+          <template v-if="showAgreementStep">
+            <CourseAgreementCard
+              @agree="handleAgreementAccepted"
+            />
+          </template>
 
-      <!-- Tooltip -->
-      <div
-        v-if="level.id === 'advanced' && !isBeginnerCourseCompleted()"
-        class="invisible group-hover:visible
-               absolute left-full top-1/2 -translate-y-1/2 ml-3
-               px-3 py-2 bg-gray-900 text-white text-sm rounded
-               whitespace-nowrap z-20"
-      >
-        Complete the Beginner Course to unlock Advanced
-        <div
-          class="absolute right-full top-1/2 -translate-y-1/2
-                 border-4 border-transparent border-r-gray-900"
-        ></div>
-      </div>
-    </button>
-  </div>
-</div>
+          <template v-else>
 
-
-          <!-- Modules Grid with Header -->
-          <div v-if="currentModules.length > 0">
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-              <ModuleCard
-                v-for="(module, index) in currentModules"
-                :key="`${currentCourseLevel}-${module.id}`"
-                :title="module.title"
-                :subtitle="module.subtitle"
-                :is-active="selectedModule?.id === module.id"
-                :is-restricted="!isModuleAccessible(module.id, index)"
-                :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
-                :emoji="module.emoji"
-                :module-id="module.id"
-                :image-url="module.image_url"
-                @click="selectModule(module)"
-              />
+            <!-- ── Beginner / Advanced tabs ── -->
+            <div class="mb-4">
+              <div class="flex flex-wrap gap-2 items-center">
+                <button
+                  v-for="level in courseLevels"
+                  :key="level.id"
+                  @click="switchCourseLevel(level.id)"
+                  :disabled="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+                  class="px-6 py-3 rounded-full text-base font-semibold transition-all relative group"
+                  :class="
+                    currentCourseLevel === level.id
+                      ? 'text-white shadow-md'
+                      : level.id === 'advanced' && !isBeginnerCourseCompleted()
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-60'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  "
+                  :style="currentCourseLevel === level.id ? { backgroundColor: '#001a4d' } : {}"
+                >
+                  {{ level.name }}
+                  <div
+                    v-if="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+                    class="invisible group-hover:visible absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded z-20 whitespace-nowrap"
+                  >
+                    Complete the Beginner Course to unlock Advanced
+                    <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                  </div>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <!-- Module Description with Learning Outcomes -->
-          <div v-if="selectedModule" class="mb-4">
-            <ModuleDescriptionPanel :module="selectedModule" />
-          </div>
+            <!-- ── Modules Grid ── -->
+            <div v-if="currentModules.length > 0">
+              <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                <ModuleCard
+                  v-for="(module, index) in currentModules"
+                  :key="`${currentCourseLevel}-${module.id}`"
+                  :title="module.title"
+                  :subtitle="module.subtitle"
+                  :is-active="selectedModule?.id === module.id"
+                  :is-restricted="!isModuleAccessible(module.id, index)"
+                  :restriction-message="!hasAcceptedAgreement ? 'Accept the course agreement to unlock modules' : 'Complete previous module'"
+                  :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
+                  :emoji="module.emoji"
+                  :module-id="module.id"
+                  :image-url="module.image_url"
+                  @click="selectModule(module)"
+                />
+              </div>
+            </div>
+
+            <!-- ── Welcome Card (below modules, replaces description) ── -->
+            <WelcomeCard
+              v-if="showWelcomeStep"
+              @open-agreement="onOpenAgreement"
+            />
+
+            <!-- ── Module Description (hidden during welcome step) ── -->
+            <div v-else-if="selectedModule" class="mb-4">
+              <ModuleDescriptionPanel :module="selectedModule" />
+            </div>
+
+          </template>
 
           <!-- Footer Buttons -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
@@ -127,49 +177,145 @@
 
 <script setup lang="ts">
 import { ref, computed, watchEffect, watch, onMounted } from "vue";
-// Protect this page with the `auth` middleware
 definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
 import ModuleDescriptionPanel from "~/components/studentdashboard/ModuleDescriptionPanel.vue";
+import NoticesCard from "~/components/studentdashboard/NoticesCard.vue";
+import WelcomeCard from "~/components/studentdashboard/WelcomeCard.vue";
+import CourseAgreementModal from "~/components/studentdashboard/CourseAgreementModal.vue";
+import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useUserProfile } from "~/composables/useUserProfile";
+import { useOnboarding } from "~/composables/useOnboarding";
+import { useModuleAutoAssignment } from "~/composables/useModuleAutoAssignment";
+import { useCourseAgreement } from "~/composables/useCourseAgreement";
 import { useRoute } from 'vue-router';
 import { useModuleManagement } from "~/composables/useModuleManagement";
 
-useHead({
-  title: "Dashboard - MIL MOOC",
-});
+useHead({ title: "Dashboard - MIL MOOC" });
 
 const route = useRoute();
 
 const studentName = ref("Student's name");
+const showCharacterModal = ref(false);
+const showAgreementModal = ref(false);
 const isLoading = ref(true);
 const { fetchUserProfile } = useUserProfile();
+const { hasSeenOnboarding, initializeOnboarding, markOnboardingAsSeen } = useOnboarding();
+const { hasAcceptedCourseAgreement, hasClickedWelcome } = useCourseAgreement();
 
-// Fetch user profile and modules on mount
+// Tracks whether the user has accepted the course agreement.
+// Used to lock module access until acceptance (including Module 1).
+const hasAcceptedAgreement = ref(false);
+
+// True when user has not agreed yet and has not clicked "Click here!" — show Meli welcome card below modules
+const showWelcomeStep = ref(false);
+// True after "Click here!" until they click "I agree" — show inline agreement card, hide modules and description
+const showAgreementStep = ref(false);
+// Increment when user accepts agreement so NoticesCard remounts and refetches agreement date
+const noticeCardKey = ref(0);
+
 onMounted(async () => {
   try {
-    // Clear any previous user's progress first
     clearProgress();
+    await loadProgressFromSupabase();
+    
+    const { $supabase } = useNuxtApp();
+    const { data: { user } } = await $supabase.auth.getUser();
     
     const userData = await fetchUserProfile();
     if (userData?.full_name) {
       studentName.value = userData.full_name;
     }
     
-    // Load all modules (no level filter - fetch everything)
+    if (user?.id) {
+      const hasAgreed = await hasAcceptedCourseAgreement(user.id);
+      hasAcceptedAgreement.value = hasAgreed;
+
+      if (!hasAgreed) {
+        const clickedWelcome = await hasClickedWelcome(user.id);
+        if (!clickedWelcome) {
+          // Step 1: Show modules + Meli welcome card below them
+          showWelcomeStep.value = true;
+        } else {
+          // Step 2: They clicked "Click here!" — show inline agreement card
+          showAgreementStep.value = true;
+        }
+      }
+    }
+    
+    if (user?.id) {
+      const { ensureModulesAssigned, checkDeadlineStatus } = useModuleAutoAssignment();
+      await ensureModulesAssigned(user.id);
+      await checkDeadlineStatus(user.id);
+    }
+    
     if (modules.value.length === 0) {
       await fetchModules();
     }
 
-    // Load progress from Supabase for current user
-    await loadProgressFromSupabase();
+    initializeOnboarding();
+    
+    if (!hasSeenOnboarding.value) {
+      showCharacterModal.value = true;
+    }
   } finally {
     isLoading.value = false;
   }
 });
+
+const handleCharacterClose = async () => {
+  showCharacterModal.value = false;
+  await markOnboardingAsSeen();
+};
+
+const handleCharacterSkip = async () => {
+  showCharacterModal.value = false;
+  await markOnboardingAsSeen();
+};
+
+// After "Click here!" — show inline agreement, hide modules and description
+const onOpenAgreement = () => {
+  showWelcomeStep.value = false;
+  showAgreementStep.value = true;
+};
+
+const handleAgreementAccepted = async () => {
+  showAgreementModal.value = false;
+  showWelcomeStep.value = false;
+  showAgreementStep.value = false;
+  noticeCardKey.value += 1;
+  hasAcceptedAgreement.value = true;
+
+  try {
+    const { $supabase } = useNuxtApp();
+    const { data: { user } } = await $supabase.auth.getUser();
+    
+    if (user?.id) {
+      const { ensureModulesAssigned, checkDeadlineStatus } = useModuleAutoAssignment();
+      await ensureModulesAssigned(user.id);
+      await checkDeadlineStatus(user.id);
+    }
+    
+    if (modules.value.length === 0) {
+      await fetchModules();
+    }
+
+    initializeOnboarding();
+    
+    if (!hasSeenOnboarding.value) {
+      showCharacterModal.value = true;
+    }
+  } catch (error) {
+    console.error('Error after agreement acceptance:', error);
+  }
+};
+
+const handleAgreementDeclined = () => {
+  showAgreementModal.value = false;
+};
 
 const { 
   getCompletedModules, 
@@ -193,19 +339,15 @@ const {
 
 const { fetchModuleById, modules, fetchModules } = useModuleManagement();
 
-// Currently selected module
 const selectedModule = ref<any>(null);
 
-// Course levels configuration
 const courseLevels = ref([
   { id: "beginner", name: "Beginner Course" },
   { id: "advanced", name: "Advanced Course" },
 ]);
 
-// Current course level
 const currentCourseLevel = ref("beginner");
 
-// Initialize course level from route query if present
 watchEffect(() => {
   const courseParam = route.query.course as string;
   if (courseParam === 'advanced' && isBeginnerCourseCompleted()) {
@@ -215,15 +357,12 @@ watchEffect(() => {
   }
 });
 
-// Computed properties for current course data
 const currentCourseData = computed(() => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
   const dbModules = currentModules.value;
   
-  // Get completed modules count
   const completedModulesCount = getCompletedCount(courseLevel);
   
-  // Get completed lessons in the current (next incomplete) module
   let completedLessonsInCurrent = 0;
   const firstIncompleteModule = dbModules.find((m: any) => !isModuleCompleted(courseLevel, m.id));
   if (firstIncompleteModule) {
@@ -244,28 +383,22 @@ const currentCourseData = computed(() => {
 
 const currentModules = computed(() => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-
-  // Keep module order consistent (Module 1, Module 2, etc.)
-  const dbModules = modules.value
-    .filter(m => m.level === courseLevel)
+  return modules.value
+    .filter(m => m.level === courseLevel && m.is_active)
     .slice()
     .sort((a, b) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10);
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10);
       return aNum - bNum;
     });
-
-  return dbModules;
 });
 
-// Check if a module is accessible
 const isModuleAccessible = (moduleId: string, index: number): boolean => {
+  // Modules should remain locked until the student agrees to the course agreement.
+  if (!hasAcceptedAgreement.value) return false;
+
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-  
-  // First module is always accessible
   if (index === 0) return true;
-  
-  // Check if the previous module is completed
   if (index > 0) {
     const previousModule = currentModules.value[index - 1];
     return isModuleCompleted(courseLevel, previousModule.id);
@@ -274,24 +407,17 @@ const isModuleAccessible = (moduleId: string, index: number): boolean => {
 };
 
 const switchCourseLevel = (levelId: string) => {
-  if (levelId === 'advanced' && !isBeginnerCourseCompleted()) {
-    return; // Prevent switching to advanced if beginner not completed
-  }
+  if (levelId === 'advanced' && !isBeginnerCourseCompleted()) return;
   currentCourseLevel.value = levelId;
 };
 
-// Watch for changes in currentModules to set initial selectedModule to first incomplete
 watchEffect(() => {
   if (currentModules.value && currentModules.value.length > 0) {
     const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-    
-    // Always select the first incomplete module (current active module)
     const firstIncompleteModule = currentModules.value.find(m => !isModuleCompleted(courseLevel, m.id));
-    
     if (firstIncompleteModule) {
       selectedModule.value = firstIncompleteModule;
     } else {
-      // If all modules completed, show first module
       selectedModule.value = currentModules.value[0];
     }
   } else {
@@ -299,57 +425,40 @@ watchEffect(() => {
   }
 });
 
-// Select a module and navigate to it
 const selectModule = (module: any) => {
   const index = currentModules.value.findIndex(m => m.id === module.id);
-  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-  
-  // Only allow navigation to accessible modules
   if (isModuleAccessible(module.id, index)) {
     selectedModule.value = module;
     navigateTo(`/modules/${module.id}`);
   }
 };
 
-// Get module progress percentage (20% per module when completed, or based on lesson completion)
 const getModuleProgress = (moduleId: string): number => {
-  if (isModuleCompleted(currentCourseLevel.value as 'beginner' | 'advanced', moduleId)) {
-    return 100;
-  }
-  
+  if (isModuleCompleted(currentCourseLevel.value as 'beginner' | 'advanced', moduleId)) return 100;
   const completedLessons = getCompletedLessons(currentCourseLevel.value as 'beginner' | 'advanced', moduleId);
-  const totalLessons = 4; // Assuming 4 lessons per module
-  return Math.round((completedLessons.length / totalLessons) * 100);
+  return Math.round((completedLessons.length / 4) * 100);
 };
 
-// Get count of completed lessons for a module
 const getCompletedLessonsCount = (moduleId: string): number => {
   return getCompletedLessons(currentCourseLevel.value as 'beginner' | 'advanced', moduleId).length;
 };
 
-// Check if a lesson is completed
 const isLessonCompleted = (moduleId: string, lessonIndex: number): boolean => {
   const completedLessons = getCompletedLessons(currentCourseLevel.value as 'beginner' | 'advanced', moduleId);
   return completedLessons.includes(lessonIndex);
 };
 
-// Get badge name for a module
 const getBadgeForModule = (moduleId: string): string => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced';
   const courseBadges = badgeMapping[courseLevel];
-  
-  // Find the position of this module in the current modules list
   const moduleIndex = currentModules.value.findIndex(m => m.id === moduleId);
   if (moduleIndex >= 0 && courseBadges) {
-    const modulePosition = moduleIndex + 1; // 1-indexed for badge matching
-    const badgeName = (courseBadges as any)[modulePosition];
+    const badgeName = (courseBadges as any)[moduleIndex + 1];
     if (badgeName) return badgeName;
   }
-  
   return 'Achievement Unlocked';
 };
 
-// Navigate to a specific lesson
 const goToLesson = (moduleId: string, lessonIndex: number) => {
   navigateTo(`/modules/${moduleId}?lesson=${lessonIndex}`);
 };

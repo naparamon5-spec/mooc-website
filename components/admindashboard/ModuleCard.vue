@@ -6,7 +6,7 @@
         ? 'border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
         : module.is_active
         ? 'border-primary-600 bg-white shadow-lg hover:shadow-xl'
-        : 'border-gray-200 bg-white hover:shadow-md'
+        : 'border-gray-300 bg-gray-100 opacity-75 hover:shadow-md'
     ]"
     @click="!module.is_restricted && $emit('edit', module)"
   >
@@ -17,6 +17,16 @@
     >
       <span class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-semibold">
         Restricted
+      </span>
+    </div>
+
+    <!-- Inactive Overlay -->
+    <div
+      v-else-if="!module.is_active"
+      class="absolute inset-0 bg-gray-100/80 flex items-center justify-center z-10"
+    >
+      <span class="bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-semibold">
+        Inactive
       </span>
     </div>
 
@@ -38,7 +48,7 @@
       
       <!-- Hover Overlay with Title -->
       <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end p-4">
-        <p v-if="!module.is_restricted" class="text-white font-bold text-sm line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <p v-if="!module.is_restricted && module.is_active" class="text-white font-bold text-sm line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {{ module.title }}
         </p>
       </div>

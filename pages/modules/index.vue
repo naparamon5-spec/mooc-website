@@ -20,13 +20,14 @@
         v-else
         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
       >
-        <ModuleCard
+              <ModuleCard
           v-for="(module, index) in allAvailableModules"
           :key="module.id"
           :title="module.title"
           :subtitle="module.subtitle"
           :is-active="true"
           :is-restricted="!isModuleAccessible(module.id, index)"
+          :restriction-message="!hasAcceptedAgreement ? 'Accept the course agreement to unlock modules' : 'Complete previous module'"
           :is-completed="isModuleCompleted(module.level, module.id)"
           :emoji="module.emoji"
           :module-id="module.id"
@@ -51,6 +52,7 @@ import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useModuleManagement } from "~/composables/useModuleManagement";
+import { useCourseAgreement } from "~/composables/useCourseAgreement";
 
 const studentName = ref("Student's name");
 
@@ -59,6 +61,9 @@ const { modules, loading, error, fetchModules } = useModuleManagement();
 
 const selectedModule = ref(null);
 const router = useRouter();
+
+const { hasAcceptedCourseAgreement } = useCourseAgreement();
+const hasAcceptedAgreement = ref(false);
 
 const completedModules = computed(() => {
   return new Set(
@@ -69,7 +74,7 @@ const completedModules = computed(() => {
 const allAvailableModules = computed(() => {
   // Group modules by level and sort
   const beginnerModules = modules.value
-    .filter(m => m.level === 'beginner')
+    .filter(m => m.level === 'beginner' && m.is_active)
     .sort((a, b) => {
       const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
       const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
@@ -77,7 +82,7 @@ const allAvailableModules = computed(() => {
     });
   
   const advancedModules = modules.value
-    .filter(m => m.level === 'advanced')
+    .filter(m => m.level === 'advanced' && m.is_active)
     .sort((a, b) => {
       const aNum = parseInt(a.title.match(/\d+/)?.[0] || '0');
       const bNum = parseInt(b.title.match(/\d+/)?.[0] || '0');
@@ -98,7 +103,10 @@ watch(
 );
 
 const isModuleAccessible = (moduleId, index) => {
-  // First module of beginner level is always accessible
+  // Modules locked until course agreement is accepted
+  if (!hasAcceptedAgreement.value) return false;
+
+  // First module of beginner level is always accessible once agreed
   if (index === 0) return true;
   
   const currentModule = allAvailableModules.value[index];
@@ -126,6 +134,14 @@ const selectModule = (module) => {
 
 onMounted(async () => {
   document.title = "Modules Dashboard - MIL MOOC";
+
+  const { $supabase } = useNuxtApp();
+  const { data: { user } } = await $supabase.auth.getUser();
+
+  if (user?.id) {
+    hasAcceptedAgreement.value = await hasAcceptedCourseAgreement(user.id);
+  }
+
   await fetchModules();
 });
 </script>

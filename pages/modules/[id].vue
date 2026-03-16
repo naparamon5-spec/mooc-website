@@ -3,6 +3,29 @@
     <!-- Header -->
     <DashboardHeader :activeModuleId="parseInt(moduleId)" />
 
+    <!-- Instructor Character Modal for Module Intro -->
+    <InstructorCharacter
+      :isOpen="showModuleCharacterModal"
+      mode="module"
+      :title="`Welcome to ${module?.title}! 🚀`"
+      :messages="[
+        `Let's dive into ${module?.title}! This module covers important concepts you need to master.`,
+        'Take your time reading through each lesson carefully. You can navigate between lessons using the previous and next buttons.',
+        `After reading all lessons, you'll need to complete the module quiz to get the badge and unlock the next module. Good luck!`
+      ]"
+      :tips="[
+        `This module has ${module?.lessons?.length || 0} lessons`,
+        'Read each lesson carefully to prepare for the quiz',
+        'You need to pass the quiz to earn your badge',
+        'Take notes while reading to help you remember key concepts'
+      ]"
+      buttonText="Let's Get Started!"
+      :showSkip="true"
+      characterName="Alex"
+      @close="handleModuleCharacterClose"
+      @skip="handleModuleCharacterSkip"
+    />
+
     <!-- Completion Modal -->
     <ModuleCompletionModal
       v-if="!isLastModule && module"
@@ -131,12 +154,38 @@
             </h2>
           </div>
 
-          <!-- Lesson Content -->
+          <!-- Lesson Content (supports inserting image via [[IMAGE]] placeholder) -->
           <div
             v-if="currentLesson"
             class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg"
-            v-html="currentLesson.htmlContent"
-          />
+          >
+            <div class="space-y-6">
+              <template v-for="(block, blockIndex) in getLessonBlocks(currentLesson)" :key="`block-${blockIndex}`">
+                <!-- Text block -->
+                <div v-if="block.type === 'text'" class="space-y-4">
+                  <template v-for="(segment, segIndex) in splitIntoSegments(block.text)" :key="`seg-${blockIndex}-${segIndex}`">
+                    <p v-if="segment.type === 'p'" class="text-gray-700 leading-relaxed text-base">
+                      {{ segment.text }}
+                    </p>
+                    <ul v-else-if="segment.type === 'ul'" class="list-disc pl-6 text-gray-700">
+                      <li v-for="(item, itemIndex) in segment.items" :key="`li-${blockIndex}-${segIndex}-${itemIndex}`">
+                        {{ item }}
+                      </li>
+                    </ul>
+                  </template>
+                </div>
+
+                <!-- Image block -->
+                <div v-else-if="block.type === 'image' && block.src" class="my-2">
+                  <img
+                    :src="block.src"
+                    :alt="currentLesson.title || 'Lesson image'"
+                    class="w-full rounded-lg border border-gray-100"
+                  />
+                </div>
+              </template>
+            </div>
+          </div>
 
         <!-- Navigation Buttons -->
         <div class="flex justify-between items-center mt-12">
@@ -218,6 +267,7 @@
 
         <div class="flex justify-end gap-3 mt-4">
           <button
+            v-if="quizInfo"
             type="button"
             @click="showQuizDialog = false"
             class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -225,12 +275,21 @@
             Cancel
           </button>
           <button
+            v-if="quizInfo"
             type="button"
             @click="goToQuiz"
             :disabled="!quizInfo || !!quizError"
             class="px-4 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Take Quiz
+          </button>
+          <button
+            v-if="!quizInfo && quizError"
+            type="button"
+            @click="showQuizDialog = false"
+            class="px-4 py-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-gray-700"
+          >
+            Close
           </button>
         </div>
       </div>
@@ -254,6 +313,7 @@ import { useCourseProgress } from '~/composables/useCourseProgress';
 import { useModuleManagement } from '~/composables/useModuleManagement';
 import { useQuizManagement } from '~/composables/useQuizManagement';
 import { useUserProfile } from '~/composables/useUserProfile';
+import { useOnboarding } from '~/composables/useOnboarding';
 
 const route = useRoute();
 const moduleIdRaw = computed(() => {
@@ -271,6 +331,7 @@ const lessonParam = computed(() => {
 const currentLessonIndex = ref(0);
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
+const showModuleCharacterModal = ref(false);
 const showQuizDialog = ref(false);
 const quizInfo = ref<any | null>(null);
 const quizLoading = ref(false);
@@ -280,6 +341,7 @@ const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule,
 const { fetchModuleById, fetchModules, modules, loading } = useModuleManagement();
 const { fetchQuizForModule } = useQuizManagement();
 const { fetchUserProfile } = useUserProfile();
+const { hasSeenModuleIntro, markModuleIntroAsSeen, initializeOnboarding } = useOnboarding();
 
 const module = ref<any>(null);
 
@@ -327,11 +389,35 @@ onMounted(async () => {
       studentName.value = userData.full_name;
     }
     await fetchAllModules();
+    
+    // Initialize onboarding state
+    initializeOnboarding();
+    
+    // Show character modal if user hasn't seen intro for this module yet
+    if (!hasSeenModuleIntro(moduleId.value)) {
+      // Wait for module to load before showing modal
+      setTimeout(() => {
+        showModuleCharacterModal.value = true;
+      }, 500);
+    }
+    
     window.scrollTo({ top: 0, behavior: 'auto' });
   } catch (err) {
     console.error('Error on mount:', err);
   }
 });
+
+// Handle module character modal close
+const handleModuleCharacterClose = () => {
+  showModuleCharacterModal.value = false;
+  markModuleIntroAsSeen(moduleId.value);
+};
+
+// Handle module character modal skip
+const handleModuleCharacterSkip = () => {
+  showModuleCharacterModal.value = false;
+  markModuleIntroAsSeen(moduleId.value);
+};
 
 const fetchAllModules = async () => {
   try {
@@ -343,7 +429,7 @@ const fetchAllModules = async () => {
   }
 };
 
-const openQuizDialog = async () => {
+const checkAndOpenQuizDialog = async () => {
   if (!module.value) return;
   quizLoading.value = true;
   quizError.value = null;
@@ -352,14 +438,17 @@ const openQuizDialog = async () => {
   try {
     const data = await fetchQuizForModule(String(module.value.id));
     if (!data) {
-      quizError.value = 'No quiz is configured for this module yet.';
+      // No quiz exists for this module - show message and prevent proceeding
+      quizError.value = 'The quiz for this module is not ready yet. Please check back later or contact your instructor.';
+      showQuizDialog.value = true;
       return;
     }
     quizInfo.value = data as any;
     showQuizDialog.value = true;
   } catch (err) {
-    console.error('Error opening quiz dialog:', err);
-    quizError.value = 'Failed to load quiz information.';
+    console.error('Error checking quiz:', err);
+    quizError.value = 'Failed to load quiz information. Please try again later.';
+    showQuizDialog.value = true;
   } finally {
     quizLoading.value = false;
   }
@@ -380,7 +469,8 @@ const currentLesson = computed(() => {
 });
 
 const isCurrentModuleCompleted = computed(() => {
-  return isModuleCompleted('beginner', moduleId.value);
+  const level = module.value?.level || 'beginner';
+  return isModuleCompleted(level, moduleId.value);
 });
 
 const goToPreviousLesson = () => {
@@ -411,10 +501,109 @@ const progressPercentage = computed(() => {
   return getTotalProgressPercentage(level, totalModules, moduleId.value, totalLessons);
 });
 
-const markLessonAsComplete = () => {
+type LessonBlock = { type: 'text'; text: string } | { type: 'image'; src: string }
+
+const stripHtmlToText = (input: string) => {
+  // Convert common HTML structures into readable plain text.
+  return (input || '')
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/\s*p\s*>/gi, '\n\n')
+    .replace(/<\/\s*h[1-6]\s*>/gi, '\n\n')
+    .replace(/<\s*h[1-6][^>]*>/gi, '')
+    .replace(/<\/\s*li\s*>/gi, '\n')
+    .replace(/<\s*li[^>]*>/gi, '- ')
+    .replace(/<\/\s*(ul|ol)\s*>/gi, '\n\n')
+    .replace(/<\s*(ul|ol)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+const legacyHtmlToBlocks = (html: string): LessonBlock[] => {
+  const input = (html || '').trim()
+  if (!input) return []
+
+  const blocks: LessonBlock[] = []
+  const imgRegex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi
+
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = imgRegex.exec(input)) !== null) {
+    const before = input.slice(lastIndex, match.index)
+    const src = (match[2] || '').trim()
+
+    const beforeText = stripHtmlToText(before)
+    if (beforeText) blocks.push({ type: 'text', text: beforeText })
+    if (src) blocks.push({ type: 'image', src })
+
+    lastIndex = match.index + match[0].length
+  }
+
+  const after = input.slice(lastIndex)
+  const afterText = stripHtmlToText(after)
+  if (afterText) blocks.push({ type: 'text', text: afterText })
+
+  return blocks
+}
+
+const getLessonBlocks = (lesson: any): LessonBlock[] => {
+  if (!lesson) return []
+
+  // New format (safe blocks, no HTML)
+  if (Array.isArray(lesson.blocks) && lesson.blocks.length > 0) {
+    return lesson.blocks
+      .filter((b: any) => b && (b.type === 'text' || b.type === 'image'))
+      .map((b: any) => (b.type === 'image'
+        ? ({ type: 'image', src: typeof b.src === 'string' ? b.src : '' } as const)
+        : ({ type: 'text', text: typeof b.text === 'string' ? b.text : '' } as const)
+      ))
+  }
+
+  // Backward compatibility (old htmlContent + single image_url)
+  const blocks: LessonBlock[] = []
+  const htmlContent = typeof lesson.htmlContent === 'string' ? lesson.htmlContent.trim() : ''
+  if (htmlContent) {
+    blocks.push(...legacyHtmlToBlocks(htmlContent))
+  }
+
+  const imageUrl = typeof lesson.image_url === 'string' ? lesson.image_url.trim() : ''
+  if (imageUrl) blocks.push({ type: 'image', src: imageUrl })
+
+  return blocks
+}
+
+const splitIntoSegments = (text: string) => {
+  const t = (text || '').trim()
+  if (!t) return []
+
+  const paragraphs = t.split(/\n\s*\n/g).map(s => s.trim()).filter(Boolean)
+  const segments: Array<
+    | { type: 'p'; text: string }
+    | { type: 'ul'; items: string[] }
+  > = []
+
+  for (const p of paragraphs) {
+    const lines = p.split('\n').map(l => l.trim()).filter(Boolean)
+    const allBullets = lines.length > 0 && lines.every(l => /^-\s+/.test(l))
+    if (allBullets) {
+      segments.push({ type: 'ul', items: lines.map(l => l.replace(/^-\s+/, '').trim()).filter(Boolean) })
+    } else {
+      segments.push({ type: 'p', text: p })
+    }
+  }
+
+  return segments
+}
+
+const markLessonAsComplete = async () => {
   completedLessons.value.add(currentLessonIndex.value);
   const currentModuleId = moduleId.value; // Use the string ID directly
-  completeLessonInModule('beginner', currentModuleId, currentLessonIndex.value);
+  const level = module.value?.level || 'beginner';
+  completeLessonInModule(level, currentModuleId, currentLessonIndex.value);
 
   // Check if all lessons in the current module are completed
   if (module.value && module.value.lessons) {
@@ -422,8 +611,8 @@ const markLessonAsComplete = () => {
       completedLessons.value.has(index)
     );
     if (allCurrentLessonsCompleted) {
-      // All lessons done – require quiz before marking module as completed
-      openQuizDialog();
+      // All lessons done – check if quiz exists before allowing completion
+      await checkAndOpenQuizDialog();
     }
   }
 };
@@ -529,19 +718,12 @@ watch(lessonParam, (newLessonParam) => {
 </script>
 
 <style>
-/* Basic styling for content rendered with v-html for better readability */
-.prose h2 {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin-bottom: 0.5em;
-}
+/* Keep original prose feel while rendering safe blocks (no v-html). */
 .prose p {
   margin-bottom: 1em;
   line-height: 1.6;
 }
 .prose ul {
-  list-style-position: inside;
-  padding-left: 1.5em;
   margin-bottom: 1em;
 }
 .prose li {

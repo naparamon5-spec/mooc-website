@@ -72,34 +72,19 @@
             />
           </div>
 
-          <!-- Level and Emoji -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Level <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="form.level"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select Level</option>
-                <option value="beginner">Beginner</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Emoji Icon <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.emoji"
-                type="text"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="e.g., 📚"
-                maxlength="2"
-              />
-            </div>
+          <!-- Level (full width now) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Level <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="form.level"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Select Level</option>
+              <option value="beginner">Beginner</option>
+              <option value="advanced">Advanced</option>
+            </select>
           </div>
 
           <!-- Description -->
@@ -121,11 +106,10 @@
               Module Image
             </label>
             <div class="space-y-3">
-              <!-- Image Preview -->
               <div v-if="imagePreview || form.image_url" class="relative">
-                <img 
-                  :src="imagePreview || form.image_url" 
-                  alt="Module preview" 
+                <img
+                  :src="imagePreview || form.image_url"
+                  alt="Module preview"
                   class="w-full h-48 object-cover rounded-lg border border-gray-300"
                 />
                 <button
@@ -139,8 +123,7 @@
                   </svg>
                 </button>
               </div>
-              
-              <!-- File Input -->
+
               <div class="flex items-center gap-3">
                 <input
                   ref="fileInput"
@@ -150,7 +133,7 @@
                   class="hidden"
                 />
                 <button
-                  @click="fileInput?.$el?.click() || $refs.fileInput?.click()"
+                  @click="$refs.fileInput?.click()"
                   type="button"
                   class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
@@ -229,7 +212,6 @@
                 :key="index"
                 class="border border-gray-200 rounded-lg p-4 bg-gray-50"
               >
-                <!-- Lesson Header -->
                 <div class="flex items-center justify-between mb-4">
                   <h4 class="font-semibold text-gray-900">Lesson {{ index + 1 }}</h4>
                   <button
@@ -240,7 +222,6 @@
                   </button>
                 </div>
 
-                <!-- Lesson Title -->
                 <div class="mb-4">
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     Lesson Title <span class="text-red-500">*</span>
@@ -253,49 +234,96 @@
                   />
                 </div>
 
-                <!-- Lesson Content -->
+                <!-- Lesson Content Blocks (NO HTML) -->
                 <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    HTML Content <span class="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    v-model="form.lessons[index].htmlContent"
-                    rows="6"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
-                    placeholder="HTML content (supports basic HTML tags)..."
-                  />
-                  <p class="text-xs text-gray-500 mt-2">
-                    Tip: You can use basic HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;img&gt;, etc.
-                  </p>
-                </div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
+                      Lesson Content <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        @click="addTextBlock(index)"
+                        class="px-3 py-1 text-sm font-medium text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
+                      >
+                        + Text
+                      </button>
+                      <button
+                        type="button"
+                        @click="addImageBlock(index)"
+                        class="px-3 py-1 text-sm font-medium text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
+                      >
+                        + Image
+                      </button>
+                    </div>
+                  </div>
 
-                <!-- Image Upload for Lesson -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Add Image to Lesson
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    @change="(e) => handleImageUpload(e, index)"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  <p class="text-xs text-gray-500 mt-2">
-                    After upload, the image URL will be added to your content
+                  <p class="text-xs text-gray-500 mb-3">
+                    Use the blocks below to match the template: text → image → text (repeat as needed). No HTML tags.
                   </p>
-                  <div v-if="form.lessons[index].image_url" class="mt-3 p-3 bg-white rounded border border-gray-200">
-                    <p class="text-sm font-medium text-gray-700 mb-2">Image Preview:</p>
-                    <img
-                      :src="form.lessons[index].image_url"
-                      :alt="form.lessons[index].title"
-                      class="max-w-full h-32 object-cover rounded"
-                    />
-                    <button
-                      @click="removeImage(index)"
-                      class="mt-2 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+
+                  <div v-if="!Array.isArray(lesson.blocks) || lesson.blocks.length === 0" class="text-center py-6 bg-white rounded border border-gray-200">
+                    <p class="text-sm text-gray-600">No content blocks yet. Add a Text block to start.</p>
+                  </div>
+
+                  <div v-else class="space-y-4">
+                    <div
+                      v-for="(block, blockIndex) in lesson.blocks"
+                      :key="`${index}-${blockIndex}`"
+                      class="bg-white rounded-lg border border-gray-200 p-3"
                     >
-                      Remove Image
-                    </button>
+                      <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-semibold text-gray-800">
+                          {{ block.type === 'image' ? 'Image' : 'Text' }} Block {{ blockIndex + 1 }}
+                        </p>
+                        <button
+                          type="button"
+                          @click="removeBlock(index, blockIndex)"
+                          class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      <div v-if="block.type === 'text'">
+                        <textarea
+                          v-model="form.lessons[index].blocks[blockIndex].text"
+                          rows="6"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          placeholder="Write your lesson content here..."
+                        />
+                        <p class="text-xs text-gray-500 mt-2">
+                          Tip: Use blank lines to separate paragraphs. Lists can be written with dashes.
+                        </p>
+                      </div>
+
+                      <div v-else-if="block.type === 'image'" class="space-y-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="(e) => handleBlockImageUpload(e, index, blockIndex)"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        <div v-if="block.src" class="p-3 bg-gray-50 rounded border border-gray-200">
+                          <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                          <img
+                            :src="block.src"
+                            :alt="form.lessons[index].title || 'Lesson image'"
+                            class="w-full max-h-72 object-contain rounded"
+                          />
+                          <button
+                            type="button"
+                            @click="clearBlockImage(index, blockIndex)"
+                            class="mt-2 px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                          >
+                            Remove Image
+                          </button>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                          Upload an image to display between text sections (you can add multiple image blocks).
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -324,22 +352,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    required: true
-  },
-  module: {
-    type: Object,
-    default: null
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  }
+  isOpen: { type: Boolean, required: true },
+  module: { type: Object, default: null },
+  loading: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['close', 'submit'])
@@ -353,7 +372,6 @@ const form = ref({
   title: '',
   subtitle: '',
   level: '',
-  emoji: '',
   description: '',
   image_url: '',
   learning_outcomes: [],
@@ -368,7 +386,6 @@ const resetForm = () => {
     title: '',
     subtitle: '',
     level: '',
-    emoji: '',
     description: '',
     image_url: '',
     learning_outcomes: [],
@@ -379,26 +396,72 @@ const resetForm = () => {
   imageFile.value = null
 }
 
-// Watch for module changes to populate form
+const normalizeLesson = (lesson: any) => {
+  const safeLesson = { ...(lesson || {}) }
+
+  const stripHtmlToText = (input: string) => {
+    // Lightweight sanitizer for legacy stored HTML so it doesn't show raw tags in the new editor.
+    // Convert common block separators to newlines, then strip remaining tags.
+    return (input || '')
+      .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+      .replace(/<\/\s*p\s*>/gi, '\n\n')
+      .replace(/<\/\s*li\s*>/gi, '\n')
+      .replace(/<\s*li[^>]*>/gi, '- ')
+      .replace(/<\/\s*(ul|ol)\s*>/gi, '\n\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
+  // Backward compatibility: if old htmlContent/image_url exist, convert into blocks.
+  if (!Array.isArray(safeLesson.blocks) || safeLesson.blocks.length === 0) {
+    const blocks: any[] = []
+
+    const htmlContent = typeof safeLesson.htmlContent === 'string' ? safeLesson.htmlContent.trim() : ''
+    if (htmlContent) {
+      blocks.push({ type: 'text', text: stripHtmlToText(htmlContent) })
+    }
+
+    const imageUrl = typeof safeLesson.image_url === 'string' ? safeLesson.image_url.trim() : ''
+    if (imageUrl) {
+      blocks.push({ type: 'image', src: imageUrl })
+    }
+
+    safeLesson.blocks = blocks
+  } else {
+    // Ensure each block has expected shape
+    safeLesson.blocks = safeLesson.blocks
+      .filter((b: any) => b && (b.type === 'text' || b.type === 'image'))
+      .map((b: any) => (b.type === 'image'
+        ? { type: 'image', src: b.src || '' }
+        : { type: 'text', text: b.text || '' }
+      ))
+  }
+
+  // Remove legacy fields from UI usage (keep them if needed elsewhere; submit will omit them)
+  return safeLesson
+}
+
 watch(
   () => props.module,
   (newModule) => {
     if (newModule) {
-      form.value = {
-        title: newModule.title || '',
-        subtitle: newModule.subtitle || '',
-        level: newModule.level || '',
-        emoji: newModule.emoji || '',
-        description: newModule.description || '',
-        image_url: newModule.image_url || '',
-        learning_outcomes: Array.isArray(newModule.learning_outcomes) 
-          ? [...newModule.learning_outcomes]
-          : [],
-        is_active: newModule.is_active !== false,
-        lessons: Array.isArray(newModule.lessons) && newModule.lessons.length > 0
-          ? JSON.parse(JSON.stringify(newModule.lessons))
-          : []
-      }
+      form.value.title = newModule.title || ''
+      form.value.subtitle = newModule.subtitle || ''
+      form.value.level = newModule.level || ''
+      form.value.description = newModule.description || ''
+      form.value.image_url = newModule.image_url || ''
+      form.value.learning_outcomes = Array.isArray(newModule.learning_outcomes)
+        ? [...newModule.learning_outcomes]
+        : []
+      form.value.is_active = newModule.is_active !== false
+      form.value.lessons = Array.isArray(newModule.lessons) && newModule.lessons.length > 0
+        ? JSON.parse(JSON.stringify(newModule.lessons)).map((l: any) => normalizeLesson(l))
+        : []
       imagePreview.value = newModule.image_url || ''
       imageFile.value = null
     } else {
@@ -409,85 +472,85 @@ watch(
   { immediate: true }
 )
 
-const addOutcome = () => {
-  form.value.learning_outcomes.push('')
+const addOutcome = () => form.value.learning_outcomes.push('')
+const removeOutcome = (index) => form.value.learning_outcomes.splice(index, 1)
+const addLesson = () => form.value.lessons.push({ title: '', blocks: [{ type: 'text', text: '' }] })
+const removeLesson = (index) => form.value.lessons.splice(index, 1)
+
+const addTextBlock = (lessonIndex: number) => {
+  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
+  form.value.lessons[lessonIndex].blocks.push({ type: 'text', text: '' })
 }
 
-const removeOutcome = (index) => {
-  form.value.learning_outcomes.splice(index, 1)
+const addImageBlock = (lessonIndex: number) => {
+  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
+  form.value.lessons[lessonIndex].blocks.push({ type: 'image', src: '' })
 }
 
-const addLesson = () => {
-  form.value.lessons.push({
-    title: '',
-    htmlContent: '',
-    image_url: ''
-  })
-}
-
-const removeLesson = (index) => {
-  form.value.lessons.splice(index, 1)
-}
-
-const removeImage = (index) => {
-  form.value.lessons[index].image_url = ''
+const removeBlock = (lessonIndex: number, blockIndex: number) => {
+  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) return
+  form.value.lessons[lessonIndex].blocks.splice(blockIndex, 1)
 }
 
 const handleModuleImageUpload = (event) => {
   const file = event.target.files?.[0]
   if (!file) return
-
-  // Validate file size (5MB max)
-  if (file.size > 5 * 1024 * 1024) {
-    alert('Image size must be less than 5MB')
-    return
-  }
-
-  // Validate file type
-  if (!file.type.startsWith('image/')) {
-    alert('Please select a valid image file')
-    return
-  }
-
+  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
+  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
   imageFile.value = file
-
-  // Create preview
   const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target?.result || ''
-  }
+  reader.onload = (e) => { imagePreview.value = e.target?.result || '' }
   reader.readAsDataURL(file)
 }
 
 const clearImage = () => {
   imagePreview.value = ''
   imageFile.value = null
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
+  if (fileInput.value) fileInput.value.value = ''
 }
 
-const handleImageUpload = (event, lessonIndex) => {
+const handleBlockImageUpload = (event: any, lessonIndex: number, blockIndex: number) => {
   const file = event.target.files?.[0]
   if (!file) return
-
-  // Create a FileReader to convert image to base64
+  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
+  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
   const reader = new FileReader()
   reader.onload = (e) => {
-    // Store as data URL (base64)
-    form.value.lessons[lessonIndex].image_url = e.target?.result || ''
+    if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
+    if (!form.value.lessons[lessonIndex].blocks[blockIndex] || form.value.lessons[lessonIndex].blocks[blockIndex].type !== 'image') {
+      return
+    }
+    form.value.lessons[lessonIndex].blocks[blockIndex].src = e.target?.result || ''
   }
   reader.readAsDataURL(file)
 }
 
+const clearBlockImage = (lessonIndex: number, blockIndex: number) => {
+  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) return
+  const block = form.value.lessons[lessonIndex].blocks[blockIndex]
+  if (block?.type === 'image') block.src = ''
+}
+
 const handleSubmit = () => {
-  if (!form.value.title || !form.value.level || !form.value.emoji || !form.value.description) {
-    alert('Please fill in all required basic fields')
+  if (!form.value.title || !form.value.level || !form.value.description) {
+    alert('Please fill in all required fields')
     return
   }
-
   const outcomes = form.value.learning_outcomes.filter(o => o.trim() !== '')
-  const lessons = form.value.lessons.filter(l => l.title.trim() && l.htmlContent.trim())
+  const lessons = form.value.lessons
+    .map((l: any) => normalizeLesson(l))
+    .map((l: any) => ({
+      title: (l.title || '').trim(),
+      blocks: Array.isArray(l.blocks) ? l.blocks : []
+    }))
+    .filter((l: any) => {
+      if (!l.title) return false
+      if (!Array.isArray(l.blocks) || l.blocks.length === 0) return false
+      return l.blocks.some((b: any) => (
+        (b.type === 'text' && typeof b.text === 'string' && b.text.trim() !== '') ||
+        (b.type === 'image' && typeof b.src === 'string' && b.src.trim() !== '')
+      ))
+    })
 
   emit('submit', {
     ...form.value,

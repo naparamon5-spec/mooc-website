@@ -43,13 +43,34 @@ export const useUserProfile = () => {
       }
 
       // Fetch user profile from profiles table
-      const { data: userData, error: fetchError } = await supabase
+      let { data: userData, error: fetchError } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, student_id, profile_pic_url, enrollment_date, created_at, language, country, phone, timezone, learning_mode, notification_preference, bio')
         .eq('id', session.user.id)
         .single()
 
-      if (fetchError) {
+      // If profile doesn't exist, create it
+      if (fetchError && fetchError.code === 'PGRST116') { // No rows returned
+        console.log('Profile not found, creating new profile for user:', session.user.id)
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: session.user.id,
+            full_name: session.user.user_metadata?.full_name || '',
+            email: session.user.email || '',
+            role: 'student',
+            created_at: new Date().toISOString()
+          })
+          .select('id, full_name, email, role, student_id, profile_pic_url, enrollment_date, created_at, language, country, phone, timezone, learning_mode, notification_preference, bio')
+          .single()
+
+        if (createError) {
+          error.value = createError.message
+          return null
+        }
+
+        userData = newProfile
+      } else if (fetchError) {
         error.value = fetchError.message
         return null
       }

@@ -131,6 +131,7 @@ export const useModuleManagement = () => {
         image_url: imageUrl,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
+        is_active: moduleData.is_active !== false, // Default to true if not specified
         created_by: userData?.user?.id
       }
 
@@ -184,6 +185,7 @@ export const useModuleManagement = () => {
         image_url: imageUrl || moduleData.image_url,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
+        is_active: moduleData.is_active !== false, // Default to true if not specified
         updated_at: new Date().toISOString()
       }
 
