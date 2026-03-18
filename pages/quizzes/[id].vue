@@ -12,7 +12,12 @@
         <button @click="router.back()" class="mt-4 text-sm underline">Go Back</button>
       </div>
 
-      <div v-else-if="!quiz && !loading" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700 mb-6 flex-1">
+      <div v-else-if="isLocked" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700 mb-6 flex-1">
+        <p>Quiz is locked. You must complete lesson 4 of this module to access the quiz.</p>
+        <button @click="router.back()" class="mt-4 text-sm underline">Go Back</button>
+      </div>
+
+      <div v-else-if="!quiz" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700 mb-6 flex-1">
         Quiz not found.
       </div>
 
@@ -159,7 +164,7 @@
                     type="radio"
                     :name="`q${currentQuestionIndex}`"
                     :value="oi"
-                    v-model="answers[currentQuestionIndex]"
+                    v-model="answers[answerKey(currentQuestionIndex)]"
                     class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                   />
                   <span class="text-gray-800 text-sm md:text-base leading-snug">{{ opt }}</span>
@@ -172,7 +177,7 @@
                     type="radio"
                     :name="`q${currentQuestionIndex}`"
                     value="True"
-                    v-model="answers[currentQuestionIndex]"
+                    v-model="answers[answerKey(currentQuestionIndex)]"
                     class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                   />
                   <span class="text-gray-800 text-sm md:text-base">True</span>
@@ -182,7 +187,7 @@
                     type="radio"
                     :name="`q${currentQuestionIndex}`"
                     value="False"
-                    v-model="answers[currentQuestionIndex]"
+                    v-model="answers[answerKey(currentQuestionIndex)]"
                     class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                   />
                   <span class="text-gray-800 text-sm md:text-base">False</span>
@@ -235,7 +240,6 @@
               >
                 Retake Quiz
               </button>
-
               <button
                 @click="goBack"
                 class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
@@ -244,7 +248,6 @@
               </button>
             </div>
           </div>
-
 
         </div>
       </div>
@@ -283,13 +286,18 @@ const router = useRouter()
 const quizId = computed(() => route.params.id as string)
 
 const { fetchQuizById, submitQuizAnswers } = useQuizManagement()
-const { completeModule, badgeMapping } = useCourseProgress()
+const { completeModule, badgeMapping, courseProgress, loadProgressFromSupabase } = useCourseProgress()
 const { fetchModules, modules } = useModuleManagement()
+
+// ✅ useNuxtApp() called at top-level setup, not inside async functions
+const { $supabase } = useNuxtApp()
 
 const quiz = ref<any>(null)
 const loading = ref(false)
 const error = ref('')
-const answers = ref<Record<number, string | number>>({})
+// ✅ Type matches submitQuizAnswers signature exactly:
+//    { [questionId: string]: string | number | undefined }
+const answers = ref<{ [key: string]: string | number | undefined }>({})
 const result = ref<any>(null)
 const existingResult = ref<any | null>(null)
 const isRetaking = ref(false)
@@ -297,11 +305,29 @@ const submitting = ref(false)
 const currentQuestionIndex = ref(0)
 const showSuccessModal = ref(false)
 
+// ✅ Mirrors the key logic in submitQuizAnswers:
+//    prefer question.id if it exists, otherwise fall back to String(index)
+//    This ensures answers are stored and looked up under the same key used for scoring
+const answerKey = (index: number): string => {
+  const q = quiz.value?.questions?.[index]
+  return q?.id ?? String(index)
+}
+
 const isReviewOnly = computed(() => {
   return !!existingResult.value && !isRetaking.value && !result.value
 })
 
-// compute next module if available
+const isLocked = computed(() => {
+  if (!quiz.value?.module_id || !quiz.value?.level) return false
+  const courseLevel = quiz.value.level
+  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return false
+  const moduleId = quiz.value.module_id
+  const levelProgress = courseProgress.value[courseLevel as 'beginner' | 'advanced']
+  if (!levelProgress) return false
+  const completedLessons = levelProgress.completedLessons.get(moduleId)
+  return !completedLessons?.has(4)
+})
+
 const nextModuleId = computed(() => {
   if (!quiz.value?.level || !quiz.value?.module_id || !modules.value.length) return null
   const courseLevel = quiz.value.level
@@ -313,7 +339,7 @@ const nextModuleId = computed(() => {
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
       return aNum - bNum
     })
-  const idx = sorted.findIndex(m => String(m.id) === String(quiz.value.module_id))
+  const idx = sorted.findIndex((m: any) => String(m.id) === String(quiz.value.module_id))
   if (idx >= 0 && idx < sorted.length - 1) {
     return String(sorted[idx + 1].id)
   }
@@ -324,15 +350,12 @@ const continueButtonText = computed(() => {
   return nextModuleId.value ? 'Continue to Next Module' : 'Back to Dashboard'
 })
 
-
 const currentQuestion = computed(() => quiz.value?.questions[currentQuestionIndex.value])
 
 const allAnswered = computed(() => {
   if (!quiz.value?.questions?.length) return false
   for (let i = 0; i < quiz.value.questions.length; i += 1) {
-    if (answers.value[i] === undefined) {
-      return false
-    }
+    if (answers.value[answerKey(i)] === undefined) return false
   }
   return true
 })
@@ -341,22 +364,18 @@ const progress = computed(() => {
   if (!quiz.value?.questions?.length) return 0
   let answeredCount = 0
   for (let i = 0; i < quiz.value.questions.length; i += 1) {
-    if (answers.value[i] !== undefined) {
-      answeredCount += 1
-    }
+    if (answers.value[answerKey(i)] !== undefined) answeredCount += 1
   }
   return Math.round((answeredCount / quiz.value.questions.length) * 100)
 })
 
-const isAnswered = (idx: number) => answers.value[idx] !== undefined
+const isAnswered = (idx: number) => answers.value[answerKey(idx)] !== undefined
 
 const earnedBadgeName = computed(() => {
   if (!quiz.value?.level || !quiz.value?.module_id) return 'Unknown Badge'
-  
   const courseLevel = quiz.value.level
+  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return 'Unknown Badge'
   const moduleId = quiz.value.module_id
-  
-  // Find module position in sorted list
   const sortedModules = modules.value
     .filter((m: any) => m.level === courseLevel)
     .slice()
@@ -365,9 +384,7 @@ const earnedBadgeName = computed(() => {
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
       return aNum - bNum
     })
-  
-  const modulePosition = sortedModules.findIndex(m => String(m.id) === String(moduleId)) + 1 // 1-indexed
-  
+  const modulePosition = sortedModules.findIndex((m: any) => String(m.id) === String(moduleId)) + 1
   const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping]
   if (courseBadges && modulePosition > 0) {
     return courseBadges[modulePosition] || 'Unknown Badge'
@@ -375,19 +392,18 @@ const earnedBadgeName = computed(() => {
   return 'Unknown Badge'
 })
 
-// compute an image url for the badge to display in the modal
 const badgeImage = computed(() => {
-  const map: Record<string,string> = {
-    'LITERACY SCHOLAR':'/assets/MODULE1.png',
-    'MEDIA SYSTEMS ADEPT':'/assets/MODULE2.png',
-    'MEDIA LINGUIST':'/assets/MODULE3.png',
-    'EQUITY ADVOCATE':'/assets/MODULE4.png',
-    'RESPONSIBLE CITIZEN':'/assets/MODULE5.png',
-    'CYBER GUARDIAN':'/assets/MODULE6.png',
-    'GENERATIVE THINKER':'/assets/MODULE7.png',
-    'DIGITAL MAVEN':'/assets/MODULE8.png',
-    'MEDIA ANALYST':'/assets/MODULE9.png',
-    'ETHICAL MEDIA CREATOR':'/assets/MODULE10.png',
+  const map: Record<string, string> = {
+    'LITERACY SCHOLAR': '/assets/MODULE1.png',
+    'MEDIA SYSTEMS ADEPT': '/assets/MODULE2.png',
+    'MEDIA LINGUIST': '/assets/MODULE3.png',
+    'EQUITY ADVOCATE': '/assets/MODULE4.png',
+    'RESPONSIBLE CITIZEN': '/assets/MODULE5.png',
+    'CYBER GUARDIAN': '/assets/MODULE6.png',
+    'GENERATIVE THINKER': '/assets/MODULE7.png',
+    'DIGITAL MAVEN': '/assets/MODULE8.png',
+    'MEDIA ANALYST': '/assets/MODULE9.png',
+    'ETHICAL MEDIA CREATOR': '/assets/MODULE10.png',
   }
   return map[earnedBadgeName.value] || '/assets/default-badge.png'
 })
@@ -396,20 +412,15 @@ onMounted(async () => {
   loading.value = true
   error.value = ''
   try {
-    console.log('Fetching quiz with ID:', quizId.value)
     const data = await fetchQuizById(quizId.value)
-    console.log('Quiz data received:', data)
     if (data) {
       quiz.value = data
       currentQuestionIndex.value = 0
     } else {
       error.value = 'Quiz not found.'
     }
-    
-    // Fetch modules to determine badge
     await fetchModules()
-
-    // If already attempted, load saved score + answers for review-only display
+    await loadProgressFromSupabase()
     await fetchExistingResult()
   } catch (err) {
     error.value = 'Failed to load quiz.'
@@ -419,21 +430,21 @@ onMounted(async () => {
   }
 })
 
+// ✅ $supabase used directly — no useNuxtApp() call inside async function
 const fetchExistingResult = async () => {
   try {
-    const { $supabase } = useNuxtApp()
     const { data: { user } } = await $supabase.auth.getUser()
     if (!user) return
 
-    const { data, error } = await $supabase
+    const { data, error: dbError } = await $supabase
       .from('quiz_results')
       .select('score, passed, answers, created_at')
       .eq('user_id', user.id)
       .eq('quiz_id', quizId.value)
       .maybeSingle()
 
-    if (error) {
-      console.error('Error fetching existing quiz result:', error)
+    if (dbError) {
+      console.error('Error fetching existing quiz result:', dbError)
       return
     }
 
@@ -445,7 +456,9 @@ const fetchExistingResult = async () => {
 
 const getSelectedAnswerText = (question: any, idx: number) => {
   const saved = existingResult.value?.answers
-  const raw = saved ? (saved[String(idx)] ?? saved[idx]) : undefined
+  // ✅ Use same key logic as answerKey() so review display matches saved data
+  const key = question?.id ?? String(idx)
+  const raw = saved ? (saved[key] ?? saved[String(idx)]) : undefined
   if (raw === undefined || raw === null) return 'No answer'
 
   if (question?.type === 'multiple_choice') {
@@ -471,6 +484,8 @@ const startRetake = () => {
   currentQuestionIndex.value = 0
 }
 
+// ✅ answers.value passed directly — no conversion needed,
+//    type already matches { [questionId: string]: string | number | undefined }
 const submitQuiz = async () => {
   if (!quiz.value) return
   submitting.value = true
@@ -478,13 +493,8 @@ const submitQuiz = async () => {
     const res = await submitQuizAnswers(quizId.value, answers.value)
     if (res) {
       result.value = res
-
-      // If user passed, mark the linked module as completed
-      if (res.passed) {
-        // mark module completed if we have enough data
-        if (quiz.value?.module_id && quiz.value?.level) {
-          completeModule(quiz.value.level, String(quiz.value.module_id))
-        }
+      if (res.passed && quiz.value?.module_id && quiz.value?.level) {
+        completeModule(quiz.value.level, String(quiz.value.module_id))
       }
     }
   } catch (err) {
@@ -494,12 +504,11 @@ const submitQuiz = async () => {
   }
 }
 
-// automatically open success modal when a passing result appears
 watch(result, (val) => {
-  if (val && val.passed) {
+  if (val?.passed) {
     showSuccessModal.value = true
   }
-}, { immediate: true })
+})
 
 const retakeQuiz = () => {
   result.value = null

@@ -53,13 +53,15 @@
       <button
         type="button"
         @click.stop="startQuiz"
-        :disabled="loading"
-        :class="hasAttempted && userPassed
-          ? 'bg-green-50 text-green-700 hover:bg-green-100'
-          : 'bg-primary-600 text-white hover:bg-primary-700'"
+        :disabled="loading || props.isLocked"
+        :class="props.isLocked
+          ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+          : hasAttempted && userPassed
+            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+            : 'bg-primary-600 text-white hover:bg-primary-700'"
         class="w-full py-2 rounded-lg font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {{ loading ? 'Loading...' : hasAttempted ? 'Retake quiz' : 'Start quiz' }}
+        {{ loading ? 'Loading...' : props.isLocked ? 'Locked' : hasAttempted ? 'Retake quiz' : 'Start quiz' }}
       </button>
     </div>
   </div>
@@ -78,6 +80,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  isLocked: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['start-quiz', 'show-result'])
@@ -90,6 +96,7 @@ const userScore = computed(() => props.userResult?.score || 0)
 const userPassed = computed(() => props.userResult?.passed || false)
 
 const handleCardClick = () => {
+  if (props.isLocked) return
   if (hasAttempted.value) {
     emit('show-result', { quiz: props.quiz, result: props.userResult })
     return
@@ -98,6 +105,7 @@ const handleCardClick = () => {
 }
 
 const startQuiz = () => {
+  if (props.isLocked) return
   loading.value = true
   router.push(`/quizzes/${props.quiz.id}`)
 }

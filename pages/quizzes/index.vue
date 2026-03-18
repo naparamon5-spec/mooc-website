@@ -45,6 +45,7 @@
             :key="quiz.id"
             :quiz="quiz"
             :user-result="quizResultsById[String(quiz.id)] || null"
+            :is-locked="isQuizLocked(quiz)"
             @show-result="openResultModal"
           />
         </div>
@@ -112,9 +113,11 @@ import { ref, onMounted } from 'vue';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
 import QuizCard from '~/components/QuizCard.vue';
 import { useQuizManagement } from '~/composables/useQuizManagement'
+import { useCourseProgress } from '~/composables/useCourseProgress'
 import { useRouter } from 'vue-router'
 
 const { quizzes, loading, fetchQuizzes } = useQuizManagement()
+const { courseProgress, loadProgressFromSupabase } = useCourseProgress()
 const router = useRouter()
 
 const studentName = ref('')
@@ -128,6 +131,7 @@ const selectedQuizTitle = ref<string>('')
 onMounted(async () => {
   await fetchQuizzes()
   await fetchQuizResults()
+  await loadProgressFromSupabase()
 })
 
 const fetchQuizResults = async () => {
@@ -175,6 +179,20 @@ const retakeSelectedQuiz = () => {
   const id = selectedQuizId.value
   closeResultModal()
   router.push(`/quizzes/${id}`)
+}
+
+const isQuizLocked = (quiz: any) => {
+  if (!quiz?.module_id || !quiz?.level) return false
+
+  const courseLevel = quiz.level
+  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return false
+
+  const moduleId = quiz.module_id
+  const levelProgress = courseProgress.value[courseLevel as 'beginner' | 'advanced']
+  if (!levelProgress) return false
+
+  const completedLessons = levelProgress.completedLessons.get(moduleId)
+  return !completedLessons?.has(4)
 }
 </script>
 
