@@ -143,7 +143,13 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
+
+useHead({
+  title: 'Sign Up - MIL MOOC',
+})
+
 import { ref, computed } from 'vue'
 import SuccessModal from '~/components/SuccessModal.vue'
 import { validateName, validateEmail, validatePassword } from '~/utils/validation/auth'

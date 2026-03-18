@@ -61,6 +61,11 @@
 </template>
 
 <script setup lang="ts">
+
+useHead({
+  title: 'Login - MIL MOOC',
+})
+
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { validateEmail, validatePassword } from '~/utils/validation/auth'
