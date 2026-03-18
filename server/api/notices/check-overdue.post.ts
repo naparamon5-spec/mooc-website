@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export default defineEventHandler(async (event) => {
   try {
-    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -30,7 +30,6 @@ export default defineEventHandler(async (event) => {
     let processedCount = 0
     let firstNoticeCount = 0
     let secondNoticeCount = 0
-    let deactivatedCount = 0
 
     for (const assignment of overdueAssignments || []) {
       const userId = assignment.user_id
@@ -92,14 +91,13 @@ export default defineEventHandler(async (event) => {
           })
 
         if (!noticeError) {
-          // Deactivate account
+          // Track that the student is overdue and that the final notice was sent.
+          // NOTE: We do NOT deactivate accounts automatically here; account activation/deactivation
+          // is only managed from the Admin "User Management" page.
           await sbAdmin
             .from('profiles')
             .update({
-              is_active: false,
               second_notice_sent_at: new Date().toISOString(),
-              account_deactivation_reason: `Account deactivated: Student failed to complete assigned module within 2 weeks and received two notices.`,
-              deactivated_at: new Date().toISOString(),
               is_overdue: true
             })
             .eq('id', userId)
@@ -111,7 +109,6 @@ export default defineEventHandler(async (event) => {
             .eq('id', assignmentId)
 
           secondNoticeCount++
-          deactivatedCount++
         }
       }
 
@@ -123,8 +120,7 @@ export default defineEventHandler(async (event) => {
       processedCount,
       firstNoticeCount,
       secondNoticeCount,
-      deactivatedCount,
-      message: `Processed ${processedCount} overdue assignments. Sent ${firstNoticeCount} first notices, ${secondNoticeCount} second notices, and deactivated ${deactivatedCount} accounts.`
+      message: `Processed ${processedCount} overdue assignments. Sent ${firstNoticeCount} first notices and ${secondNoticeCount} second notices.`
     }
   } catch (error: any) {
     console.error('Error checking overdue modules:', error)

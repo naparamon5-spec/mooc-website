@@ -60,21 +60,21 @@ const groupedActions = computed(() => {
     {
       title: 'Course Settings',
       options: [
-        { label: 'Archive the course', type: 'archive' },
+        // { label: 'Archive the course', type: 'archive' },
         { label: 'Download course report', type: 'download-report' }
       ]
     },
     {
       title: 'Edit Resource Hub',
       options: [
-        { label: 'Edit content', type: 'edit-content' },
-        { label: 'Update resources', type: 'upload-resources' }
+        // { label: 'Edit content', type: 'edit-content' },
+        { label: 'Update resources content', type: 'upload-resources' }
       ]
     },
     {
       title: 'Edit Course Details',
       options: [
-        { label: 'Update content', type: 'update-content' },
+        // { label: 'Update content', type: 'update-content' },
         { label: 'Upload course policies', type: 'upload-policies' }
       ]
     },

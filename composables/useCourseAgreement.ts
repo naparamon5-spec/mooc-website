@@ -168,7 +168,8 @@ export const useCourseAgreement = () => {
     }
   }
 
-  // Check and send second notice and deactivate account
+  // Check and send second notice.
+  // NOTE: We do NOT deactivate accounts automatically; account status is managed in Admin "User Management".
   const checkAndSendSecondNoticeAndDeactivate = async (
     assignmentId: number,
     userId: string
@@ -205,16 +206,10 @@ export const useCourseAgreement = () => {
 
       if (noticeError) throw noticeError
 
-      // Deactivate account
-      const deactivationReason = `Account deactivated: Student failed to complete assigned module within 2 weeks and received two notices.`
-
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          is_active: false,
           second_notice_sent_at: new Date().toISOString(),
-          account_deactivation_reason: deactivationReason,
-          deactivated_at: new Date().toISOString(),
           is_overdue: true
         })
         .eq('id', userId)
@@ -230,7 +225,7 @@ export const useCourseAgreement = () => {
       return {
         success: true,
         notice: notice?.[0],
-        accountDeactivated: true
+        accountDeactivated: false
       }
     } catch (err: any) {
       error.value = err.message

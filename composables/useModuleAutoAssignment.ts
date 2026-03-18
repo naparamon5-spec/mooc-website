@@ -138,75 +138,9 @@ export const useModuleAutoAssignment = () => {
   // Check and deactivate account for week 4 (14+ days after deadline)
   const checkAndDeactivateWeekFour = async (userId: string) => {
     try {
-      // Get first assignment to check deadline
-      const { data: assignments, error: fetchError } = await supabase
-        .from('module_assignments')
-        .select('deadline, status')
-        .eq('user_id', userId)
-        .limit(1)
-
-      if (fetchError) throw fetchError
-      if (!assignments || assignments.length === 0) return
-
-      const assignment = assignments[0]
-      if (!assignment?.deadline) return
-
-      const deadline = new Date(assignment.deadline)
-      const now = new Date()
-      const daysAfterDeadline = Math.floor((now.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24))
-
-      // Week 4: 14+ days after deadline
-      if (daysAfterDeadline >= 14) {
-        // 1. Get user profile to verify they're not already inactive
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_active')
-          .eq('id', userId)
-          .single()
-
-        if (profileError && profileError.code !== 'PGRST116') throw profileError
-
-        // Only deactivate if currently active
-        if (profile?.is_active) {
-          // 2. Mark user as inactive
-          const { error: deactivateError } = await supabase
-            .from('profiles')
-            .update({
-              is_active: false,
-              deactivated_at: new Date().toISOString(),
-              account_deactivation_reason: 'Module deadline exceeded (Week 4)'
-            })
-            .eq('id', userId)
-
-          if (deactivateError) throw deactivateError
-
-          // 3. Delete all progress for this user
-          const { error: deleteProgressError } = await supabase
-            .from('course_progress')
-            .delete()
-            .eq('user_id', userId)
-
-          if (deleteProgressError) throw deleteProgressError
-
-          // 4. Reset all module assignments to pending
-          const { error: resetError } = await supabase
-            .from('module_assignments')
-            .update({ status: 'pending' })
-            .eq('user_id', userId)
-
-          if (resetError) throw resetError
-
-          // 5. Delete quiz results
-          const { error: deleteQuizError } = await supabase
-            .from('quiz_results')
-            .delete()
-            .eq('user_id', userId)
-
-          if (deleteQuizError) throw deleteQuizError
-
-          console.log(`✅ Deactivated account and cleared progress for user ${userId} (Week 4)`)
-        }
-      }
+      // NOTE: Account activation/deactivation is managed only from the Admin "User Management" page.
+      // This function remains for backwards compatibility but intentionally does nothing.
+      void userId
     } catch (error) {
       console.error('Error checking week 4 deactivation:', error)
     }
@@ -215,7 +149,6 @@ export const useModuleAutoAssignment = () => {
   // Run all deadline checks
   const checkDeadlineStatus = async (userId: string) => {
     await checkAndResetWeekThree(userId)
-    await checkAndDeactivateWeekFour(userId)
   }
 
   return {

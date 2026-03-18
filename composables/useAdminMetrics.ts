@@ -9,6 +9,8 @@ export const useAdminMetrics = () => {
   const pendingEnrollments = ref(0)
   const completed = ref(0)
   const moduleCompletionStats = ref<Array<{ title: string, completions: number }>>([])
+  const dailyCompletions = ref<Array<{ date: string, completions: number }>>([])
+  const courseCompletionRates = ref<Array<{ year: string, percentage: number }>>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -124,24 +126,63 @@ export const useAdminMetrics = () => {
 
       const { data, error: fetchError } = await supabase
         .from('module_completion')
-        .select('module_title, created_at')
+        .select(`
+          module_id,
+          created_at,
+          modules!inner(title)
+        `)
         .gte('created_at', fourteenDaysAgo.toISOString())
+        .order('created_at', { ascending: true })
 
       if (fetchError) throw fetchError
 
-      // Group by module_title
-      const stats: { [key: string]: number } = {}
+      // Group by module title
+      const moduleStats: { [key: string]: number } = {}
+      const dailyStats: { [key: string]: number } = {}
+
       data?.forEach((item: any) => {
-        stats[item.module_title] = (stats[item.module_title] || 0) + 1
+        const title = item.modules?.title || item.module_id
+        moduleStats[title] = (moduleStats[title] || 0) + 1
+
+        const date = new Date(item.created_at).toISOString().split('T')[0] // YYYY-MM-DD
+        dailyStats[date] = (dailyStats[date] || 0) + 1
       })
 
-      moduleCompletionStats.value = Object.entries(stats).map(([title, completions]) => ({
+      moduleCompletionStats.value = Object.entries(moduleStats).map(([title, completions]) => ({
         title,
         completions
       }))
+
+      dailyCompletions.value = Object.entries(dailyStats)
+        .map(([date, completions]) => ({
+          date,
+          completions
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date))
     } catch (err: any) {
       console.error('Error fetching module completion stats:', err)
       moduleCompletionStats.value = []
+      dailyCompletions.value = []
+    }
+  }
+
+  // Fetch course completion rates by year
+  const fetchCourseCompletionRates = async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('course_completion_rates')
+        .select('year, completion_percentage')
+        .order('year', { ascending: true })
+
+      if (fetchError) throw fetchError
+
+      courseCompletionRates.value = data?.map(item => ({
+        year: item.year.toString(),
+        percentage: Number(item.completion_percentage)
+      })) || []
+    } catch (err: any) {
+      console.error('Error fetching course completion rates:', err)
+      courseCompletionRates.value = []
     }
   }
 
@@ -151,9 +192,12 @@ export const useAdminMetrics = () => {
     pendingEnrollments,
     completed,
     moduleCompletionStats,
+    dailyCompletions,
+    courseCompletionRates,
     isLoading,
     error,
     fetchMetrics,
-    fetchModuleCompletionStats
+    fetchModuleCompletionStats,
+    fetchCourseCompletionRates
   }
 }

@@ -124,7 +124,7 @@
               :key="assignment.id"
               class="border-b border-gray-200 hover:bg-gray-50"
             >
-              <td class="py-3 px-3 text-gray-900">Module ID: {{ assignment.module_id }}</td>
+              <td class="py-3 px-3 text-gray-900">{{ assignment.module_title }}</td>
               <td class="py-3 px-3 text-gray-600">{{ formatDate(assignment.deadline) }}</td>
               <td class="py-3 px-3">
                 <span
@@ -184,6 +184,7 @@ const getUser = async () => {
 const assignments = ref<any[]>([])
 const notices = ref<any[]>([])
 const loading = ref(false)
+const moduleTitleById = ref<Map<string, string>>(new Map())
 
 const hasOverdueModules = computed(() => {
   return assignments.value.some(
@@ -232,6 +233,21 @@ const acknowledgeNotice = async (noticeId: number) => {
   }
 }
 
+const loadModuleTitles = async (moduleIds: string[]) => {
+  if (moduleIds.length === 0) return
+  const { data, error } = await supabase
+    .from('modules')
+    .select('id, title')
+    .in('id', moduleIds)
+  if (error) {
+    console.error('Error loading module titles:', error)
+    return
+  }
+  const map = new Map<string, string>()
+  for (const m of data || []) map.set(m.id, m.title || m.id)
+  moduleTitleById.value = map
+}
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -245,7 +261,13 @@ onMounted(async () => {
       checkAccountStatus(user.id),
       (async () => {
         const data = await getUserAssignments(user.id)
-        assignments.value = data
+        const raw = data || []
+        const ids = Array.from(new Set(raw.map((a: any) => a.module_id).filter(Boolean)))
+        await loadModuleTitles(ids)
+        assignments.value = raw.map((a: any) => ({
+          ...a,
+          module_title: moduleTitleById.value.get(a.module_id) || a.module_id
+        }))
       })(),
       (async () => {
         const data = await getUserNotices(user.id)

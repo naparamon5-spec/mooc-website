@@ -35,7 +35,7 @@
 
         <!-- System Health -->
         <div class="lg:col-span-1">
-          <SystemHealth :metrics="moduleMetrics" />
+          <SystemHealth :data="dailyCompletions" />
         </div>
       </div>
 
@@ -45,7 +45,7 @@
         <EnrollmentAnalytics :data="enrollmentData" />
 
         <!-- Course Completion Rate -->
-        <CourseCompletionRate :data="completionData" />
+        <CourseCompletionRate :data="courseCompletionRates" />
       </div>
 
       <!-- 2-Week Course Agreement Management -->
@@ -88,7 +88,7 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
-const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, fetchMetrics, fetchModuleCompletionStats } = useAdminMetrics()
+const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, dailyCompletions, courseCompletionRates, fetchMetrics, fetchModuleCompletionStats, fetchCourseCompletionRates } = useAdminMetrics()
 const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
 const inactiveStudents = ref(0)
@@ -108,6 +108,8 @@ onMounted(async () => {
     await fetchMetrics();
     // Fetch module completion stats (last 2 weeks)
     await fetchModuleCompletionStats();
+    // Fetch course completion rates by year
+    await fetchCourseCompletionRates();
     
     // Fetch users from database
     await fetchUsers();
@@ -157,13 +159,6 @@ const enrollmentData = ref([
   { day: 'Wed', value: 28 },
   { day: 'Thurs', value: 35 },
   { day: 'Fri', value: 32 }
-])
-
-const completionData = ref([
-  { year: '2026', percentage: 10 },
-  { year: '2027', percentage: 20 },
-  { year: '2028', percentage: 30 },
-  { year: '2029', percentage: 40 }
 ])
 
 // module completion counts used to illustrate how quickly each module is being finished
