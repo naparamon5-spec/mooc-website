@@ -67,6 +67,11 @@
 </template>
 
 <script setup lang="ts">
+
+useHead({
+  title: 'Forgot Password - MIL MOOC',
+})
+
 import { ref } from 'vue'
 import SuccessModal from '~/components/SuccessModal.vue'
 

@@ -104,6 +104,12 @@
 </template>
 
 <script setup lang="ts">
+
+
+useHead({
+  title: 'Reset Password - MIL MOOC',
+})
+
 import { ref, onMounted } from 'vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import { validatePassword, validateConfirmPassword } from '~/utils/validation/auth'
