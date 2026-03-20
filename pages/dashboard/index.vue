@@ -133,9 +133,9 @@
               </div>
             </div>
 
-            <!-- ── Welcome Card (below modules, replaces description) ── -->
-            <WelcomeCard
-              v-if="showWelcomeStep"
+            <!-- ── Welcome Video (below modules, replaces description) ── -->
+            <WelcomeVideo
+              v-if="showWelcomeVideo"
               @open-agreement="onOpenAgreement"
             />
 
@@ -184,6 +184,7 @@ import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
 import ModuleDescriptionPanel from "~/components/studentdashboard/ModuleDescriptionPanel.vue";
 import NoticesCard from "~/components/studentdashboard/NoticesCard.vue";
 import WelcomeCard from "~/components/studentdashboard/WelcomeCard.vue";
+import WelcomeVideo from "~/components/studentdashboard/WelcomeVideo.vue";
 import CourseAgreementModal from "~/components/studentdashboard/CourseAgreementModal.vue";
 import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
@@ -205,13 +206,14 @@ const isLoading = ref(true);
 const { fetchUserProfile } = useUserProfile();
 const { hasSeenOnboarding, initializeOnboarding, markOnboardingAsSeen } = useOnboarding();
 const { hasAcceptedCourseAgreement, hasClickedWelcome } = useCourseAgreement();
+const hasWelcomeVideo = ref(false);
 
 // Tracks whether the user has accepted the course agreement.
 // Used to lock module access until acceptance (including Module 1).
 const hasAcceptedAgreement = ref(false);
 
-// True when user has not agreed yet and has not clicked "Click here!" — show Meli welcome card below modules
-const showWelcomeStep = ref(false);
+// True when user has not agreed yet and has not clicked "Click here!" — show welcome video below modules
+const showWelcomeVideo = ref(false);
 // True after "Click here!" until they click "I agree" — show inline agreement card, hide modules and description
 const showAgreementStep = ref(false);
 // Increment when user accepts agreement so NoticesCard remounts and refetches agreement date
@@ -225,6 +227,21 @@ onMounted(async () => {
     const { $supabase } = useNuxtApp();
     const { data: { user } } = await $supabase.auth.getUser();
     
+    // Check if welcome video exists
+    try {
+      const { data } = await $supabase
+        .from('welcome_video_metadata')
+        .select('video_url')
+        .eq('id', '00000000-0000-0000-0000-000000000001')
+        .single();
+      
+      if (data?.video_url) {
+        hasWelcomeVideo.value = true;
+      }
+    } catch (err) {
+      console.warn('Could not check for welcome video:', err);
+    }
+    
     const userData = await fetchUserProfile();
     if (userData?.full_name) {
       studentName.value = userData.full_name;
@@ -237,8 +254,8 @@ onMounted(async () => {
       if (!hasAgreed) {
         const clickedWelcome = await hasClickedWelcome(user.id);
         if (!clickedWelcome) {
-          // Step 1: Show modules + Meli welcome card below them
-          showWelcomeStep.value = true;
+          // Step 1: Show modules + welcome video below them
+          showWelcomeVideo.value = true;
         } else {
           // Step 2: They clicked "Click here!" — show inline agreement card
           showAgreementStep.value = true;
@@ -278,13 +295,13 @@ const handleCharacterSkip = async () => {
 
 // After "Click here!" — show inline agreement, hide modules and description
 const onOpenAgreement = () => {
-  showWelcomeStep.value = false;
+  showWelcomeVideo.value = false;
   showAgreementStep.value = true;
 };
 
 const handleAgreementAccepted = async () => {
   showAgreementModal.value = false;
-  showWelcomeStep.value = false;
+  showWelcomeVideo.value = false;
   showAgreementStep.value = false;
   noticeCardKey.value += 1;
   hasAcceptedAgreement.value = true;

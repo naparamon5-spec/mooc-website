@@ -89,7 +89,7 @@
         <div class="flex items-center justify-between mb-4">
           <div>
             <h4 class="text-md font-semibold text-gray-900">Questions</h4>
-            <p class="text-xs text-gray-500 mt-1">Add 10-20 questions for optimal quiz length</p>
+            <p class="text-xs text-gray-500 mt-1">Add 10 questions for optimal quiz length</p>
           </div>
           <button
             type="button"
@@ -103,7 +103,7 @@
         <!-- Empty State -->
         <div v-if="formData.questions.length === 0" class="text-center py-8 bg-gray-50 rounded">
           <p class="text-gray-500">No questions added yet. Click "Add Question" to start.</p>
-          <p class="text-xs text-gray-400 mt-2">Recommended: 10-20 questions per quiz</p>
+          <p class="text-xs text-gray-400 mt-2">Recommended: 10 questions per quiz</p>
         </div>
 
         <!-- Questions List -->
@@ -382,8 +382,8 @@ const submitForm = async () => {
     return
   }
 
-  if (formData.questions.length < 10 || formData.questions.length > 20) {
-    alert('Please add between 10-20 questions for optimal quiz length')
+  if (formData.questions.length <= 10) {
+    alert('Please add between 10 questions for optimal quiz length')
     return
   }
 

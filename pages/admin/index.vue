@@ -183,6 +183,8 @@ const handleCourseAction = (actionType: string) => {
   console.log('Course action:', actionType)
   if (actionType === 'upload-resources') {
     navigateTo('/admin/resources')
+  } else if (actionType === 'change-welcome-card') {
+    navigateTo('/admin/welcome-video')
   } else {
     // Handle other course management actions
   }
