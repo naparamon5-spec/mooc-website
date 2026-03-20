@@ -9,10 +9,14 @@
       <div class="flex flex-col md:flex-row gap-6">
         <!-- Content left -->
         <div class="flex-1 min-w-0">
-          <p class="text-gray-700 mb-1">Hi there! Here's what you need to learn for</p>
-          <h3 class="text-xl font-bold mb-3" style="color: #001a4d;">
+          <h1 class="font-bold text-gray-700 mb-1">Hi there! Here's what you need to learn for</h1>
+          <!-- <h3
+            v-if="showTitle"
+            class="text-xl font-bold mb-3"
+            style="color: #001a4d;"
+          >
             {{ module.title }}
-          </h3>
+          </h3> -->
 
           <p class="text-gray-700 mb-4 leading-relaxed text-base">
             {{ module.description }}
@@ -21,7 +25,7 @@
           <!-- DepEd's Most Essential Learning Competencies -->
           <div v-if="outcomesList.length" class="mt-4">
             <h4 class="text-sm font-bold text-gray-800 mb-2">
-              DepEd's Most Essential Learning Competencies
+              {{ module.learning_outcomes_label || "DepEd's Most Essential Learning Competencies" }}
             </h4>
             <ul class="space-y-2 text-gray-700 text-sm ml-4 list-disc">
               <li
@@ -56,6 +60,10 @@ const props = defineProps({
   module: {
     type: Object,
     default: null
+  },
+  showTitle: {
+    type: Boolean,
+    default: true
   }
 });
 

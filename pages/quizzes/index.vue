@@ -182,6 +182,9 @@ const retakeSelectedQuiz = () => {
 }
 
 const isQuizLocked = (quiz: any) => {
+  // If user has already attempted this quiz, do not lock it.
+  if (quizResultsById[String(quiz.id)]) return false
+
   if (!quiz?.module_id || !quiz?.level) return false
 
   const courseLevel = quiz.level
@@ -192,7 +195,8 @@ const isQuizLocked = (quiz: any) => {
   if (!levelProgress) return false
 
   const completedLessons = levelProgress.completedLessons.get(moduleId)
-  return !completedLessons?.has(4)
+  // Require completion of lesson 4 (zero-based index 3)
+  return !completedLessons?.has(3)
 }
 </script>
 

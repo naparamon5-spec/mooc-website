@@ -51,6 +51,86 @@ export const useModuleManagement = () => {
     }
   }
 
+  // Upload card image to Supabase Storage
+  const uploadCardImage = async (file: File, moduleId?: string) => {
+    try {
+      const fileName = `card-${moduleId || Date.now()}-${file.name}`
+      const filePath = `module-card-images/${fileName}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('module-card-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get the public URL
+      const { data: publicData } = supabase.storage
+        .from('module-card-images')
+        .getPublicUrl(filePath)
+
+      return publicData?.publicUrl || null
+    } catch (err: any) {
+      console.error('Error uploading card image:', err)
+      throw err
+    }
+  }
+
+  // Upload video to Supabase Storage
+  const uploadModuleVideo = async (file: File, moduleId?: string) => {
+    try {
+      const fileName = `video-${moduleId || Date.now()}-${file.name}`
+      const filePath = `module-videos/${fileName}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('module-videos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get the public URL
+      const { data: publicData } = supabase.storage
+        .from('module-videos')
+        .getPublicUrl(filePath)
+
+      return publicData?.publicUrl || null
+    } catch (err: any) {
+      console.error('Error uploading video:', err)
+      throw err
+    }
+  }
+
+  // Upload PPT to Supabase Storage
+  const uploadModulePpt = async (file: File, moduleId?: string) => {
+    try {
+      const fileName = `ppt-${moduleId || Date.now()}-${file.name}`
+      const filePath = `module-ppts/${fileName}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('module-ppts')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data: publicData } = supabase.storage
+        .from('module-ppts')
+        .getPublicUrl(filePath)
+
+      return publicData?.publicUrl || null
+    } catch (err: any) {
+      console.error('Error uploading PPT:', err)
+      throw err
+    }
+  }
+
   // Fetch all modules from Supabase
   const fetchModules = async (level?: string) => {
     loading.value = true
@@ -108,6 +188,9 @@ export const useModuleManagement = () => {
       const { data: userData } = await supabase.auth.getUser()
       
       let imageUrl = moduleData.image_url
+      let cardImageUrl = moduleData.card_image_url
+      let videoUrl = moduleData.video_url
+      let pptUrl = moduleData.ppt_url
       
       // Upload image if provided
       if (moduleData.imageFile) {
@@ -116,8 +199,40 @@ export const useModuleManagement = () => {
         } catch (uploadErr: any) {
           error.value = `Image upload failed: ${uploadErr.message}`
           console.error('Image upload error:', uploadErr)
-          // Continue with module creation without image
           imageUrl = null
+        }
+      }
+
+      // Upload card image if provided
+      if (moduleData.cardImageFile) {
+        try {
+          cardImageUrl = await uploadCardImage(moduleData.cardImageFile)
+        } catch (uploadErr: any) {
+          error.value = `Card image upload failed: ${uploadErr.message}`
+          console.error('Card image upload error:', uploadErr)
+          cardImageUrl = null
+        }
+      }
+
+      // Upload video if provided
+      if (moduleData.videoFile) {
+        try {
+          videoUrl = await uploadModuleVideo(moduleData.videoFile)
+        } catch (uploadErr: any) {
+          error.value = `Video upload failed: ${uploadErr.message}`
+          console.error('Video upload error:', uploadErr)
+          videoUrl = null
+        }
+      }
+
+      // Upload PPT if provided
+      if (moduleData.pptFile) {
+        try {
+          pptUrl = await uploadModulePpt(moduleData.pptFile)
+        } catch (uploadErr: any) {
+          error.value = `PPT upload failed: ${uploadErr.message}`
+          console.error('PPT upload error:', uploadErr)
+          pptUrl = null
         }
       }
       
@@ -125,10 +240,15 @@ export const useModuleManagement = () => {
       const dataToSave = {
         title: moduleData.title,
         subtitle: moduleData.subtitle,
+        introduction: moduleData.introduction,
         description: moduleData.description,
+        learning_outcomes_label: moduleData.learning_outcomes_label || "DepEd's Most Essential Learning Competencies",
         level: moduleData.level,
         emoji: moduleData.emoji,
         image_url: imageUrl,
+        card_image_url: cardImageUrl,
+        video_url: videoUrl,
+        ppt_url: pptUrl,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
         is_active: moduleData.is_active !== false, // Default to true if not specified
@@ -163,6 +283,9 @@ export const useModuleManagement = () => {
     error.value = null
     try {
       let imageUrl = moduleData.image_url
+      let cardImageUrl = moduleData.card_image_url
+      let videoUrl = moduleData.video_url
+      let pptUrl = moduleData.ppt_url
       
       // Upload image if provided
       if (moduleData.imageFile) {
@@ -171,7 +294,36 @@ export const useModuleManagement = () => {
         } catch (uploadErr: any) {
           error.value = `Image upload failed: ${uploadErr.message}`
           console.error('Image upload error:', uploadErr)
-          // Continue with module update without new image
+        }
+      }
+
+      // Upload card image if provided
+      if (moduleData.cardImageFile) {
+        try {
+          cardImageUrl = await uploadCardImage(moduleData.cardImageFile, moduleId)
+        } catch (uploadErr: any) {
+          error.value = `Card image upload failed: ${uploadErr.message}`
+          console.error('Card image upload error:', uploadErr)
+        }
+      }
+
+      // Upload video if provided
+      if (moduleData.videoFile) {
+        try {
+          videoUrl = await uploadModuleVideo(moduleData.videoFile, moduleId)
+        } catch (uploadErr: any) {
+          error.value = `Video upload failed: ${uploadErr.message}`
+          console.error('Video upload error:', uploadErr)
+        }
+      }
+
+      // Upload PPT if provided
+      if (moduleData.pptFile) {
+        try {
+          pptUrl = await uploadModulePpt(moduleData.pptFile, moduleId)
+        } catch (uploadErr: any) {
+          error.value = `PPT upload failed: ${uploadErr.message}`
+          console.error('PPT upload error:', uploadErr)
         }
       }
       
@@ -179,10 +331,15 @@ export const useModuleManagement = () => {
       const dataToSave = {
         title: moduleData.title,
         subtitle: moduleData.subtitle,
+        introduction: moduleData.introduction,
         description: moduleData.description,
+        learning_outcomes_label: moduleData.learning_outcomes_label || "DepEd's Most Essential Learning Competencies",
         level: moduleData.level,
         emoji: moduleData.emoji,
         image_url: imageUrl || moduleData.image_url,
+        card_image_url: cardImageUrl || moduleData.card_image_url,
+        video_url: videoUrl || moduleData.video_url,
+        ppt_url: pptUrl || moduleData.ppt_url,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
         is_active: moduleData.is_active !== false, // Default to true if not specified

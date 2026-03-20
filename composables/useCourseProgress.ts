@@ -343,14 +343,14 @@ export const useCourseProgress = () => {
   }
 
   // Mark a lesson as completed in a module
-  const completeLessonInModule = (courseLevel: 'beginner' | 'advanced', moduleId: string, lessonIndex: number) => {
+  const completeLessonInModule = async (courseLevel: 'beginner' | 'advanced', moduleId: string, lessonIndex: number) => {
     if (!courseProgress.value[courseLevel].completedLessons.has(moduleId)) {
       courseProgress.value[courseLevel].completedLessons.set(moduleId, new Set<number>())
     }
     courseProgress.value[courseLevel].completedLessons.get(moduleId)!.add(lessonIndex)
     
     // Save to Supabase
-    saveLessonToSupabase(courseLevel, moduleId, lessonIndex)
+    await saveLessonToSupabase(courseLevel, moduleId, lessonIndex)
   }
 
   // Get completed lessons for a module

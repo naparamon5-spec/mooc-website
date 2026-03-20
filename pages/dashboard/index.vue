@@ -139,9 +139,9 @@
               @open-agreement="onOpenAgreement"
             />
 
-            <!-- ── Module Description (hidden during welcome step) ── -->
+            <!-- ── Module Video (hidden during welcome step) ── -->
             <div v-else-if="selectedModule" class="mb-4">
-              <ModuleDescriptionPanel :module="selectedModule" />
+              <ModuleVideoPanel :module="selectedModule" />
             </div>
 
           </template>
@@ -181,7 +181,7 @@ definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
 import ModuleCard from "~/components/studentdashboard/ModuleCard.vue";
-import ModuleDescriptionPanel from "~/components/studentdashboard/ModuleDescriptionPanel.vue";
+import ModuleVideoPanel from "~/components/studentdashboard/ModuleVideoPanel.vue";
 import NoticesCard from "~/components/studentdashboard/NoticesCard.vue";
 import WelcomeCard from "~/components/studentdashboard/WelcomeCard.vue";
 import WelcomeVideo from "~/components/studentdashboard/WelcomeVideo.vue";

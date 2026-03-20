@@ -53,15 +53,15 @@
       <button
         type="button"
         @click.stop="startQuiz"
-        :disabled="loading || props.isLocked"
-        :class="props.isLocked
+        :disabled="loading || (props.isLocked && !hasAttempted)"
+        :class="(props.isLocked && !hasAttempted)
           ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
           : hasAttempted && userPassed
             ? 'bg-green-50 text-green-700 hover:bg-green-100'
             : 'bg-primary-600 text-white hover:bg-primary-700'"
         class="w-full py-2 rounded-lg font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {{ loading ? 'Loading...' : props.isLocked ? 'Locked' : hasAttempted ? 'Retake quiz' : 'Start quiz' }}
+        {{ loading ? 'Loading...' : (props.isLocked && !hasAttempted) ? 'Locked' : hasAttempted ? 'Retake quiz' : 'Start quiz' }}
       </button>
     </div>
   </div>
@@ -96,7 +96,7 @@ const userScore = computed(() => props.userResult?.score || 0)
 const userPassed = computed(() => props.userResult?.passed || false)
 
 const handleCardClick = () => {
-  if (props.isLocked) return
+  if (props.isLocked && !hasAttempted.value) return
   if (hasAttempted.value) {
     emit('show-result', { quiz: props.quiz, result: props.userResult })
     return

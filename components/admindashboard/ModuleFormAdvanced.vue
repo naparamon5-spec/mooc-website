@@ -72,6 +72,19 @@
             />
           </div>
 
+          <!-- Introduction -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Introduction <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              v-model="form.introduction"
+              rows="3"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="A brief introduction to this module..."
+            />
+          </div>
+
           <!-- Level (full width now) -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -100,7 +113,7 @@
             />
           </div>
 
-          <!-- Image Upload -->
+          <!-- Module Image Upload -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Module Image
@@ -133,7 +146,7 @@
                   class="hidden"
                 />
                 <button
-                  @click="$refs.fileInput?.click()"
+                  @click="fileInput?.click()"
                   type="button"
                   class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
@@ -144,6 +157,169 @@
                 </span>
               </div>
             </div>
+          </div>
+
+          <!-- Module Card Image Upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Module Card Image
+            </label>  
+            <div class="space-y-3">
+              <div v-if="cardImagePreview || form.card_image_url" class="relative">
+                <img
+                  :src="cardImagePreview || form.card_image_url"
+                  alt="Module card preview"
+                  class="w-full h-48 object-cover rounded-lg border border-gray-300"
+                />
+                <button
+                  v-if="cardImagePreview"
+                  @click="clearCardImage"
+                  type="button"
+                  class="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input
+                  ref="cardImageFileInput"
+                  type="file"
+                  accept="image/*"
+                  @change="handleCardImageUpload"
+                  class="hidden"
+                />
+                <button
+                  @click="cardImageFileInput?.click()"
+                  type="button"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {{ cardImagePreview ? 'Change Image' : 'Upload Image' }}
+                </button>
+                <span v-if="!cardImagePreview && !form.card_image_url" class="text-sm text-gray-500">
+                  JPG, PNG, WebP (Max 5MB)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Module Video Upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Module Video
+            </label>
+            <div class="space-y-3">
+              <div v-if="videoPreview || form.video_url" class="relative bg-gray-900 rounded-lg border border-gray-300 h-48 flex items-center justify-center">
+                <video
+                  v-if="videoPreview || form.video_url"
+                  :src="videoPreview || form.video_url"
+                  class="w-full h-full object-contain rounded-lg"
+                  controls
+                />
+                <button
+                  v-if="videoPreview"
+                  @click="clearVideo"
+                  type="button"
+                  class="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input
+                  ref="videoFileInput"
+                  type="file"
+                  accept="video/*"
+                  @change="handleVideoUpload"
+                  class="hidden"
+                />
+                <button
+                  @click="videoFileInput?.click()"
+                  type="button"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {{ videoPreview ? 'Change Video' : 'Upload Video' }}
+                </button>
+                <span v-if="!videoPreview && !form.video_url" class="text-sm text-gray-500">
+                  MP4, WebM, OGG (Max 50MB)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Module PPT Upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Module PPT
+            </label>
+            <div class="space-y-3">
+              <div
+                v-if="pptFileName || form.ppt_url"
+                class="bg-gray-50 rounded-lg border border-gray-200 p-4 flex items-start justify-between gap-4"
+              >
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-800 mb-1">Current / Selected PPT</p>
+                  <p class="text-xs text-gray-500 break-all">
+                    {{ pptFileName || (form.ppt_url ? form.ppt_url.split('/').pop() : '') }}
+                  </p>
+                  <a
+                    v-if="form.ppt_url"
+                    :href="form.ppt_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm text-primary-600 hover:text-primary-700 underline inline-block mt-2"
+                  >
+                    Open PPT
+                  </a>
+                </div>
+                <button
+                  @click="clearPpt"
+                  type="button"
+                  class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors shrink-0"
+                >
+                  Remove
+                </button>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input
+                  ref="pptFileInput"
+                  type="file"
+                  accept=".ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  @change="handlePptUpload"
+                  class="hidden"
+                />
+                <button
+                  @click="pptFileInput?.click()"
+                  type="button"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {{ pptFileName ? 'Change PPT' : 'Upload PPT' }}
+                </button>
+                <span v-if="!pptFileName && !form.ppt_url" class="text-sm text-gray-500">
+                  PPT / PPTX (Max 50MB)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Learning Outcomes Label -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Learning Outcomes Label (Optional)
+            </label>
+            <input
+              v-model="form.learning_outcomes_label"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="e.g., DepEd's Most Essential Learning Competencies"
+            />
+            <p class="text-xs text-gray-500 mt-1">This label will be displayed above the learning outcomes on the student dashboard</p>
           </div>
 
           <!-- Learning Outcomes -->
@@ -227,7 +403,7 @@
                     Lesson Title <span class="text-red-500">*</span>
                   </label>
                   <input
-                    v-model="form.lessons[index].title"
+                    v-model="lesson.title"
                     type="text"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="e.g., Introduction to MIL"
@@ -287,7 +463,7 @@
 
                       <div v-if="block.type === 'text'">
                         <textarea
-                          v-model="form.lessons[index].blocks[blockIndex].text"
+                          v-model="block.text"
                           rows="6"
                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                           placeholder="Write your lesson content here..."
@@ -308,7 +484,7 @@
                           <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
                           <img
                             :src="block.src"
-                            :alt="form.lessons[index].title || 'Lesson image'"
+                            :alt="lesson.title || 'Lesson image'"
                             class="w-full max-h-72 object-contain rounded"
                           />
                           <button
@@ -364,16 +540,57 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit'])
 
 const activeTab = ref('basic')
-const fileInput = ref(null)
-const imagePreview = ref('')
-const imageFile = ref(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const imagePreview = ref<string>('')
+const imageFile = ref<File | null>(null)
+const cardImageFileInput = ref<HTMLInputElement | null>(null)
+const cardImagePreview = ref<string>('')
+const cardImageFile = ref<File | null>(null)
+const videoFileInput = ref<HTMLInputElement | null>(null)
+const videoPreview = ref<string>('')
+const videoFile = ref<File | null>(null)
+const pptFileInput = ref<HTMLInputElement | null>(null)
+const pptFileName = ref<string>('')
+const pptFile = ref<File | null>(null)
 
-const form = ref({
+interface LessonBlock {
+  type: 'text' | 'image'
+  text?: string
+  src?: string
+}
+
+interface Lesson {
+  title: string
+  blocks: LessonBlock[]
+}
+
+interface ModuleForm {
+  title: string
+  subtitle: string
+  introduction: string
+  level: string
+  description: string
+  learning_outcomes_label: string
+  image_url: string
+  card_image_url: string
+  video_url: string
+  ppt_url: string
+  learning_outcomes: string[]
+  is_active: boolean
+  lessons: Lesson[]
+}
+
+const form = ref<ModuleForm>({
   title: '',
   subtitle: '',
+  introduction: '',
   level: '',
   description: '',
+  learning_outcomes_label: "DepEd's Most Essential Learning Competencies",
   image_url: '',
+  card_image_url: '',
+  video_url: '',
+  ppt_url: '',
   learning_outcomes: [],
   is_active: true,
   lessons: []
@@ -385,15 +602,26 @@ const resetForm = () => {
   form.value = {
     title: '',
     subtitle: '',
+    introduction: '',
     level: '',
     description: '',
+    learning_outcomes_label: "DepEd's Most Essential Learning Competencies",
     image_url: '',
+    card_image_url: '',
+    video_url: '',
+    ppt_url: '',
     learning_outcomes: [],
     is_active: true,
     lessons: []
   }
   imagePreview.value = ''
   imageFile.value = null
+  cardImagePreview.value = ''
+  cardImageFile.value = null
+  videoPreview.value = ''
+  videoFile.value = null
+  pptFileName.value = ''
+  pptFile.value = null
 }
 
 const normalizeLesson = (lesson: any) => {
@@ -452,9 +680,14 @@ watch(
     if (newModule) {
       form.value.title = newModule.title || ''
       form.value.subtitle = newModule.subtitle || ''
+      form.value.introduction = newModule.introduction || ''
       form.value.level = newModule.level || ''
       form.value.description = newModule.description || ''
+      form.value.learning_outcomes_label = newModule.learning_outcomes_label || "DepEd's Most Essential Learning Competencies"
       form.value.image_url = newModule.image_url || ''
+      form.value.card_image_url = newModule.card_image_url || ''
+      form.value.video_url = newModule.video_url || ''
+      form.value.ppt_url = newModule.ppt_url || ''
       form.value.learning_outcomes = Array.isArray(newModule.learning_outcomes)
         ? [...newModule.learning_outcomes]
         : []
@@ -464,6 +697,12 @@ watch(
         : []
       imagePreview.value = newModule.image_url || ''
       imageFile.value = null
+      cardImagePreview.value = newModule.card_image_url || ''
+      cardImageFile.value = null
+      videoPreview.value = newModule.video_url || ''
+      videoFile.value = null
+      pptFileName.value = ''
+      pptFile.value = null
     } else {
       resetForm()
       activeTab.value = 'basic'
@@ -473,33 +712,36 @@ watch(
 )
 
 const addOutcome = () => form.value.learning_outcomes.push('')
-const removeOutcome = (index) => form.value.learning_outcomes.splice(index, 1)
+const removeOutcome = (index: number) => form.value.learning_outcomes.splice(index, 1)
 const addLesson = () => form.value.lessons.push({ title: '', blocks: [{ type: 'text', text: '' }] })
-const removeLesson = (index) => form.value.lessons.splice(index, 1)
+const removeLesson = (index: number) => form.value.lessons.splice(index, 1)
 
 const addTextBlock = (lessonIndex: number) => {
-  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
-  form.value.lessons[lessonIndex].blocks.push({ type: 'text', text: '' })
+  const lesson = form.value.lessons[lessonIndex]
+  if (lesson && !Array.isArray(lesson.blocks)) lesson.blocks = []
+  if (lesson) lesson.blocks.push({ type: 'text', text: '' })
 }
 
 const addImageBlock = (lessonIndex: number) => {
-  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
-  form.value.lessons[lessonIndex].blocks.push({ type: 'image', src: '' })
+  const lesson = form.value.lessons[lessonIndex]
+  if (lesson && !Array.isArray(lesson.blocks)) lesson.blocks = []
+  if (lesson) lesson.blocks.push({ type: 'image', src: '' })
 }
 
 const removeBlock = (lessonIndex: number, blockIndex: number) => {
-  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) return
-  form.value.lessons[lessonIndex].blocks.splice(blockIndex, 1)
+  const lesson = form.value.lessons[lessonIndex]
+  if (!lesson || !Array.isArray(lesson.blocks)) return
+  lesson.blocks.splice(blockIndex, 1)
 }
 
-const handleModuleImageUpload = (event) => {
-  const file = event.target.files?.[0]
+const handleModuleImageUpload = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
   if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
   imageFile.value = file
   const reader = new FileReader()
-  reader.onload = (e) => { imagePreview.value = e.target?.result || '' }
+  reader.onload = (e) => { imagePreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
 
@@ -509,30 +751,100 @@ const clearImage = () => {
   if (fileInput.value) fileInput.value.value = ''
 }
 
-const handleBlockImageUpload = (event: any, lessonIndex: number, blockIndex: number) => {
-  const file = event.target.files?.[0]
+const handleCardImageUpload = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
+  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
+  cardImageFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => { cardImagePreview.value = (e.target?.result as string) || '' }
+  reader.readAsDataURL(file)
+}
+
+const clearCardImage = () => {
+  cardImagePreview.value = ''
+  cardImageFile.value = null
+  if (cardImageFileInput.value) cardImageFileInput.value.value = ''
+}
+
+const handleVideoUpload = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (file.size > 50 * 1024 * 1024) { alert('Video size must be less than 50MB'); return }
+  if (!file.type.startsWith('video/')) { alert('Please select a valid video file'); return }
+  videoFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => { videoPreview.value = (e.target?.result as string) || '' }
+  reader.readAsDataURL(file)
+}
+
+const clearVideo = () => {
+  videoPreview.value = ''
+  videoFile.value = null
+  if (videoFileInput.value) videoFileInput.value.value = ''
+}
+
+const handlePptUpload = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  if (file.size > 50 * 1024 * 1024) { alert('PPT size must be less than 50MB'); return }
+
+  const lowerName = file.name.toLowerCase()
+  const isPpt = lowerName.endsWith('.ppt')
+  const isPptx = lowerName.endsWith('.pptx')
+  const mimeOk = [
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ].includes(file.type)
+
+  if (!mimeOk && !isPpt && !isPptx) {
+    alert('Please select a valid PPT/PPTX file')
+    return
+  }
+
+  pptFile.value = file
+  pptFileName.value = file.name
+}
+
+const clearPpt = () => {
+  if (pptFileName.value) {
+    // Revert back to the currently-saved PPT (if any)
+    pptFileName.value = ''
+    pptFile.value = null
+  } else {
+    // Removing an already-uploaded PPT
+    form.value.ppt_url = ''
+  }
+  if (pptFileInput.value) pptFileInput.value.value = ''
+}
+
+const handleBlockImageUpload = (event: Event, lessonIndex: number, blockIndex: number) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
   if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
   const reader = new FileReader()
   reader.onload = (e) => {
-    if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) form.value.lessons[lessonIndex].blocks = []
-    if (!form.value.lessons[lessonIndex].blocks[blockIndex] || form.value.lessons[lessonIndex].blocks[blockIndex].type !== 'image') {
-      return
-    }
-    form.value.lessons[lessonIndex].blocks[blockIndex].src = e.target?.result || ''
+    const lesson = form.value.lessons[lessonIndex]
+    if (!lesson || !Array.isArray(lesson.blocks)) return
+    const block = lesson.blocks[blockIndex]
+    if (!block || block.type !== 'image') return
+    block.src = (e.target?.result as string) || ''
   }
   reader.readAsDataURL(file)
 }
 
 const clearBlockImage = (lessonIndex: number, blockIndex: number) => {
-  if (!Array.isArray(form.value.lessons[lessonIndex].blocks)) return
-  const block = form.value.lessons[lessonIndex].blocks[blockIndex]
+  const lesson = form.value.lessons[lessonIndex]
+  if (!lesson || !Array.isArray(lesson.blocks)) return
+  const block = lesson.blocks[blockIndex]
   if (block?.type === 'image') block.src = ''
 }
 
 const handleSubmit = () => {
-  if (!form.value.title || !form.value.level || !form.value.description) {
+  if (!form.value.title || !form.value.introduction || !form.value.level || !form.value.description) {
     alert('Please fill in all required fields')
     return
   }
@@ -556,7 +868,10 @@ const handleSubmit = () => {
     ...form.value,
     learning_outcomes: outcomes,
     lessons: lessons.length > 0 ? lessons : undefined,
-    imageFile: imageFile.value
+    imageFile: imageFile.value,
+    cardImageFile: cardImageFile.value,
+    videoFile: videoFile.value,
+    pptFile: pptFile.value
   })
 }
 </script>

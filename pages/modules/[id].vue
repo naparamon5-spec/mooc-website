@@ -57,17 +57,19 @@
           <h2 class="text-xl font-bold text-gray-800 mb-6">Curriculum</h2>
           <div class="space-y-2">
             <div
-              v-for="(mod, moduleIndex) in allModules"
+              v-for="(mod, moduleIndex) in sidebarModules"
               :key="mod.id"
               class="space-y-1"
             >
               <!-- Module Title -->
               <div
-                @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), 0)"
+                @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), -1)"
                 class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors border-b-2"
                 :class="[
-                  String(mod.id) === moduleId
+                  String(mod.id) === moduleId && currentLessonIndex === -1
                     ? 'bg-primary-600 text-white border-b-primary-700'
+                    : String(mod.id) === moduleId
+                    ? 'bg-primary-100 text-primary-700 border-b-primary-300'
                     : 'text-gray-800 hover:bg-gray-100 border-b-transparent',
                   !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50 cursor-not-allowed hover:bg-white'
                 ]"
@@ -94,7 +96,7 @@
                     !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50'
                   ]"
                 >
-                  <span v-if="mod.id === parseInt(moduleId) && currentLessonIndex === lessonIndex" class="mr-2">▶️</span>
+                  <span v-if="String(mod.id) === moduleId && currentLessonIndex === lessonIndex" class="mr-2">▶️</span>
                   <span v-else class="mr-2">•</span>
                   {{ lesson.title }}
                 </div>
@@ -113,8 +115,8 @@
 
         <!-- Module Content -->
         <div v-else-if="module">
-          <!-- Module Banner/Image -->
-          <div v-if="module?.image_url" class="mb-6 rounded-lg overflow-hidden">
+          <!-- Module Banner/Image (only show on intro) -->
+          <div v-if="currentLessonIndex === -1 && module?.image_url" class="mb-6 rounded-lg overflow-hidden">
             <img
               :src="module.image_url"
               :alt="module.title"
@@ -122,120 +124,154 @@
             />
           </div>
 
-          <!-- Module Description Panel -->
-          <div v-if="module" class="mb-6">
+          <!-- Module Intro Section (when currentLessonIndex === -1) -->
+          <div v-if="currentLessonIndex === -1" class="space-y-6 mb-6">
             <ModuleDescriptionPanel :module="module" />
-          </div>
-
-          <!-- Title & Progress -->
-          <div class="flex justify-between items-center mb-6">
-            <div>
-              <h1 class="text-4xl font-extrabold text-gray-900 mb-2">
-                {{ module?.emoji }} {{ module?.title }}
-              </h1>
-              <p v-if="module?.subtitle" class="text-lg text-gray-600">
-                {{ module.subtitle }}
-              </p>
+            
+            <!-- Introduction Card -->
+            <div
+              v-if="module?.introduction"
+              class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary-600"
+            >
+              <p class="text-gray-700 whitespace-pre-line">{{ module.introduction }}</p>
             </div>
-            <div class="text-lg font-semibold text-primary-600">
-              {{ currentLessonIndex + 1 }} / {{ module?.lessons?.length || 0 }}
+
+            <!-- PPT Viewer (only on intro) -->
+            <div class="ppt-viewer-wrapper">
+              <iframe
+                v-if="module?.ppt_url"
+                :src="pptEmbedSrc"
+                class="ppt-iframe"
+                frameborder="0"
+                allowfullscreen
+              />
+              <div v-else class="ppt-viewer-placeholder">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm text-gray-600">No PPT available</p>
+              </div>
             </div>
-          </div>
 
-          <!-- Module Description -->
-          <div v-if="module?.description" class="bg-gray-50 p-4 rounded-lg mb-6 border-l-4 border-primary-600">
-            <p class="text-gray-700">{{ module.description }}</p>
-          </div>
-
-          <!-- Lesson Title -->
-          <div v-if="currentLesson" class="mb-4">
-            <h2 class="text-2xl font-bold text-gray-800">
-              Lesson {{ currentLessonIndex + 1 }}: {{ currentLesson.title }}
-            </h2>
-          </div>
-
-          <!-- Lesson Content (supports inserting image via [[IMAGE]] placeholder) -->
-          <div
-            v-if="currentLesson"
-            class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg"
-          >
-            <div class="space-y-6">
-              <template v-for="(block, blockIndex) in getLessonBlocks(currentLesson)" :key="`block-${blockIndex}`">
-                <!-- Text block -->
-                <div v-if="block.type === 'text'" class="space-y-4">
-                  <template v-for="(segment, segIndex) in splitIntoSegments(block.text)" :key="`seg-${blockIndex}-${segIndex}`">
-                    <p v-if="segment.type === 'p'" class="text-gray-700 leading-relaxed text-base">
-                      {{ segment.text }}
-                    </p>
-                    <ul v-else-if="segment.type === 'ul'" class="list-disc pl-6 text-gray-700">
-                      <li v-for="(item, itemIndex) in segment.items" :key="`li-${blockIndex}-${segIndex}-${itemIndex}`">
-                        {{ item }}
-                      </li>
-                    </ul>
-                  </template>
-                </div>
-
-                <!-- Image block -->
-                <div v-else-if="block.type === 'image' && block.src" class="my-2">
-                  <img
-                    :src="block.src"
-                    :alt="currentLesson.title || 'Lesson image'"
-                    class="w-full rounded-lg border border-gray-100"
-                  />
-                </div>
-              </template>
+            <!-- Fallback: open PPT directly -->
+            <div v-if="module?.ppt_url" class="flex justify-end">
+              <a
+                :href="module.ppt_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary-600 hover:text-primary-700 underline text-sm font-medium"
+              >
+                If the PPT doesn't display, click to open →
+              </a>
+            </div>
+            
+            <!-- Intro Continue Button -->
+            <div class="flex justify-end mt-8">
+              <button
+                @click="goToNextLesson"
+                class="bg-primary-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center gap-2"
+              >
+                Continue to Lesson 1 →
+              </button>
             </div>
           </div>
 
-        <!-- Navigation Buttons -->
-        <div class="flex justify-between items-center mt-12">
-          <button
-            v-if="currentLessonIndex > 0"
-            @click="goToPreviousLesson"
-            class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200"
-          >
-            ← Previous Lesson
-          </button>
+          <!-- Lessons Section (only show when currentLessonIndex >= 0) -->
+          <template v-if="currentLessonIndex >= 0">
+            <!-- Lesson Title with Progress -->
+            <div class="flex justify-between items-center mb-6">
+              <div>
+                <h2 class="text-3xl font-bold text-gray-900">
+                  Lesson {{ currentLessonIndex + 1 }}: {{ currentLesson?.title }}
+                </h2>
+              </div>
+              <div class="text-lg font-semibold text-primary-600">
+                {{ currentLessonIndex + 1 }} / {{ module?.lessons?.length || 0 }}
+              </div>
+            </div>
 
-          <button
-            v-if="currentLessonIndex < (module?.lessons?.length || 0) - 1"
-            @click="markLessonAndGoToNext"
-            class="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700"
-            :class="{ 'ml-auto': currentLessonIndex === 0 }"
-          >
-            Next Lesson →
-          </button>
+            <!-- Lesson Content (supports inserting image via [[IMAGE]] placeholder) -->
+            <div
+              v-if="currentLesson"
+              class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg"
+            >
+              <div class="space-y-6">
+                <template v-for="(block, blockIndex) in getLessonBlocks(currentLesson)" :key="`block-${blockIndex}`">
+                  <!-- Text block -->
+                  <div v-if="block.type === 'text'" class="space-y-4">
+                    <template v-for="(segment, segIndex) in splitIntoSegments(block.text)" :key="`seg-${blockIndex}-${segIndex}`">
+                      <p v-if="segment.type === 'p'" class="text-gray-700 leading-relaxed text-base">
+                        {{ segment.text }}
+                      </p>
+                      <ul v-else-if="segment.type === 'ul'" class="list-disc pl-6 text-gray-700">
+                        <li v-for="(item, itemIndex) in segment.items" :key="`li-${blockIndex}-${segIndex}-${itemIndex}`">
+                          {{ item }}
+                        </li>
+                      </ul>
+                    </template>
+                  </div>
 
-          <button
-            v-else-if="!isCurrentModuleCompleted"
-            @click="markLessonAsComplete"
-            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-            Take Quiz
-          </button>
+                  <!-- Image block -->
+                  <div v-else-if="block.type === 'image' && block.src" class="my-2">
+                    <img
+                      :src="block.src"
+                      :alt="currentLesson.title || 'Lesson image'"
+                      class="w-full rounded-lg border border-gray-100"
+                    />
+                  </div>
+                </template>
+              </div>
+            </div>
 
-          <button
-            v-else-if="isCurrentModuleCompleted && hasNextModule"
-            @click="handleNextModule"
-            class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 ml-auto flex items-center gap-2"
-          >
-            Next Module →
-          </button>
+            <!-- Navigation Buttons -->
+            <div class="flex justify-between items-center mt-12">
+              <button
+                v-if="currentLessonIndex >= 0"
+                @click="goToPreviousLesson"
+                class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200"
+              >
+                {{ currentLessonIndex === 0 ? '← Back to Intro' : '← Previous Lesson' }}
+              </button>
 
-          <button
-            v-else-if="isCurrentModuleCompleted && !hasNextModule"
-            @click="handleBackToDashboard"
-            class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-            </svg>
-            Return to Dashboard
-          </button>
-        </div>
+              <button
+                v-if="currentLessonIndex < (module?.lessons?.length || 0) - 1"
+                @click="markLessonAndGoToNext"
+                class="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700"
+              >
+                Next Lesson →
+              </button>
+
+              <button
+                v-else-if="!isCurrentModuleCompleted"
+                @click="markLessonAsComplete"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                Take Quiz
+              </button>
+
+              <button
+                v-else-if="isCurrentModuleCompleted && hasNextModule"
+                @click="handleNextModule"
+                class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 ml-auto flex items-center gap-2"
+              >
+                Next Module →
+              </button>
+
+              <button
+                v-else-if="isCurrentModuleCompleted && !hasNextModule"
+                @click="handleBackToDashboard"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 ml-auto flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                Return to Dashboard
+              </button>
+            </div>
+          </template>
         </div>
       </section>
     </main>
@@ -325,10 +361,10 @@ const moduleId = computed(() => moduleIdRaw.value || '1');
 // Get lesson parameter from query string
 const lessonParam = computed(() => {
   const lesson = route.query.lesson;
-  return lesson ? parseInt(lesson as string) : 0;
+  return lesson ? parseInt(lesson as string) : -1;  // -1 = intro, >= 0 = lesson index
 });
 
-const currentLessonIndex = ref(0);
+const currentLessonIndex = ref(-1);  // -1 = module intro, 0+ = lesson index
 const completedLessons = ref(new Set());
 const showCompletionModal = ref(false);
 const showModuleCharacterModal = ref(false);
@@ -345,18 +381,30 @@ const { hasSeenModuleIntro, markModuleIntroAsSeen, initializeOnboarding } = useO
 
 const module = ref<any>(null);
 
+const currentCourseLevel = computed(() => module.value?.level || 'beginner')
+
+const sidebarModules = computed(() => {
+  // Requirement: show only 5 modules per course level in the sidebar.
+  return allModules.value
+    .filter((m: any) => m.level === currentCourseLevel.value)
+    .slice(0, 5)
+})
+
 const isLastModule = computed(() => {
-  const sortedModules = allModules.value;
-  if (!sortedModules.length || !module.value) return false;
-  const lastId = String(sortedModules[sortedModules.length - 1].id);
-  return String(module.value.id) === lastId;
-});
+  if (!module.value) return false
+  const mods = sidebarModules.value
+  if (!mods.length) return false
+  const lastId = String(mods[mods.length - 1].id)
+  return String(module.value.id) === lastId
+})
 
 const earnedBadgeName = computed(() => {
   const courseLevel = module.value?.level || 'beginner';
   
   // Find module position in sorted list
-  const sortedModules = allModules.value.filter(m => m.level === courseLevel);
+  const sortedModules = allModules.value
+    .filter(m => m.level === courseLevel)
+    .slice(0, 5);
   const modulePosition = sortedModules.findIndex(m => String(m.id) === String(moduleId.value)) + 1; // 1-indexed
   
   const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping];
@@ -377,7 +425,9 @@ const allModules = computed(() => {
 });
 
 const allBeginnerModules = computed(() =>
-  allModules.value.filter((m: any) => m.level === 'beginner'),
+  allModules.value
+    .filter((m: any) => m.level === 'beginner')
+    .slice(0, 5),
 );
 
 // Fetch all modules on mount to show in sidebar
@@ -474,32 +524,42 @@ const isCurrentModuleCompleted = computed(() => {
 });
 
 const goToPreviousLesson = () => {
-  if (currentLessonIndex.value > 0) {
+  if (currentLessonIndex.value > -1) {
     currentLessonIndex.value--;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const goToNextLesson = () => {
-  if (module.value && module.value.lessons && currentLessonIndex.value < module.value.lessons.length - 1) {
+  if (currentLessonIndex.value === -1) {
+    // From intro to first lesson
+    currentLessonIndex.value = 0;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (module.value && module.value.lessons && currentLessonIndex.value < module.value.lessons.length - 1) {
     currentLessonIndex.value++;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const hasNextModule = computed(() => {
-  const currentIndex = allModules.value.findIndex(
-    (m: any) => String(m.id) === moduleId.value,
-  );
-  return currentIndex >= 0 && currentIndex < allModules.value.length - 1;
-});
+  const mods = sidebarModules.value
+  const currentIndex = mods.findIndex((m: any) => String(m.id) === moduleId.value)
+  return currentIndex >= 0 && currentIndex < mods.length - 1
+})
 
 const progressPercentage = computed(() => {
-  const level = module.value?.level || 'beginner';
-  const totalModules = allModules.value.filter(m => m.level === level).length;
+  const level = module.value?.level || 'beginner'
+  const totalModules = sidebarModules.value.filter(m => m.level === level).length
   const totalLessons = module.value?.lessons?.length || 0;
-  return getTotalProgressPercentage(level, totalModules, moduleId.value, totalLessons);
+  return getTotalProgressPercentage(level, totalModules, moduleId.value, totalLessons)
 });
+
+const pptEmbedSrc = computed(() => {
+  const url = module.value?.ppt_url
+  if (!url) return ''
+  // Office Online embed. Requires the PPT to be publicly accessible.
+  return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
+})
 
 type LessonBlock = { type: 'text'; text: string } | { type: 'image'; src: string }
 
@@ -618,11 +678,10 @@ const markLessonAsComplete = async () => {
 };
 
 const handleNextModule = () => {
-  const currentIndex = allBeginnerModules.value.findIndex(
-    (m: any) => String(m.id) === moduleId.value,
-  );
-  const nextModuleIndex = currentIndex + 1;
-  if (currentIndex >= 0 && nextModuleIndex < allBeginnerModules.value.length) {
+  const mods = sidebarModules.value
+  const currentIndex = mods.findIndex((m: any) => String(m.id) === moduleId.value)
+  const nextModuleIndex = currentIndex + 1
+  if (currentIndex >= 0 && nextModuleIndex < mods.length) {
     // Close modal first
     showCompletionModal.value = false;
     // Reset lesson index and completed lessons for new module
@@ -630,7 +689,7 @@ const handleNextModule = () => {
     completedLessons.value.clear();
     // Navigate
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    navigateTo(`/modules/${allBeginnerModules.value[nextModuleIndex].id}`);
+    navigateTo(`/modules/${mods[nextModuleIndex].id}`);
   }
 };
 
@@ -647,13 +706,18 @@ const handleBackToDashboard = () => {
 const markLessonAndGoToNext = () => {
   markLessonAsComplete();
   if (currentLessonIndex.value < module.value.lessons.length - 1) {
-    goToNextLesson();
+    currentLessonIndex.value++;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
-const goToModule = (id: string, lessonIndex: number = 0) => {
+const goToModule = (id: string, lessonIndex: number = -1) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  navigateTo(`/modules/${id}?lesson=${lessonIndex}`);
+  if (lessonIndex === -1) {
+    navigateTo(`/modules/${id}`);
+  } else {
+    navigateTo(`/modules/${id}?lesson=${lessonIndex}`);
+  }
 };
 
 const isModuleAccessible = (moduleId: string, index: number) => {
@@ -663,7 +727,7 @@ const isModuleAccessible = (moduleId: string, index: number) => {
   }
 
   if (index > 0) {
-    const prevMod = allModules.value[index - 1] as any;
+    const prevMod = sidebarModules.value[index - 1] as any;
     if (prevMod) {
       return isModuleCompleted(prevMod.level || 'beginner', String(prevMod.id));
     }
@@ -676,9 +740,9 @@ watch(moduleId, async (newModuleId) => {
   const moduleData = await fetchModuleById(newModuleId);
   if (moduleData) {
     module.value = moduleData;
-    // Set lesson from query param if provided, otherwise start at 0
-    currentLessonIndex.value = lessonParam.value;
-    // Clear completed lessons for this module (user hasn't completed any yet in this view)
+    // Set lesson from query param if provided (>= 0), otherwise start at intro (-1)
+    currentLessonIndex.value = lessonParam.value >= 0 ? lessonParam.value : -1;
+    // Clear completed lessons for this module
     completedLessons.value.clear();
 
     if (module.value) {
@@ -708,10 +772,13 @@ watch(fromQuiz, (val) => {
   }
 }, { immediate: true });
 
-// Watch for lesson parameter changes
+// Watch for lesson parameter changes - handle both intro (-1) and lesson (>= 0)
 watch(lessonParam, (newLessonParam) => {
-  if (newLessonParam !== currentLessonIndex.value && newLessonParam >= 0) {
+  if (newLessonParam >= 0 && newLessonParam !== currentLessonIndex.value) {
     currentLessonIndex.value = newLessonParam;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (newLessonParam === -1 && currentLessonIndex.value !== -1) {
+    currentLessonIndex.value = -1;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 });
@@ -728,5 +795,35 @@ watch(lessonParam, (newLessonParam) => {
 }
 .prose li {
   margin-bottom: 0.5em;
+}
+
+/* PPT viewer area (sized like WelcomeVideo placeholder) */
+.ppt-viewer-wrapper {
+  width: 100%;
+  background: #1f2937;
+  border: 1px solid #b8c7e3;
+  border-radius: 12px;
+  aspect-ratio: 16 / 9;
+  max-height: 700px;
+  overflow: hidden;
+}
+
+.ppt-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+.ppt-viewer-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1f2937;
+  color: #cbd5e1;
+  padding: 16px;
 }
 </style>

@@ -318,6 +318,9 @@ const isReviewOnly = computed(() => {
 })
 
 const isLocked = computed(() => {
+  // If the user already has a result for this quiz, show results/review mode.
+  if (existingResult.value) return false
+
   if (!quiz.value?.module_id || !quiz.value?.level) return false
   const courseLevel = quiz.value.level
   if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return false
@@ -325,7 +328,7 @@ const isLocked = computed(() => {
   const levelProgress = courseProgress.value[courseLevel as 'beginner' | 'advanced']
   if (!levelProgress) return false
   const completedLessons = levelProgress.completedLessons.get(moduleId)
-  return !completedLessons?.has(4)
+  return !completedLessons?.has(3)
 })
 
 const nextModuleId = computed(() => {
