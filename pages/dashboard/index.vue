@@ -432,10 +432,12 @@ watchEffect(() => {
   if (currentModules.value && currentModules.value.length > 0) {
     const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
     const firstIncompleteModule = currentModules.value.find(m => !isModuleCompleted(courseLevel, m.id));
-    if (firstIncompleteModule) {
-      selectedModule.value = firstIncompleteModule;
-    } else {
-      selectedModule.value = currentModules.value[0];
+    if (!selectedModule.value || !currentModules.value.some(m => m.id === selectedModule.value.id)) {
+      if (firstIncompleteModule) {
+        selectedModule.value = firstIncompleteModule;
+      } else {
+        selectedModule.value = currentModules.value[0];
+      }
     }
   } else {
     selectedModule.value = null;
@@ -445,8 +447,13 @@ watchEffect(() => {
 const selectModule = (module: any) => {
   const index = currentModules.value.findIndex(m => m.id === module.id);
   if (isModuleAccessible(module.id, index)) {
-    selectedModule.value = module;
-    navigateTo(`/modules/${module.id}`);
+    if (selectedModule.value?.id === module.id) {
+      // Already selected, navigate
+      navigateTo(`/modules/${module.id}`);
+    } else {
+      // Select it
+      selectedModule.value = module;
+    }
   }
 };
 

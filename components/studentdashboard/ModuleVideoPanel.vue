@@ -59,6 +59,7 @@ const props = defineProps({
   gap: 8px;
   background: #1f2937;
   width: 100%;
+  max-height: 320px;
   aspect-ratio: 16 / 9;
   border-radius: 8px;
 }

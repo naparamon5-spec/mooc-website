@@ -110,6 +110,7 @@ const onClickHere = async () => {
   gap: 8px;
   background: #1f2937;
   width: 100%;
+    max-height: 300px;
   aspect-ratio: 16 / 9;
   border-radius: 8px;
 }
