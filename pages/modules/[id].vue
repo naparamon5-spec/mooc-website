@@ -3,29 +3,6 @@
     <!-- Header -->
     <DashboardHeader :activeModuleId="parseInt(moduleId)" />
 
-    <!-- Instructor Character Modal for Module Intro -->
-    <!-- <InstructorCharacter
-      :isOpen="showModuleCharacterModal"
-      mode="module"
-      :title="`Welcome to ${module?.title}! 🚀`"
-      :messages="[
-        `Let's dive into ${module?.title}! This module covers important concepts you need to master.`,
-        'Take your time reading through each lesson carefully. You can navigate between lessons using the previous and next buttons.',
-        `After reading all lessons, you'll need to complete the module quiz to get the badge and unlock the next module. Good luck!`
-      ]"
-      :tips="[
-        `This module has ${module?.lessons?.length || 0} lessons`,
-        'Read each lesson carefully to prepare for the quiz',
-        'You need to pass the quiz to earn your badge',
-        'Take notes while reading to help you remember key concepts'
-      ]"
-      buttonText="Let's Get Started!"
-      :showSkip="true"
-      characterName="Alex"
-      @close="handleModuleCharacterClose"
-      @skip="handleModuleCharacterSkip"
-    /> -->
-
     <!-- Completion Modal -->
     <ModuleCompletionModal
       v-if="!isLastModule && module"
@@ -148,31 +125,59 @@
               </div>
             </div>
 
-            <!-- ── Lesson content rendered from block rows ── -->
+            <!-- Lesson content rendered from block rows -->
             <div v-if="currentLesson" class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg">
-              <!--
-                We group consecutive blocks into "rows":
-                  • A "left" block followed immediately by a "right" block → one flex row (side-by-side)
-                  • Any other block → its own full row
-                renderRows() returns an array of rows, each containing 1 or 2 blocks.
-              -->
               <div class="space-y-6">
                 <template v-for="(row, rowIndex) in renderRows(getLessonBlocks(currentLesson))" :key="`row-${rowIndex}`">
 
-                  <!-- Two-column row (left + right pair) -->
-                  <div v-if="row.length === 2 && row[0] && row[1]" class="flex flex-col sm:flex-row gap-6 items-start">
-                    <div class="flex-1 min-w-0">
-                      <BlockRenderer :block="(row[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                  <!-- ─── NEWSPAPER WRAP LAYOUT ─── -->
+                  <!-- IMAGE first in blocks → float LEFT, text wraps on the RIGHT -->
+                  <div
+                    v-if="row.wrapLayout && row.wrapSide === 'left' && row.blocks.length === 2"
+                    class="text-wrap-container"
+                  >
+                    <!-- Image floated LEFT -->
+                    <div class="wrap-image-float-left">
+                      <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
-                    <div class="flex-1 min-w-0">
-                      <BlockRenderer :block="(row[1] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    <!-- Text flows to the right -->
+                    <div class="wrap-text-content">
+                      <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                   </div>
 
-                  <!-- Single block row -->
-                  <div v-else-if="row.length === 1 && row[0]">
-                    <div :class="getSingleBlockWrapperClass(row[0] as LessonBlock)">
-                      <BlockRenderer :block="(row[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                  <!-- TEXT first in blocks → float image RIGHT, text wraps on the LEFT -->
+                  <div
+                    v-else-if="row.wrapLayout && row.wrapSide === 'right' && row.blocks.length === 2"
+                    class="text-wrap-container"
+                  >
+                    <!-- Image floated RIGHT (must be rendered first in DOM for float to work) -->
+                    <div class="wrap-image-float-right">
+                      <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
+                    <!-- Text flows to the left -->
+                    <div class="wrap-text-content">
+                      <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
+                  </div>
+
+                  <!-- ─── TWO-COLUMN ROW (left + right pair) ─── -->
+                  <div
+                    v-else-if="!row.wrapLayout && row.blocks.length === 2 && row.blocks[0] && row.blocks[1]"
+                    class="flex flex-col sm:flex-row gap-6 items-start"
+                  >
+                    <div class="flex-1 min-w-0 w-full overflow-hidden">
+                      <BlockRenderer :block="(row.blocks[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
+                    <div class="flex-1 min-w-0 w-full overflow-hidden">
+                      <BlockRenderer :block="(row.blocks[1] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
+                  </div>
+
+                  <!-- ─── SINGLE BLOCK ROW ─── -->
+                  <div v-else-if="row.blocks.length === 1 && row.blocks[0]">
+                    <div :class="getSingleBlockWrapperClass(row.blocks[0] as LessonBlock)">
+                      <BlockRenderer :block="(row.blocks[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                   </div>
 
@@ -259,7 +264,6 @@
   ────────────────────────────────────────────────────────────────────
   Inline sub-component: BlockRenderer
   Renders a single block (text | image | video) with its layout/align.
-  Defined inline to avoid creating a separate file; you can extract it.
   ────────────────────────────────────────────────────────────────────
 -->
 <script lang="ts">
@@ -274,6 +278,8 @@ interface LessonBlock {
   src?: string
   layout?: BlockLayout
   align?: BlockAlign
+  width?: string
+  height?: string
 }
 
 export const BlockRenderer = defineComponent({
@@ -299,13 +305,16 @@ export const BlockRenderer = defineComponent({
       }
 
       if (b.type === 'image' && b.src) {
-        // align within block: left | center (default) | right
         const alignClass = b.align === 'left' ? 'justify-start' : b.align === 'right' ? 'justify-end' : 'justify-center'
+        const imgStyle: Record<string, string> = {}
+        if (b.width) imgStyle.width = b.width
+        if (b.height) imgStyle.height = b.height
         return h('div', { class: `flex ${alignClass} my-2` },
           h('img', {
             src: b.src,
             alt: props.lessonTitle || 'Lesson image',
-            class: 'max-w-full h-auto rounded-lg border border-gray-100'
+            class: 'rounded-lg border border-gray-100',
+            style: Object.keys(imgStyle).length > 0 ? imgStyle : { width: '100%', height: 'auto' }
           })
         )
       }
@@ -315,12 +324,12 @@ export const BlockRenderer = defineComponent({
           h('video', {
             src: b.src,
             controls: true,
-            class: 'max-w-full h-auto rounded-lg border border-gray-100'
+            class: 'w-full h-auto rounded-lg border border-gray-100'
           })
         )
       }
 
-      return h('div') // empty node for empty / unknown blocks
+      return h('div')
     }
   }
 })
@@ -464,26 +473,64 @@ const getLessonBlocks = (lesson: any): LessonBlock[] => {
   return blocks
 }
 
+// ── Types ──────────────────────────────────────────────────────────────────
+type BlockLayout = 'full-width' | 'left' | 'right' | 'center'
+type BlockAlign  = 'left' | 'center' | 'right'
+
+interface LessonBlock {
+  type: 'text' | 'image' | 'video'
+  text?: string
+  src?: string
+  layout?: BlockLayout
+  align?: BlockAlign
+  width?: string
+  height?: string
+}
+
+interface RowGroup {
+  blocks: LessonBlock[]
+  wrapLayout?: boolean
+  /**
+   * 'right' → image floats RIGHT  (text block comes first in blocks[])
+   * 'left'  → image floats LEFT   (image block comes first in blocks[])
+   */
+  wrapSide?: 'left' | 'right'
+}
+
 /**
  * Groups blocks into display rows.
  *
- * Rules:
- *  • A "left"-layout block immediately followed by a "right"-layout block
- *    → merged into a single row of length 2 (flex side-by-side).
- *  • A lone "left" or "right" block (no pair) → row of length 1.
- *  • "full-width" and "center" blocks always → row of length 1.
+ * Newspaper wrap rules:
+ *   • IMAGE block first, TEXT block next  → image floats LEFT,  text wraps on the right
+ *   • TEXT block first, IMAGE block next  → image floats RIGHT, text wraps on the left
+ *   • left-layout + right-layout pair     → two-column flex row
+ *   • anything else                       → single-block row
  */
-const renderRows = (blocks: LessonBlock[]): LessonBlock[][] => {
-  const rows: LessonBlock[][] = []
+const renderRows = (blocks: LessonBlock[]): RowGroup[] => {
+  const rows: RowGroup[] = []
   let i = 0
   while (i < blocks.length) {
     const current = blocks[i]!
     const next = blocks[i + 1]
-    if (current.layout === 'left' && next?.layout === 'right') {
-      rows.push([current, next])
+
+    // IMAGE → TEXT  ⟹  float image LEFT, text wraps right
+    if (current.type === 'image' && next?.type === 'text') {
+      rows.push({ blocks: [current, next], wrapLayout: true, wrapSide: 'left' })
       i += 2
+
+    // TEXT → IMAGE  ⟹  float image RIGHT, text wraps left
+    } else if (current.type === 'text' && next?.type === 'image') {
+      rows.push({ blocks: [current, next], wrapLayout: true, wrapSide: 'right' })
+      i += 2
+
+    // Explicit left + right column pair
+    } else if (current.layout === 'left' && next?.layout === 'right') {
+      rows.push({ blocks: [current, next], wrapLayout: false })
+      i += 2
+
+    // Single block fallback
     } else {
-      rows.push([current])
+      rows.push({ blocks: [current], wrapLayout: false })
       i++
     }
   }
@@ -492,17 +539,13 @@ const renderRows = (blocks: LessonBlock[]): LessonBlock[][] => {
 
 /**
  * Returns a CSS class string that wraps a single (non-paired) block.
- * "center"     → 60% width, auto margins
- * "left"       → left-align (no pair found)
- * "right"      → right-align (no pair found)
- * "full-width" → default, no extra wrapper
  */
 const getSingleBlockWrapperClass = (block: LessonBlock): string => {
   switch (block.layout) {
-    case 'center':     return 'mx-auto w-full sm:w-3/5'
-    case 'left':       return 'mr-auto w-full sm:w-1/2'
-    case 'right':      return 'ml-auto w-full sm:w-1/2'
-    default:           return 'w-full'
+    case 'center': return 'mx-auto w-full sm:w-3/5'
+    case 'left':   return 'mr-auto w-full sm:w-1/2'
+    case 'right':  return 'ml-auto w-full sm:w-1/2'
+    default:       return 'w-full'
   }
 }
 
@@ -612,15 +655,126 @@ watch(lessonParam, (val) => {
 .prose ul { margin-bottom: 1em; }
 .prose li { margin-bottom: 0.5em; }
 
-.ppt-viewer-wrapper {
-  width: 100%; background: #1f2937;
-  border: 1px solid #b8c7e3; border-radius: 12px;
-  aspect-ratio: 16 / 9; max-height: 700px; overflow: hidden;
+/* ═══════════════════════════════════════════════════════════════════
+   NEWSPAPER WRAP LAYOUT
+   ═══════════════════════════════════════════════════════════════════ */
+
+.text-wrap-container {
+  display: flow-root; /* new block formatting context — clears floats */
+  overflow: hidden;
+  margin-bottom: 1.5rem;
 }
-.ppt-iframe { width: 100%; height: 100%; border: 0; background: #ffffff; }
+
+/* ── Image floated RIGHT  (text wraps on the LEFT / default screenshot look) ── */
+.wrap-image-float-right {
+  float: right;
+  margin-left: 1.5rem;   /* gap between image and text */
+  margin-bottom: 1rem;
+  max-width: 42%;        /* image takes up to 42% of the container */
+  clear: none;
+}
+
+/* ── Image floated LEFT  (text wraps on the RIGHT) ── */
+.wrap-image-float-left {
+  float: left;
+  margin-right: 1.5rem;  /* gap between image and text */
+  margin-bottom: 1rem;
+  max-width: 42%;
+  clear: none;
+}
+
+.wrap-image-float-right img,
+.wrap-image-float-left img {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+/* Text flows naturally around whichever float is active */
+.wrap-text-content {
+  overflow: visible;
+}
+
+.wrap-text-content p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+.wrap-text-content ul {
+  margin-bottom: 1em;
+  list-style-position: inside;
+}
+
+.wrap-text-content li {
+  margin-bottom: 0.5em;
+}
+
+/* ── Mobile: stack vertically ── */
+@media (max-width: 640px) {
+  .wrap-image-float-right,
+  .wrap-image-float-left {
+    float: none;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .text-wrap-container {
+    display: block;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GENERAL IMAGE STYLING
+   ═══════════════════════════════════════════════════════════════════ */
+
+.prose img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  display: block;
+  object-fit: cover;
+}
+
+.flex.flex-col.sm\:flex-row img {
+  margin: 0;
+}
+
+div:not(.flex) .prose img {
+  margin: 2rem 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PPT VIEWER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ppt-viewer-wrapper {
+  width: 100%;
+  background: #1f2937;
+  border: 1px solid #b8c7e3;
+  border-radius: 12px;
+  aspect-ratio: 16 / 9;
+  max-height: 700px;
+  overflow: hidden;
+}
+.ppt-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
 .ppt-viewer-placeholder {
-  height: 100%; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 8px; background: #1f2937; color: #cbd5e1; padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1f2937;
+  color: #cbd5e1;
+  padding: 16px;
 }
 </style>
