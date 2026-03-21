@@ -6,11 +6,13 @@
     >
       <!-- Logo -->
       <div class="flex justify-center mb-4">
-        <img
-          src="/assets/logo.png"
-          alt="MIL MOOC"
-          class="h-28 w-auto object-contain"
-        />
+        <NuxtLink to="/">
+          <img
+            src="/assets/logo.png"
+            alt="MIL MOOC"
+            class="h-28 w-auto object-contain cursor-pointer hover:opacity-80 transition"
+          />
+        </NuxtLink>
       </div>
 
       <!-- Title -->

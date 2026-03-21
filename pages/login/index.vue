@@ -3,7 +3,9 @@
     <div class="w-full max-w-lg bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-sky-100">
       <!-- Logo -->
       <div class="flex justify-center mb-4">
-        <img src="/assets/logo.png" alt="MIL MOOC" class="h-28 w-auto object-contain"/>
+        <NuxtLink to="/">
+          <img src="/assets/logo.png" alt="MIL MOOC" class="h-28 w-auto object-contain cursor-pointer hover:opacity-80 transition"/>
+        </NuxtLink>
       </div>
 
        <!-- Title -->
