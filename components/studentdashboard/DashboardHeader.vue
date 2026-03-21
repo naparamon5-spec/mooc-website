@@ -152,7 +152,6 @@ import { useUserProfile } from '~/composables/useUserProfile'
 const route = useRoute()
 const dropdownOpen = ref(false)
 const mobileMenuOpen = ref(false)
-const profilePicUrl = ref<string | null>(null)
 
 const { profile, userInitials, logout, fetchUserProfile } = useUserProfile()
 
@@ -167,32 +166,33 @@ const currentRoute = computed(() => route.path)
 
 const isModulesRoute = computed(() => route.path.startsWith('/modules'))
 
-// Watch for profile changes to update avatar in real-time with deep watching
+// Watch for profile changes to update avatar in real-time
 watch(
   profile,
   (newProfile) => {
     if (newProfile?.profile_pic_url) {
-      profilePicUrl.value = newProfile.profile_pic_url
+      // Profile picture updated
     }
   },
   { deep: true }
 )
 
-// Fetch user profile on component mount
-onMounted(async () => {
-  await fetchUserProfile()
-  if (profile.value?.profile_pic_url) {
-    profilePicUrl.value = profile.value.profile_pic_url
-  }
-})
-
 // Close dropdown when clicking outside
 const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement
-  if (dropdownOpen.value && target && !target.closest('.relative')) {
+  if (!target) return
+  
+  if (dropdownOpen.value && !target.closest('.relative')) {
     dropdownOpen.value = false
   }
 }
+
+// Fetch user profile on component mount if not already loaded
+onMounted(async () => {
+  if (!profile.value) {
+    await fetchUserProfile()
+  }
+})
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)

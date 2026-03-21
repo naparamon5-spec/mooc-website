@@ -182,21 +182,8 @@ const retakeSelectedQuiz = () => {
 }
 
 const isQuizLocked = (quiz: any) => {
-  // If user has already attempted this quiz, do not lock it.
-  if (quizResultsById[String(quiz.id)]) return false
-
-  if (!quiz?.module_id || !quiz?.level) return false
-
-  const courseLevel = quiz.level
-  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return false
-
-  const moduleId = quiz.module_id
-  const levelProgress = courseProgress.value[courseLevel as 'beginner' | 'advanced']
-  if (!levelProgress) return false
-
-  const completedLessons = levelProgress.completedLessons.get(moduleId)
-  // Require completion of lesson 4 (zero-based index 3)
-  return !completedLessons?.has(3)
+  // Lock quiz if it hasn't been taken yet
+  return !quizResultsById.value[String(quiz.id)]
 }
 </script>
 

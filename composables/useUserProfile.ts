@@ -10,10 +10,15 @@ export interface UserProfile {
   created_at: string
 }
 
+// Global singleton state - persists across component remounts
+let globalProfile = ref<UserProfile | null>(null)
+let globalLoading = ref(false)
+let globalError = ref<string | null>(null)
+
 export const useUserProfile = () => {
-  const profile = ref<UserProfile | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  const profile = globalProfile
+  const loading = globalLoading
+  const error = globalError
 
   const userInitials = computed(() => {
     if (!profile.value?.full_name) return '?'
