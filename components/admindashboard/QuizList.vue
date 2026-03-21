@@ -35,8 +35,8 @@
                 :class="quiz.level === 'beginner' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'">
                 {{ quiz.level === 'beginner' ? 'Beginner' : 'Advanced' }}
               </span>
-              <span v-if="getModuleTitle(quiz.moduleId)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                Module: {{ getModuleTitle(quiz.moduleId) }}
+              <span v-if="getModuleTitle(quiz.moduleId || quiz.module_id)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                Module: {{ getModuleTitle(quiz.moduleId || quiz.module_id) }}
               </span>
               <span class="text-xs text-gray-500">
                 {{ quiz.questions?.length || 0 }} questions

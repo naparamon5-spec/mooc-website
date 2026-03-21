@@ -75,7 +75,7 @@
                   Create the first beginner module →
                 </button>
               </div>
-              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <ModuleCard
                   v-for="module in beginnerModules"
                   :key="module.id"
@@ -97,7 +97,7 @@
                   Create the first advanced module →
                 </button>
               </div>
-              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <ModuleCard
                   v-for="module in advancedModules"
                   :key="module.id"

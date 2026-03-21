@@ -329,14 +329,14 @@ const availableModules = computed(() => {
   // Get modules that match the selected level
   let levelModules = modules.value.filter((m: any) => m.level === formData.level)
   
-  // Get module IDs that already have quizzes assigned
+  // Get module IDs that already have quizzes assigned (handle both moduleId and module_id)
   const assignedModuleIds = quizzes.value
-    .filter(q => q.moduleId) // Only quizzes with assigned modules
-    .map(q => q.moduleId)
+    .filter(q => q.moduleId || q.module_id) // Handle both naming conventions
+    .map(q => q.moduleId || q.module_id)
   
   // Filter out modules that already have quizzes, but keep the current module in edit mode
   levelModules = levelModules.filter(module => {
-    if (props.isEditMode && props.quiz?.moduleId === module.id) {
+    if (props.isEditMode && (props.quiz?.moduleId === module.id || props.quiz?.module_id === module.id)) {
       return true // Keep current module in edit mode
     }
     return !assignedModuleIds.includes(module.id)
@@ -447,7 +447,7 @@ const submitForm = async () => {
 
   // Check if the selected module already has a quiz (except in edit mode for the same quiz)
   if (!props.isEditMode) {
-    const existingQuiz = quizzes.value.find(q => q.moduleId === formData.moduleId)
+    const existingQuiz = quizzes.value.find(q => (q.moduleId || q.module_id) === formData.moduleId)
     if (existingQuiz) {
       alert('This module already has a quiz assigned to it. Please select a different module.')
       return

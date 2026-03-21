@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative rounded-lg overflow-hidden border-2 transition-all duration-200 cursor-pointer"
+    class="relative rounded-lg overflow-hidden border-2 transition-all duration-200 cursor-pointer aspect-[5/6] w-full max-w-xs bg-gray-100"
     :class="[
       module.is_restricted
         ? 'border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Module Image or Emoji - Full Height -->
-    <div class="w-full h-48 flex items-center justify-center bg-gray-100 relative group">
+    <div class="w-full h-full flex items-center justify-center bg-gray-100 relative group">
       <img
         v-if="module.card_image_url"
         :src="module.card_image_url"
