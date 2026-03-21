@@ -48,20 +48,13 @@
       @backToDashboard="handleBackToDashboard"
     />
 
-    <main
-      class="bg-primary-100 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8"
-    >
+    <main class="bg-primary-100 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
       <!-- Sidebar -->
       <aside class="lg:col-span-1">
         <nav class="bg-white rounded-lg shadow p-4">
           <h2 class="text-xl font-bold text-gray-800 mb-6">Curriculum</h2>
           <div class="space-y-2">
-            <div
-              v-for="(mod, moduleIndex) in sidebarModules"
-              :key="mod.id"
-              class="space-y-1"
-            >
-              <!-- Module Title -->
+            <div v-for="(mod, moduleIndex) in sidebarModules" :key="mod.id" class="space-y-1">
               <div
                 @click="isModuleAccessible(String(mod.id), moduleIndex) && goToModule(String(mod.id), -1)"
                 class="p-3 rounded-lg cursor-pointer font-bold text-sm transition-colors border-b-2"
@@ -79,7 +72,6 @@
                 <span v-if="!isModuleAccessible(String(mod.id), moduleIndex)" class="ml-2 text-xs">🔒</span>
               </div>
 
-              <!-- Lessons List -->
               <div v-if="mod.lessons && mod.lessons.length > 0" class="pl-4 space-y-1">
                 <div
                   v-for="(lesson, lessonIndex) in mod.lessons"
@@ -90,9 +82,7 @@
                     isModuleAccessible(String(mod.id), moduleIndex) ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed',
                     String(mod.id) === moduleId && currentLessonIndex === lessonIndex
                       ? 'bg-primary-500 text-white font-semibold'
-                      : String(mod.id) === moduleId
-                      ? 'text-primary-600 font-medium'
-                      : 'text-gray-600',
+                      : String(mod.id) === moduleId ? 'text-primary-600 font-medium' : 'text-gray-600',
                     !isModuleAccessible(String(mod.id), moduleIndex) && 'opacity-50'
                   ]"
                 >
@@ -108,43 +98,24 @@
 
       <!-- Main Content -->
       <section class="md:col-span-3">
-        <!-- Loading State -->
         <div v-if="loading" class="text-center py-12">
           <p class="text-gray-600">Loading module...</p>
         </div>
 
-        <!-- Module Content -->
         <div v-else-if="module">
-          <!-- Module Banner/Image (only show on intro) -->
+          <!-- Module Banner (only on intro) -->
           <div v-if="currentLessonIndex === -1 && module?.image_url" class="mb-6 rounded-lg overflow-hidden">
-            <img
-              :src="module.image_url"
-              :alt="module.title"
-              class="w-full h-64 object-cover"
-            />
+            <img :src="module.image_url" :alt="module.title" class="w-full h-64 object-cover" />
           </div>
 
-          <!-- Module Intro Section (when currentLessonIndex === -1) -->
+          <!-- Module Intro Section -->
           <div v-if="currentLessonIndex === -1" class="space-y-6 mb-6">
             <ModuleDescriptionPanel :module="module" />
-            
-            <!-- Introduction Card -->
-            <div
-              v-if="module?.introduction"
-              class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary-600"
-            >
+            <div v-if="module?.introduction" class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary-600">
               <p class="text-gray-700 whitespace-pre-line">{{ module.introduction }}</p>
             </div>
-
-            <!-- PPT Viewer (only on intro) -->
             <div class="ppt-viewer-wrapper">
-              <iframe
-                v-if="module?.ppt_url"
-                :src="pptEmbedSrc"
-                class="ppt-iframe"
-                frameborder="0"
-                allowfullscreen
-              />
+              <iframe v-if="module?.ppt_url" :src="pptEmbedSrc" class="ppt-iframe" frameborder="0" allowfullscreen />
               <div v-else class="ppt-viewer-placeholder">
                 <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -152,33 +123,20 @@
                 <p class="text-sm text-gray-600">No PPT available</p>
               </div>
             </div>
-
-            <!-- Fallback: open PPT directly -->
             <div v-if="module?.ppt_url" class="flex justify-end">
-              <a
-                :href="module.ppt_url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary-600 hover:text-primary-700 underline text-sm font-medium"
-              >
+              <a :href="module.ppt_url" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:text-primary-700 underline text-sm font-medium">
                 If the PPT doesn't display, click to open →
               </a>
             </div>
-            
-            <!-- Intro Continue Button -->
             <div class="flex justify-end mt-8">
-              <button
-                @click="goToNextLesson"
-                class="bg-primary-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center gap-2"
-              >
+              <button @click="goToNextLesson" class="bg-primary-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center gap-2">
                 Continue to Lesson 1 →
               </button>
             </div>
           </div>
 
-          <!-- Lessons Section (only show when currentLessonIndex >= 0) -->
+          <!-- Lessons Section -->
           <template v-if="currentLessonIndex >= 0">
-            <!-- Lesson Title with Progress -->
             <div class="flex justify-between items-center mb-6">
               <div>
                 <h2 class="text-3xl font-bold text-gray-900">
@@ -190,35 +148,34 @@
               </div>
             </div>
 
-            <!-- Lesson Content (supports inserting image via [[IMAGE]] placeholder) -->
-            <div
-              v-if="currentLesson"
-              class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg"
-            >
+            <!-- ── Lesson content rendered from block rows ── -->
+            <div v-if="currentLesson" class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg">
+              <!--
+                We group consecutive blocks into "rows":
+                  • A "left" block followed immediately by a "right" block → one flex row (side-by-side)
+                  • Any other block → its own full row
+                renderRows() returns an array of rows, each containing 1 or 2 blocks.
+              -->
               <div class="space-y-6">
-                <template v-for="(block, blockIndex) in getLessonBlocks(currentLesson)" :key="`block-${blockIndex}`">
-                  <!-- Text block -->
-                  <div v-if="block.type === 'text'" class="space-y-4">
-                    <template v-for="(segment, segIndex) in splitIntoSegments(block.text)" :key="`seg-${blockIndex}-${segIndex}`">
-                      <p v-if="segment.type === 'p'" class="text-gray-700 leading-relaxed text-base">
-                        {{ segment.text }}
-                      </p>
-                      <ul v-else-if="segment.type === 'ul'" class="list-disc pl-6 text-gray-700">
-                        <li v-for="(item, itemIndex) in segment.items" :key="`li-${blockIndex}-${segIndex}-${itemIndex}`">
-                          {{ item }}
-                        </li>
-                      </ul>
-                    </template>
+                <template v-for="(row, rowIndex) in renderRows(getLessonBlocks(currentLesson))" :key="`row-${rowIndex}`">
+
+                  <!-- Two-column row (left + right pair) -->
+                  <div v-if="row.length === 2 && row[0] && row[1]" class="flex flex-col sm:flex-row gap-6 items-start">
+                    <div class="flex-1 min-w-0">
+                      <BlockRenderer :block="(row[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <BlockRenderer :block="(row[1] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
                   </div>
 
-                  <!-- Image block -->
-                  <div v-else-if="block.type === 'image' && block.src" class="my-2">
-                    <img
-                      :src="block.src"
-                      :alt="currentLesson.title || 'Lesson image'"
-                      class="w-full rounded-lg border border-gray-100"
-                    />
+                  <!-- Single block row -->
+                  <div v-else-if="row.length === 1 && row[0]">
+                    <div :class="getSingleBlockWrapperClass(row[0] as LessonBlock)">
+                      <BlockRenderer :block="(row[0] as LessonBlock)" :lessonTitle="currentLesson?.title || ''" />
+                    </div>
                   </div>
+
                 </template>
               </div>
             </div>
@@ -237,9 +194,7 @@
                 v-if="currentLessonIndex < (module?.lessons?.length || 0) - 1"
                 @click="markLessonAndGoToNext"
                 class="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700"
-              >
-                Next Lesson →
-              </button>
+              >Next Lesson →</button>
 
               <button
                 v-else-if="!isCurrentModuleCompleted"
@@ -256,9 +211,7 @@
                 v-else-if="isCurrentModuleCompleted && hasNextModule"
                 @click="handleNextModule"
                 class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 ml-auto flex items-center gap-2"
-              >
-                Next Module →
-              </button>
+              >Next Module →</button>
 
               <button
                 v-else-if="isCurrentModuleCompleted && !hasNextModule"
@@ -277,553 +230,397 @@
     </main>
 
     <!-- Quiz Prompt Dialog -->
-    <div
-      v-if="showQuizDialog"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
+    <div v-if="showQuizDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
         <h2 class="text-2xl font-bold text-gray-900 mb-2">Module Quiz</h2>
-        <p class="text-gray-600 mb-4">
-          Before you can complete this module, you need to pass the quiz.
-        </p>
-
-        <div v-if="quizLoading" class="text-gray-600 py-4">
-          Loading quiz information...
-        </div>
-
-        <div v-else-if="quizError" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4">
-          {{ quizError }}
-        </div>
-
+        <p class="text-gray-600 mb-4">Before you can complete this module, you need to pass the quiz.</p>
+        <div v-if="quizLoading" class="text-gray-600 py-4">Loading quiz information...</div>
+        <div v-else-if="quizError" class="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4">{{ quizError }}</div>
         <div v-else-if="quizInfo" class="space-y-2 mb-4">
           <p><span class="font-semibold">Topic:</span> {{ quizInfo.title }}</p>
           <p><span class="font-semibold">Number of items:</span> {{ quizInfo.questions?.length || 0 }}</p>
           <p><span class="font-semibold">Passing score:</span> {{ quizInfo.passing_score || 70 }}%</p>
         </div>
-
         <div class="flex justify-end gap-3 mt-4">
-          <button
-            v-if="quizInfo"
-            type="button"
-            @click="showQuizDialog = false"
-            class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            v-if="quizInfo"
-            type="button"
-            @click="goToQuiz"
-            :disabled="!quizInfo || !!quizError"
-            class="px-4 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Take Quiz
-          </button>
-          <button
-            v-if="!quizInfo && quizError"
-            type="button"
-            @click="showQuizDialog = false"
-            class="px-4 py-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-gray-700"
-          >
-            Close
-          </button>
+          <button v-if="quizInfo" type="button" @click="showQuizDialog = false" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button v-if="quizInfo" type="button" @click="goToQuiz" :disabled="!quizInfo || !!quizError" class="px-4 py-2 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">Take Quiz</button>
+          <button v-if="!quizInfo && quizError" type="button" @click="showQuizDialog = false" class="px-4 py-2 rounded-lg bg-gray-600 text-white font-semibold hover:bg-gray-700">Close</button>
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
-import ModuleDescriptionPanel from '~/components/studentdashboard/ModuleDescriptionPanel.vue';
-import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue';
-import CertificateModal from '~/components/CertificateModal.vue';
-import { useCourseProgress } from '~/composables/useCourseProgress';
-import { useModuleManagement } from '~/composables/useModuleManagement';
-import { useQuizManagement } from '~/composables/useQuizManagement';
-import { useUserProfile } from '~/composables/useUserProfile';
-import { useOnboarding } from '~/composables/useOnboarding';
+<!--
+  ────────────────────────────────────────────────────────────────────
+  Inline sub-component: BlockRenderer
+  Renders a single block (text | image | video) with its layout/align.
+  Defined inline to avoid creating a separate file; you can extract it.
+  ────────────────────────────────────────────────────────────────────
+-->
+<script lang="ts">
+import { defineComponent, h } from 'vue'
 
-const route = useRoute();
-const moduleIdRaw = computed(() => {
-  const id = route.params.id;
-  return Array.isArray(id) ? id[0] : id || '1';
-});
-const moduleId = computed(() => moduleIdRaw.value || '1');
+type BlockLayout = 'full-width' | 'left' | 'right' | 'center'
+type BlockAlign  = 'left' | 'center' | 'right'
 
-// Get lesson parameter from query string
-const lessonParam = computed(() => {
-  const lesson = route.query.lesson;
-  return lesson ? parseInt(lesson as string) : -1;  // -1 = intro, >= 0 = lesson index
-});
+interface LessonBlock {
+  type: 'text' | 'image' | 'video'
+  text?: string
+  src?: string
+  layout?: BlockLayout
+  align?: BlockAlign
+}
 
-const currentLessonIndex = ref(-1);  // -1 = module intro, 0+ = lesson index
-const completedLessons = ref(new Set());
-const showCompletionModal = ref(false);
-const showModuleCharacterModal = ref(false);
-const showQuizDialog = ref(false);
-const quizInfo = ref<any | null>(null);
-const quizLoading = ref(false);
-const quizError = ref<string | null>(null);
-const studentName = ref("Student Name");
-const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage, clearProgress, loadProgressFromSupabase } = useCourseProgress();
-const { fetchModuleById, fetchModules, modules, loading } = useModuleManagement();
-const { fetchQuizForModule } = useQuizManagement();
-const { fetchUserProfile } = useUserProfile();
-const { hasSeenModuleIntro, markModuleIntroAsSeen, initializeOnboarding } = useOnboarding();
+export const BlockRenderer = defineComponent({
+  name: 'BlockRenderer',
+  props: {
+    block: { type: Object as () => LessonBlock, required: true },
+    lessonTitle: { type: String, default: '' }
+  },
+  setup(props) {
+    return () => {
+      const b = props.block as any
 
-const module = ref<any>(null);
+      if (b.type === 'text') {
+        const paragraphs = splitIntoSegments(b.text || '')
+        return h('div', { class: 'space-y-4' }, paragraphs.map((seg: any, i: number) => {
+          if (seg.type === 'ul') {
+            return h('ul', { class: 'list-disc pl-6 text-gray-700', key: i },
+              seg.items.map((item: string, j: number) => h('li', { key: j, class: 'mb-1' }, item))
+            )
+          }
+          return h('p', { class: 'text-gray-700 leading-relaxed text-base', key: i }, seg.text)
+        }))
+      }
 
-const currentCourseLevel = computed(() => module.value?.level || 'beginner')
+      if (b.type === 'image' && b.src) {
+        // align within block: left | center (default) | right
+        const alignClass = b.align === 'left' ? 'justify-start' : b.align === 'right' ? 'justify-end' : 'justify-center'
+        return h('div', { class: `flex ${alignClass} my-2` },
+          h('img', {
+            src: b.src,
+            alt: props.lessonTitle || 'Lesson image',
+            class: 'max-w-full h-auto rounded-lg border border-gray-100'
+          })
+        )
+      }
 
-const sidebarModules = computed(() => {
-  // Requirement: show only 5 modules per course level in the sidebar.
-  return allModules.value
-    .filter((m: any) => m.level === currentCourseLevel.value)
-    .slice(0, 5)
+      if (b.type === 'video' && b.src) {
+        return h('div', { class: 'flex justify-center my-2' },
+          h('video', {
+            src: b.src,
+            controls: true,
+            class: 'max-w-full h-auto rounded-lg border border-gray-100'
+          })
+        )
+      }
+
+      return h('div') // empty node for empty / unknown blocks
+    }
+  }
 })
 
+/** Split plain text into paragraph / bullet-list segments */
+function splitIntoSegments(text: string) {
+  const t = (text || '').trim()
+  if (!t) return []
+  const paragraphs = t.split(/\n\s*\n/g).map((s: string) => s.trim()).filter(Boolean)
+  return paragraphs.map((p: string) => {
+    const lines = p.split('\n').map((l: string) => l.trim()).filter(Boolean)
+    const allBullets = lines.length > 0 && lines.every((l: string) => /^-\s+/.test(l))
+    if (allBullets) {
+      return { type: 'ul', items: lines.map((l: string) => l.replace(/^-\s+/, '').trim()).filter(Boolean) }
+    }
+    return { type: 'p', text: p }
+  })
+}
+</script>
+
+<script setup lang="ts">
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue'
+import ModuleDescriptionPanel from '~/components/studentdashboard/ModuleDescriptionPanel.vue'
+import ModuleCompletionModal from '~/components/ModuleCompletionModal.vue'
+import CertificateModal from '~/components/CertificateModal.vue'
+import { useCourseProgress } from '~/composables/useCourseProgress'
+import { useModuleManagement } from '~/composables/useModuleManagement'
+import { useQuizManagement } from '~/composables/useQuizManagement'
+import { useUserProfile } from '~/composables/useUserProfile'
+import { useOnboarding } from '~/composables/useOnboarding'
+
+// ── Route ──────────────────────────────────────────────────────────────────
+const route = useRoute()
+const moduleIdRaw = computed(() => { const id = route.params.id; return Array.isArray(id) ? id[0] : id || '1' })
+const moduleId = computed(() => moduleIdRaw.value || '1')
+const lessonParam = computed(() => { const lesson = route.query.lesson; return lesson ? parseInt(lesson as string) : -1 })
+
+// ── State ──────────────────────────────────────────────────────────────────
+const currentLessonIndex = ref(-1)
+const completedLessons = ref(new Set())
+const showCompletionModal = ref(false)
+const showModuleCharacterModal = ref(false)
+const showQuizDialog = ref(false)
+const quizInfo = ref<any | null>(null)
+const quizLoading = ref(false)
+const quizError = ref<string | null>(null)
+const studentName = ref('Student Name')
+const module = ref<any>(null)
+
+const { completeModule, badgeMapping, isModuleCompleted, completeLessonInModule, getTotalProgressPercentage, clearProgress, loadProgressFromSupabase } = useCourseProgress()
+const { fetchModuleById, fetchModules, modules, loading } = useModuleManagement()
+const { fetchQuizForModule } = useQuizManagement()
+const { fetchUserProfile } = useUserProfile()
+const { hasSeenModuleIntro, markModuleIntroAsSeen, initializeOnboarding } = useOnboarding()
+
+// ── Computed ───────────────────────────────────────────────────────────────
+const currentCourseLevel = computed(() => module.value?.level || 'beginner')
+const sidebarModules = computed(() => allModules.value.filter((m: any) => m.level === currentCourseLevel.value).slice(0, 5))
 const isLastModule = computed(() => {
   if (!module.value) return false
   const mods = sidebarModules.value
-  if (!mods.length) return false
-  const lastId = String(mods[mods.length - 1].id)
-  return String(module.value.id) === lastId
+  return mods.length > 0 && String(module.value.id) === String(mods[mods.length - 1].id)
 })
-
 const earnedBadgeName = computed(() => {
-  const courseLevel = module.value?.level || 'beginner';
-  
-  // Find module position in sorted list
-  const sortedModules = allModules.value
-    .filter(m => m.level === courseLevel)
-    .slice(0, 5);
-  const modulePosition = sortedModules.findIndex(m => String(m.id) === String(moduleId.value)) + 1; // 1-indexed
-  
-  const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping];
-  if (courseBadges && modulePosition > 0) {
-    return courseBadges[modulePosition] || 'Unknown Badge';
-  }
-  return 'Unknown Badge';
-});
-
-const allModules = computed(() => {
-  return modules.value
-    .slice()
-    .sort((a: any, b: any) => {
-      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10);
-      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10);
-      return aNum - bNum;
-    });
-});
-
-const allBeginnerModules = computed(() =>
-  allModules.value
-    .filter((m: any) => m.level === 'beginner')
-    .slice(0, 5),
-);
-
-// Fetch all modules on mount to show in sidebar
-onMounted(async () => {
-  try {
-    // Fetch user profile to get full_name
-    const userData = await fetchUserProfile();
-    if (userData?.full_name) {
-      studentName.value = userData.full_name;
-    }
-    await fetchAllModules();
-    
-    // Initialize onboarding state
-    initializeOnboarding();
-    
-    // Show character modal if user hasn't seen intro for this module yet
-    if (!hasSeenModuleIntro(moduleId.value)) {
-      // Wait for module to load before showing modal
-      setTimeout(() => {
-        showModuleCharacterModal.value = true;
-      }, 500);
-    }
-    
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  } catch (err) {
-    console.error('Error on mount:', err);
-  }
-});
-
-// Handle module character modal close
-const handleModuleCharacterClose = () => {
-  showModuleCharacterModal.value = false;
-  markModuleIntroAsSeen(moduleId.value);
-};
-
-// Handle module character modal skip
-const handleModuleCharacterSkip = () => {
-  showModuleCharacterModal.value = false;
-  markModuleIntroAsSeen(moduleId.value);
-};
-
-const fetchAllModules = async () => {
-  try {
-    if (!modules.value.length) {
-      await fetchModules();
-    }
-  } catch (err) {
-    console.error('Error fetching all modules:', err);
-  }
-};
-
-const checkAndOpenQuizDialog = async () => {
-  if (!module.value) return;
-  quizLoading.value = true;
-  quizError.value = null;
-  quizInfo.value = null;
-
-  try {
-    const data = await fetchQuizForModule(String(module.value.id));
-    if (!data) {
-      // No quiz exists for this module - show message and prevent proceeding
-      quizError.value = 'The quiz for this module is not ready yet. Please check back later or contact your instructor.';
-      showQuizDialog.value = true;
-      return;
-    }
-    quizInfo.value = data as any;
-    showQuizDialog.value = true;
-  } catch (err) {
-    console.error('Error checking quiz:', err);
-    quizError.value = 'Failed to load quiz information. Please try again later.';
-    showQuizDialog.value = true;
-  } finally {
-    quizLoading.value = false;
-  }
-};
-
-const goToQuiz = () => {
-  if (!quizInfo.value?.id) return;
-  showQuizDialog.value = false;
-  window.scrollTo({ top: 0, behavior: 'auto' });
-  navigateTo(`/quizzes/${quizInfo.value.id}`);
-};
-
+  const courseLevel = module.value?.level || 'beginner'
+  const sortedModules = allModules.value.filter((m: any) => m.level === courseLevel).slice(0, 5)
+  const modulePosition = sortedModules.findIndex((m: any) => String(m.id) === String(moduleId.value)) + 1
+  const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping]
+  return (courseBadges && modulePosition > 0) ? courseBadges[modulePosition] || 'Unknown Badge' : 'Unknown Badge'
+})
+const allModules = computed(() =>
+  modules.value.slice().sort((a: any, b: any) => {
+    const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+    const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+    return aNum - bNum
+  })
+)
 const currentLesson = computed(() => {
-  if (!module.value || !module.value.lessons || module.value.lessons.length === 0) {
-    return null;
-  }
-  return module.value.lessons[currentLessonIndex.value] || null;
-});
-
-const isCurrentModuleCompleted = computed(() => {
-  const level = module.value?.level || 'beginner';
-  return isModuleCompleted(level, moduleId.value);
-});
-
-const goToPreviousLesson = () => {
-  if (currentLessonIndex.value > -1) {
-    currentLessonIndex.value--;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
-
-const goToNextLesson = () => {
-  if (currentLessonIndex.value === -1) {
-    // From intro to first lesson
-    currentLessonIndex.value = 0;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (module.value && module.value.lessons && currentLessonIndex.value < module.value.lessons.length - 1) {
-    currentLessonIndex.value++;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
-
+  if (!module.value?.lessons?.length) return null
+  return module.value.lessons[currentLessonIndex.value] || null
+})
+const isCurrentModuleCompleted = computed(() => isModuleCompleted(module.value?.level || 'beginner', moduleId.value))
 const hasNextModule = computed(() => {
   const mods = sidebarModules.value
-  const currentIndex = mods.findIndex((m: any) => String(m.id) === moduleId.value)
-  return currentIndex >= 0 && currentIndex < mods.length - 1
+  const idx = mods.findIndex((m: any) => String(m.id) === moduleId.value)
+  return idx >= 0 && idx < mods.length - 1
 })
-
-const progressPercentage = computed(() => {
-  const level = module.value?.level || 'beginner'
-  const totalModules = sidebarModules.value.filter(m => m.level === level).length
-  const totalLessons = module.value?.lessons?.length || 0;
-  return getTotalProgressPercentage(level, totalModules, moduleId.value, totalLessons)
-});
-
 const pptEmbedSrc = computed(() => {
   const url = module.value?.ppt_url
-  if (!url) return ''
-  // Office Online embed. Requires the PPT to be publicly accessible.
-  return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
+  return url ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}` : ''
 })
 
-type LessonBlock = { type: 'text'; text: string } | { type: 'image'; src: string }
+// ── Block rendering helpers ────────────────────────────────────────────────
 
-const stripHtmlToText = (input: string) => {
-  // Convert common HTML structures into readable plain text.
-  return (input || '')
-    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
-    .replace(/<\/\s*p\s*>/gi, '\n\n')
-    .replace(/<\/\s*h[1-6]\s*>/gi, '\n\n')
-    .replace(/<\s*h[1-6][^>]*>/gi, '')
-    .replace(/<\/\s*li\s*>/gi, '\n')
-    .replace(/<\s*li[^>]*>/gi, '- ')
-    .replace(/<\/\s*(ul|ol)\s*>/gi, '\n\n')
-    .replace(/<\s*(ul|ol)[^>]*>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
+const stripHtmlToText = (input: string) =>
+  (input || '')
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n').replace(/<\/\s*p\s*>/gi, '\n\n')
+    .replace(/<\/\s*h[1-6]\s*>/gi, '\n\n').replace(/<\s*h[1-6][^>]*>/gi, '')
+    .replace(/<\/\s*li\s*>/gi, '\n').replace(/<\s*li[^>]*>/gi, '- ')
+    .replace(/<\/\s*(ul|ol)\s*>/gi, '\n\n').replace(/<\s*(ul|ol)[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\n{3,}/g, '\n\n').trim()
 
 const legacyHtmlToBlocks = (html: string): LessonBlock[] => {
   const input = (html || '').trim()
   if (!input) return []
-
   const blocks: LessonBlock[] = []
   const imgRegex = /<img\b[^>]*\bsrc\s*=\s*(['"])(.*?)\1[^>]*>/gi
-
-  let lastIndex = 0
-  let match: RegExpExecArray | null
+  let lastIndex = 0; let match: RegExpExecArray | null
   while ((match = imgRegex.exec(input)) !== null) {
-    const before = input.slice(lastIndex, match.index)
+    const beforeText = stripHtmlToText(input.slice(lastIndex, match.index))
     const src = (match[2] || '').trim()
-
-    const beforeText = stripHtmlToText(before)
-    if (beforeText) blocks.push({ type: 'text', text: beforeText })
-    if (src) blocks.push({ type: 'image', src })
-
+    if (beforeText) blocks.push({ type: 'text', text: beforeText, layout: 'full-width' })
+    if (src) blocks.push({ type: 'image', src, layout: 'full-width', align: 'center' })
     lastIndex = match.index + match[0].length
   }
-
-  const after = input.slice(lastIndex)
-  const afterText = stripHtmlToText(after)
-  if (afterText) blocks.push({ type: 'text', text: afterText })
-
+  const afterText = stripHtmlToText(input.slice(lastIndex))
+  if (afterText) blocks.push({ type: 'text', text: afterText, layout: 'full-width' })
   return blocks
 }
 
 const getLessonBlocks = (lesson: any): LessonBlock[] => {
   if (!lesson) return []
-
-  // New format (safe blocks, no HTML)
   if (Array.isArray(lesson.blocks) && lesson.blocks.length > 0) {
     return lesson.blocks
-      .filter((b: any) => b && (b.type === 'text' || b.type === 'image'))
-      .map((b: any) => (b.type === 'image'
-        ? ({ type: 'image', src: typeof b.src === 'string' ? b.src : '' } as const)
-        : ({ type: 'text', text: typeof b.text === 'string' ? b.text : '' } as const)
-      ))
+      .filter((b: any) => b && (b.type === 'text' || b.type === 'image' || b.type === 'video'))
+      .map((b: any) => {
+        const layout = (b.layout || 'full-width') as BlockLayout
+        if (b.type === 'image') return { type: 'image' as const, src: b.src || '', layout, align: (b.align || 'center') as BlockAlign }
+        if (b.type === 'video') return { type: 'video' as const, src: b.src || '', layout }
+        return { type: 'text' as const, text: b.text || '', layout }
+      })
   }
-
-  // Backward compatibility (old htmlContent + single image_url)
   const blocks: LessonBlock[] = []
   const htmlContent = typeof lesson.htmlContent === 'string' ? lesson.htmlContent.trim() : ''
-  if (htmlContent) {
-    blocks.push(...legacyHtmlToBlocks(htmlContent))
-  }
-
+  if (htmlContent) blocks.push(...legacyHtmlToBlocks(htmlContent))
   const imageUrl = typeof lesson.image_url === 'string' ? lesson.image_url.trim() : ''
-  if (imageUrl) blocks.push({ type: 'image', src: imageUrl })
-
+  if (imageUrl) blocks.push({ type: 'image', src: imageUrl, layout: 'full-width', align: 'center' })
   return blocks
 }
 
-const splitIntoSegments = (text: string) => {
-  const t = (text || '').trim()
-  if (!t) return []
-
-  const paragraphs = t.split(/\n\s*\n/g).map(s => s.trim()).filter(Boolean)
-  const segments: Array<
-    | { type: 'p'; text: string }
-    | { type: 'ul'; items: string[] }
-  > = []
-
-  for (const p of paragraphs) {
-    const lines = p.split('\n').map(l => l.trim()).filter(Boolean)
-    const allBullets = lines.length > 0 && lines.every(l => /^-\s+/.test(l))
-    if (allBullets) {
-      segments.push({ type: 'ul', items: lines.map(l => l.replace(/^-\s+/, '').trim()).filter(Boolean) })
+/**
+ * Groups blocks into display rows.
+ *
+ * Rules:
+ *  • A "left"-layout block immediately followed by a "right"-layout block
+ *    → merged into a single row of length 2 (flex side-by-side).
+ *  • A lone "left" or "right" block (no pair) → row of length 1.
+ *  • "full-width" and "center" blocks always → row of length 1.
+ */
+const renderRows = (blocks: LessonBlock[]): LessonBlock[][] => {
+  const rows: LessonBlock[][] = []
+  let i = 0
+  while (i < blocks.length) {
+    const current = blocks[i]!
+    const next = blocks[i + 1]
+    if (current.layout === 'left' && next?.layout === 'right') {
+      rows.push([current, next])
+      i += 2
     } else {
-      segments.push({ type: 'p', text: p })
+      rows.push([current])
+      i++
     }
   }
+  return rows
+}
 
-  return segments
+/**
+ * Returns a CSS class string that wraps a single (non-paired) block.
+ * "center"     → 60% width, auto margins
+ * "left"       → left-align (no pair found)
+ * "right"      → right-align (no pair found)
+ * "full-width" → default, no extra wrapper
+ */
+const getSingleBlockWrapperClass = (block: LessonBlock): string => {
+  switch (block.layout) {
+    case 'center':     return 'mx-auto w-full sm:w-3/5'
+    case 'left':       return 'mr-auto w-full sm:w-1/2'
+    case 'right':      return 'ml-auto w-full sm:w-1/2'
+    default:           return 'w-full'
+  }
+}
+
+// ── Lifecycle / watchers ───────────────────────────────────────────────────
+onMounted(async () => {
+  try {
+    const userData = await fetchUserProfile()
+    if (userData?.full_name) studentName.value = userData.full_name
+    await fetchAllModules()
+    initializeOnboarding()
+    if (!hasSeenModuleIntro(moduleId.value)) {
+      setTimeout(() => { showModuleCharacterModal.value = true }, 500)
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  } catch (err) { console.error('Error on mount:', err) }
+})
+
+onMounted(async () => {
+  try { clearProgress(); await loadProgressFromSupabase() }
+  catch (err) { console.error('Error loading progress:', err) }
+})
+
+const handleModuleCharacterClose = () => { showModuleCharacterModal.value = false; markModuleIntroAsSeen(moduleId.value) }
+const handleModuleCharacterSkip  = () => { showModuleCharacterModal.value = false; markModuleIntroAsSeen(moduleId.value) }
+
+const fetchAllModules = async () => {
+  try { if (!modules.value.length) await fetchModules() }
+  catch (err) { console.error('Error fetching all modules:', err) }
+}
+
+const checkAndOpenQuizDialog = async () => {
+  if (!module.value) return
+  quizLoading.value = true; quizError.value = null; quizInfo.value = null
+  try {
+    const data = await fetchQuizForModule(String(module.value.id))
+    if (!data) { quizError.value = 'The quiz for this module is not ready yet. Please check back later or contact your instructor.'; showQuizDialog.value = true; return }
+    quizInfo.value = data as any; showQuizDialog.value = true
+  } catch (err) { console.error('Error checking quiz:', err); quizError.value = 'Failed to load quiz information. Please try again later.'; showQuizDialog.value = true }
+  finally { quizLoading.value = false }
+}
+
+const goToQuiz = () => {
+  if (!quizInfo.value?.id) return
+  showQuizDialog.value = false; window.scrollTo({ top: 0, behavior: 'auto' })
+  navigateTo(`/quizzes/${quizInfo.value.id}`)
+}
+
+const goToPreviousLesson = () => { if (currentLessonIndex.value > -1) { currentLessonIndex.value--; window.scrollTo({ top: 0, behavior: 'smooth' }) } }
+const goToNextLesson = () => {
+  if (currentLessonIndex.value === -1) { currentLessonIndex.value = 0; window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  else if (module.value?.lessons && currentLessonIndex.value < module.value.lessons.length - 1) { currentLessonIndex.value++; window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 
 const markLessonAsComplete = async () => {
-  completedLessons.value.add(currentLessonIndex.value);
-  const currentModuleId = moduleId.value; // Use the string ID directly
-  const level = module.value?.level || 'beginner';
-  completeLessonInModule(level, currentModuleId, currentLessonIndex.value);
-
-  // Check if all lessons in the current module are completed
-  if (module.value && module.value.lessons) {
-    const allCurrentLessonsCompleted = module.value.lessons.every((lesson: any, index: number) =>
-      completedLessons.value.has(index)
-    );
-    if (allCurrentLessonsCompleted) {
-      // All lessons done – check if quiz exists before allowing completion
-      await checkAndOpenQuizDialog();
-    }
+  completedLessons.value.add(currentLessonIndex.value)
+  completeLessonInModule(module.value?.level || 'beginner', moduleId.value, currentLessonIndex.value)
+  if (module.value?.lessons) {
+    const allDone = module.value.lessons.every((_: any, idx: number) => completedLessons.value.has(idx))
+    if (allDone) await checkAndOpenQuizDialog()
   }
-};
+}
 
 const handleNextModule = () => {
   const mods = sidebarModules.value
-  const currentIndex = mods.findIndex((m: any) => String(m.id) === moduleId.value)
-  const nextModuleIndex = currentIndex + 1
-  if (currentIndex >= 0 && nextModuleIndex < mods.length) {
-    // Close modal first
-    showCompletionModal.value = false;
-    // Reset lesson index and completed lessons for new module
-    currentLessonIndex.value = 0;
-    completedLessons.value.clear();
-    // Navigate
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    navigateTo(`/modules/${mods[nextModuleIndex].id}`);
+  const idx = mods.findIndex((m: any) => String(m.id) === moduleId.value)
+  if (idx >= 0 && idx + 1 < mods.length) {
+    showCompletionModal.value = false; currentLessonIndex.value = 0; completedLessons.value.clear()
+    window.scrollTo({ top: 0, behavior: 'smooth' }); navigateTo(`/modules/${mods[idx + 1].id}`)
   }
-};
-
-const handleAdvancedCourse = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  navigateTo('/dashboard?course=advanced');
-};
-
-const handleBackToDashboard = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  navigateTo('/dashboard');
-};
-
+}
+const handleAdvancedCourse = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); navigateTo('/dashboard?course=advanced') }
+const handleBackToDashboard = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); navigateTo('/dashboard') }
 const markLessonAndGoToNext = () => {
-  markLessonAsComplete();
-  if (currentLessonIndex.value < module.value.lessons.length - 1) {
-    currentLessonIndex.value++;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  markLessonAsComplete()
+  if (module.value?.lessons && currentLessonIndex.value < module.value.lessons.length - 1) { currentLessonIndex.value++; window.scrollTo({ top: 0, behavior: 'smooth' }) }
+}
+const goToModule = (id: string, lessonIndex = -1) => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  navigateTo(lessonIndex === -1 ? `/modules/${id}` : `/modules/${id}?lesson=${lessonIndex}`)
+}
+const isModuleAccessible = (modId: string, index: number) => {
+  if (index === 0) return true
+  const prevMod = sidebarModules.value[index - 1] as any
+  return prevMod ? isModuleCompleted(prevMod.level || 'beginner', String(prevMod.id)) : false
+}
+
+watch(moduleId, async (newId) => {
+  const data = await fetchModuleById(newId)
+  if (data) {
+    module.value = data
+    currentLessonIndex.value = lessonParam.value >= 0 ? lessonParam.value : -1
+    completedLessons.value.clear()
+    if (module.value) useHead({ title: `${module.value.title} - MIL MOOC` })
   }
-};
+}, { immediate: true })
 
-const goToModule = (id: string, lessonIndex: number = -1) => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (lessonIndex === -1) {
-    navigateTo(`/modules/${id}`);
-  } else {
-    navigateTo(`/modules/${id}?lesson=${lessonIndex}`);
-  }
-};
-
-const isModuleAccessible = (moduleId: string, index: number) => {
-  // Modules are ordered consistently in allModules; unlock sequentially
-  if (index === 0) {
-    return true;
-  }
-
-  if (index > 0) {
-    const prevMod = sidebarModules.value[index - 1] as any;
-    if (prevMod) {
-      return isModuleCompleted(prevMod.level || 'beginner', String(prevMod.id));
-    }
-  }
-  return false;
-};
-
-// Load module data on mount or when moduleId changes
-watch(moduleId, async (newModuleId) => {
-  const moduleData = await fetchModuleById(newModuleId);
-  if (moduleData) {
-    module.value = moduleData;
-    // Set lesson from query param if provided (>= 0), otherwise start at intro (-1)
-    currentLessonIndex.value = lessonParam.value >= 0 ? lessonParam.value : -1;
-    // Clear completed lessons for this module
-    completedLessons.value.clear();
-
-    if (module.value) {
-      useHead({
-        title: `${module.value.title} - MIL MOOC`,
-      });
-    }
-  }
-}, { immediate: true });
-
-// Load progress and modules on component mount
-onMounted(async () => {
-  try {
-    clearProgress();
-    await loadProgressFromSupabase();
-  } catch (err) {
-    console.error('Error loading progress:', err);
-  }
-});
-
-// When coming back from a passed quiz, automatically show completion modal
-const fromQuiz = computed(() => route.query.fromQuiz === '1');
-
-watch(fromQuiz, (val) => {
-  if (val && module.value) {
-    showCompletionModal.value = true;
-  }
-}, { immediate: true });
-
-// Watch for lesson parameter changes - handle both intro (-1) and lesson (>= 0)
-watch(lessonParam, (newLessonParam) => {
-  if (newLessonParam >= 0 && newLessonParam !== currentLessonIndex.value) {
-    currentLessonIndex.value = newLessonParam;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (newLessonParam === -1 && currentLessonIndex.value !== -1) {
-    currentLessonIndex.value = -1;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-});
+const fromQuiz = computed(() => route.query.fromQuiz === '1')
+watch(fromQuiz, (val) => { if (val && module.value) showCompletionModal.value = true }, { immediate: true })
+watch(lessonParam, (val) => {
+  if (val >= 0 && val !== currentLessonIndex.value) { currentLessonIndex.value = val; window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  else if (val === -1 && currentLessonIndex.value !== -1) { currentLessonIndex.value = -1; window.scrollTo({ top: 0, behavior: 'smooth' }) }
+})
 </script>
 
 <style>
-/* Keep original prose feel while rendering safe blocks (no v-html). */
-.prose p {
-  margin-bottom: 1em;
-  line-height: 1.6;
-}
-.prose ul {
-  margin-bottom: 1em;
-}
-.prose li {
-  margin-bottom: 0.5em;
-}
+.prose p  { margin-bottom: 1em; line-height: 1.6; }
+.prose ul { margin-bottom: 1em; }
+.prose li { margin-bottom: 0.5em; }
 
-/* PPT viewer area (sized like WelcomeVideo placeholder) */
 .ppt-viewer-wrapper {
-  width: 100%;
-  background: #1f2937;
-  border: 1px solid #b8c7e3;
-  border-radius: 12px;
-  aspect-ratio: 16 / 9;
-  max-height: 700px;
-  overflow: hidden;
+  width: 100%; background: #1f2937;
+  border: 1px solid #b8c7e3; border-radius: 12px;
+  aspect-ratio: 16 / 9; max-height: 700px; overflow: hidden;
 }
-
-.ppt-iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: #ffffff;
-}
-
+.ppt-iframe { width: 100%; height: 100%; border: 0; background: #ffffff; }
 .ppt-viewer-placeholder {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #1f2937;
-  color: #cbd5e1;
-  padding: 16px;
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px; background: #1f2937; color: #cbd5e1; padding: 16px;
 }
 </style>
