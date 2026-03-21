@@ -73,9 +73,9 @@
             </div>
           </div>
 
-          <!-- Module Card Image -->
+          <!-- Module Thumbnail -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Module Card Image</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Module Thumbnail</label>
             <div class="space-y-3">
               <div v-if="cardImagePreview || form.card_image_url" class="relative">
                 <img :src="cardImagePreview || form.card_image_url" alt="Module card preview" class="w-full h-48 object-cover rounded-lg border border-gray-300" />

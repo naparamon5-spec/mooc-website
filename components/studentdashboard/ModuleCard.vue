@@ -24,7 +24,13 @@
     <!-- Image area: fixed height so all cards align -->
     <div class="w-full h-[220px] relative overflow-hidden flex items-center justify-center bg-gray-50/80">
       <img 
-        v-if="imageUrl"
+        v-if="cardImageUrl"
+        :src="cardImageUrl"
+        :alt="title"
+        class="w-full h-full object-contain"
+      />
+      <img 
+        v-else-if="imageUrl"
         :src="imageUrl"
         :alt="title"
         class="w-full h-full object-contain"
@@ -57,6 +63,7 @@ const props = defineProps({
   isCompleted: { type: Boolean, default: false },
   restrictionMessage: { type: String, default: 'Complete previous module' },
   title: { type: String, default: "" },
+  cardImageUrl: { type: String, default: "" },
   imageUrl: { type: String, default: "" },
   moduleId: { type: String, default: null },
 })

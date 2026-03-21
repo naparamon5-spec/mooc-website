@@ -4,7 +4,15 @@
 
     <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-8">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-bold text-gray-900">Resource Management</h1>
+        <div>
+          <button
+            @click="navigateTo('/admin')"
+            class="mb-3 text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 text-sm"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 class="text-3xl font-bold text-gray-900">Resource Management</h1>
+        </div>
         <button
           @click="showAddModal = true"
           class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"

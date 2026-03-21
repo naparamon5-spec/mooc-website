@@ -42,7 +42,7 @@
       <!-- Analytics Row -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Enrollment Analytics -->
-        <EnrollmentAnalytics :data="enrollmentData" />
+        <EnrollmentAnalytics :data="enrollmentAnalyticsData" />
 
         <!-- Course Completion Rate -->
         <CourseCompletionRate :data="courseCompletionRates" />
@@ -59,6 +59,15 @@
       </div> -->
     </div>
 
+    <!-- Course Report Dialog -->
+    <CourseReportDialog
+      :is-open="showReportDialog"
+      :module-completion-stats="moduleCompletionStats"
+      :enrollment-data="dailyEnrollments"
+      :course-completion-rates="courseCompletionRates"
+      @close="showReportDialog = false"
+    />
+
     <!-- Footer -->
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
@@ -67,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import MetricCard from '~/components/admindashboard/MetricCard.vue'
 import CourseManagement from '~/components/admindashboard/CourseManagement.vue'
@@ -76,6 +85,7 @@ import EnrollmentAnalytics from '~/components/admindashboard/EnrollmentAnalytics
 import CourseCompletionRate from '~/components/admindashboard/CourseCompletionRate.vue'
 import SystemHealth from '~/components/admindashboard/SystemHealth.vue'
 import CourseAgreementManagement from '~/components/admindashboard/CourseAgreementManagement.vue'
+import CourseReportDialog from '~/components/admindashboard/CourseReportDialog.vue'
 import NoticeSystemTestConsole from '~/components/admindashboard/NoticeSystemTestConsole.vue'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useAdminMetrics } from '~/composables/useAdminMetrics'
@@ -88,13 +98,16 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
-const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, dailyCompletions, courseCompletionRates, fetchMetrics, fetchModuleCompletionStats, fetchCourseCompletionRates } = useAdminMetrics()
+const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, dailyCompletions, dailyEnrollments, courseCompletionRates, fetchMetrics, fetchDailyEnrollments, fetchModuleCompletionStats, fetchCourseCompletionRates } = useAdminMetrics()
 const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
 const inactiveStudents = ref(0)
 
 const { $supabase } = useNuxtApp()
 const supabase = $supabase
+
+// Report dialog state
+const showReportDialog = ref(false)
 
 // Fetch user profile and metrics on mount
 onMounted(async () => {
@@ -106,6 +119,8 @@ onMounted(async () => {
     
     // Fetch enrollment metrics from Supabase
     await fetchMetrics();
+    // Fetch daily enrollments/signups (last 14 days)
+    await fetchDailyEnrollments();
     // Fetch module completion stats (last 2 weeks)
     await fetchModuleCompletionStats();
     // Fetch course completion rates by year
@@ -153,13 +168,14 @@ const activities = ref([
   },
 ])
 
-const enrollmentData = ref([
-  { day: 'Mon', value: 18 },
-  { day: 'Tues', value: 22 },
-  { day: 'Wed', value: 28 },
-  { day: 'Thurs', value: 35 },
-  { day: 'Fri', value: 32 }
-])
+// Transform dailyEnrollments into format for EnrollmentAnalytics (last 7 days)
+const enrollmentAnalyticsData = computed(() => {
+  const last7Days = dailyEnrollments.value.slice(-7)
+  return last7Days.map(item => ({
+    day: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
+    value: item.enrollments
+  }))
+})
 
 // module completion counts used to illustrate how quickly each module is being finished
 // (data pulled from the last 14 days)
@@ -185,6 +201,8 @@ const handleCourseAction = (actionType: string) => {
     navigateTo('/admin/resources')
   } else if (actionType === 'change-welcome-card') {
     navigateTo('/admin/welcome-video')
+  } else if (actionType === 'download-report') {
+    showReportDialog.value = true
   } else {
     // Handle other course management actions
   }

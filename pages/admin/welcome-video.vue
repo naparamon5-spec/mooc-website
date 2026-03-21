@@ -1,20 +1,23 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <div class="max-w-4xl mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <button
-          @click="navigateTo('/admin')"
-          class="mb-4 text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2"
-        >
-          ← Back to Dashboard
-        </button>
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Update Welcome Card</h1>
-        <p class="text-gray-600">Upload a welcome video to replace the welcome card shown to students</p>
+    <AdminHeader :admin-name="adminName" />
+
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <button
+            @click="navigateTo('/admin')"
+            class="mb-3 text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 text-sm"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 class="text-3xl font-bold text-gray-900">Welcome Video</h1>
+          <p class="text-gray-600 mt-1">Upload a welcome video to replace the welcome card shown to students</p>
+        </div>
       </div>
 
       <!-- Upload Card -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-8">
         <div class="mb-6">
           <label class="block text-sm font-semibold text-gray-900 mb-2">Upload Welcome Video</label>
           <p class="text-sm text-gray-600 mb-4">Supported formats: MP4 only (Max 20MB)</p>
@@ -92,7 +95,7 @@
       </div>
 
       <!-- Current Welcome Video -->
-      <div v-if="currentVideoUrl" class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+      <div v-if="currentVideoUrl" class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
         <h2 class="text-lg font-bold text-gray-900 mb-4">Current Welcome Video</h2>
         <div class="mb-4 bg-black rounded-lg overflow-hidden" style="aspect-ratio: 16 / 9;">
           <video
@@ -112,7 +115,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+      <div v-else class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
@@ -125,6 +128,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
+import { useUserProfile } from '~/composables/useUserProfile'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -133,7 +138,9 @@ useHead({
 })
 
 const { $supabase } = useNuxtApp()
+const { fetchUserProfile } = useUserProfile()
 const fileInput = ref<HTMLInputElement | null>(null)
+const adminName = ref('Admin User')
 
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
@@ -148,6 +155,10 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB in bytes
 
 // Load current welcome video on mount
 onMounted(async () => {
+  const userData = await fetchUserProfile()
+  if (userData?.full_name) {
+    adminName.value = userData.full_name
+  }
   await loadCurrentVideo()
 })
 

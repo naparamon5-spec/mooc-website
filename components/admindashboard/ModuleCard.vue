@@ -33,7 +33,13 @@
     <!-- Module Image or Emoji - Full Height -->
     <div class="w-full h-48 flex items-center justify-center bg-gray-100 relative group">
       <img
-        v-if="module.image_url"
+        v-if="module.card_image_url"
+        :src="module.card_image_url"
+        :alt="module.title"
+        class="w-full h-full object-cover"
+      />
+      <img
+        v-else-if="module.image_url"
         :src="module.image_url"
         :alt="module.title"
         class="w-full h-full object-cover"

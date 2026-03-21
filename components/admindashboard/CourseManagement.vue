@@ -72,11 +72,11 @@ const groupedActions = computed(() => {
       ]
     },
     {
-      title: 'Edit Course Details',
+      title: 'Edit Welcome Video',
       options: [
         // { label: 'Update content', type: 'update-content' },
-        { label: 'Upload course policies', type: 'upload-policies' },
-        { label: 'Change Welcome Card', type: 'change-welcome-card' }
+        // { label: 'Upload course policies', type: 'upload-policies' },
+        { label: 'Upload Welcome Video', type: 'change-welcome-card' }
       ]
     },
     // {

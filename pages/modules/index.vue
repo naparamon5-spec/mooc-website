@@ -31,6 +31,7 @@
           :is-completed="isModuleCompleted(module.level, module.id)"
           :emoji="module.emoji"
           :module-id="module.id"
+          :card-image-url="module.card_image_url"
           :image-url="module.image_url"
           class="h-full" 
           @click="selectModule(module)"

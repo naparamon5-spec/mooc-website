@@ -127,6 +127,7 @@
                   :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
                   :emoji="module.emoji"
                   :module-id="module.id"
+                  :card-image-url="module.card_image_url"
                   :image-url="module.image_url"
                   @click="selectModule(module)"
                 />
