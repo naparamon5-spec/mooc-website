@@ -164,7 +164,8 @@
                     type="radio"
                     :name="`q${currentQuestionIndex}`"
                     :value="oi"
-                    v-model="answers[answerKey(currentQuestionIndex)]"
+                    @change="answers[answerKey(currentQuestionIndex)] = oi"
+                    :checked="answers[answerKey(currentQuestionIndex)] === oi"
                     class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500 flex-shrink-0"
                   />
                   <span class="text-gray-800 text-sm md:text-base leading-snug">{{ opt }}</span>

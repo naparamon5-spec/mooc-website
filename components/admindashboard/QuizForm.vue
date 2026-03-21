@@ -89,12 +89,17 @@
         <div class="flex items-center justify-between mb-4">
           <div>
             <h4 class="text-md font-semibold text-gray-900">Questions</h4>
-            <p class="text-xs text-gray-500 mt-1">Add 10 questions for optimal quiz length</p>
+            <p class="text-xs text-gray-500 mt-1">{{ 
+              formData.level === 'beginner' && fifthBeginnerModuleId && formData.moduleId === fifthBeginnerModuleId 
+                ? 'Beginner Module 5 requires exactly 20 questions'
+                : 'Add up to 10 questions (maximum)'
+            }}</p>
           </div>
           <button
             type="button"
             @click="addQuestion"
-            class="bg-primary-100 text-primary-700 px-3 py-1 rounded text-sm font-medium hover:bg-primary-200 transition"
+            :disabled="formData.questions.length >= maxQuestions"
+            class="bg-primary-100 text-primary-700 px-3 py-1 rounded text-sm font-medium hover:bg-primary-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             + Add Question
           </button>
@@ -103,7 +108,11 @@
         <!-- Empty State -->
         <div v-if="formData.questions.length === 0" class="text-center py-8 bg-gray-50 rounded">
           <p class="text-gray-500">No questions added yet. Click "Add Question" to start.</p>
-          <p class="text-xs text-gray-400 mt-2">Recommended: 10 questions per quiz</p>
+          <p class="text-xs text-gray-400 mt-2">{{ 
+            formData.level === 'beginner' && fifthBeginnerModuleId && formData.moduleId === fifthBeginnerModuleId 
+              ? 'Beginner Module 5: exactly 20 questions required'
+              : 'Maximum: 10 questions per quiz'
+          }}</p>
         </div>
 
         <!-- Questions List -->
@@ -198,7 +207,18 @@
                   Correct Answer <span class="text-red-500">*</span>
                 </label>
                 <select
+                  v-if="question.type === 'true_false'"
                   v-model="question.correctAnswer"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                >
+                  <option value="">Select correct answer</option>
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+                <select
+                  v-else
+                  v-model.number="question.correctAnswer"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 >
@@ -343,6 +363,18 @@ watch(() => props.quiz, () => {
   initializeForm()
 }, { deep: true })
 
+// Calculate max questions based on module
+const maxQuestions = computed(() => {
+  if (
+    formData.level === 'beginner' &&
+    fifthBeginnerModuleId.value &&
+    formData.moduleId === fifthBeginnerModuleId.value
+  ) {
+    return 20 // Module 5 needs exactly 20 questions
+  }
+  return 10 // Default max is 10 questions
+})
+
 const addQuestion = () => {
   const newQuestion: QuizQuestion = {
     question: '',
@@ -372,7 +404,7 @@ const updateQuestionType = (questionIndex: number) => {
   if (!question) return
   if (question.type === 'true_false') {
     question.options = ['True', 'False']
-    question.correctAnswer = 0
+    question.correctAnswer = 'false' // Store as string for true/false
   } else {
     question.options = ['', '']
     question.correctAnswer = 0
@@ -395,9 +427,22 @@ const submitForm = async () => {
     return
   }
 
-  if (formData.questions.length <= 10) {
-    alert('Please add between 10 questions for optimal quiz length')
-    return
+  // Special rule: Beginner Module 5 quiz must have exactly 20 questions
+  if (
+    formData.level === 'beginner' &&
+    fifthBeginnerModuleId.value &&
+    formData.moduleId === fifthBeginnerModuleId.value
+  ) {
+    if (formData.questions.length !== 20) {
+      alert('The quiz for Beginner Module 5 must have exactly 20 questions.')
+      return
+    }
+  } else {
+    // For all other quizzes: maximum 10 questions
+    if (formData.questions.length > 10) {
+      alert('Maximum 10 questions allowed per quiz')
+      return
+    }
   }
 
   // Check if the selected module already has a quiz (except in edit mode for the same quiz)
@@ -407,17 +452,6 @@ const submitForm = async () => {
       alert('This module already has a quiz assigned to it. Please select a different module.')
       return
     }
-  }
-
-  // Special rule: Beginner Module 5 quiz must have exactly 20 questions
-  if (
-    formData.level === 'beginner' &&
-    fifthBeginnerModuleId.value &&
-    formData.moduleId === fifthBeginnerModuleId.value &&
-    formData.questions.length !== 20
-  ) {
-    alert('The quiz for Beginner Module 5 must have exactly 20 questions.')
-    return
   }
 
   // Validate all questions

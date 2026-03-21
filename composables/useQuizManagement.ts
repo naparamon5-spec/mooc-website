@@ -31,6 +31,76 @@ export const useQuizManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  /**
+   * Normalize any true/false value to 'true' or 'false'
+   * Handles ALL formats:
+   *   → 'true': 'True', 'true', 'TRUE', 1, '1', 'yes'
+   *   → 'false': 'False', 'false', 'FALSE', 0, '0', 'no'
+   */
+  const normalizeTrueFalseToString = (value: string | number | boolean): string => {
+    const str = String(value).toLowerCase().trim()
+    return str === 'true' || str === '1' || str === 'yes' ? 'true' : 'false'
+  }
+
+  /**
+   * Normalize any true/false value to 1 (true) or 0 (false) for comparison
+   * Handles ALL formats:
+   *   → 1: 'True', 'true', 'TRUE', 1, '1', 'yes', 'true'
+   *   → 0: 'False', 'false', 'FALSE', 0, '0', 'no', 'false'
+   */
+  const normalizeTrueFalseToInt = (value: string | number | boolean): number => {
+    const str = String(value).toLowerCase().trim()
+    return str === 'true' || str === '1' || str === 'yes' ? 1 : 0
+  }
+
+  /**
+   * Normalize a question's correctAnswer to the correct stored type:
+   *   - multiple_choice → number (index)
+   *   - true_false      → string ('true' or 'false')
+   */
+  const normalizeCorrectAnswer = (q: QuizQuestion): string | number => {
+    if (q.type === 'multiple_choice') {
+      return parseInt(String(q.correctAnswer), 10)
+    } else if (q.type === 'true_false') {
+      return normalizeTrueFalseToString(q.correctAnswer)
+    }
+    return String(q.correctAnswer)
+  }
+
+  /**
+   * Normalize all questions in a quiz fetched from database.
+   * Ensures correctAnswer is always in the right format for comparison.
+   */
+  const normalizeQuizData = (quiz: any): any => {
+    if (!quiz || !quiz.questions) return quiz
+    
+    const normalizedQuestions = quiz.questions.map((q: any) => {
+      if (!q) return q
+      
+      // Always normalize correctAnswer to ensure consistent format
+      let normalizedAnswer: string | number
+      
+      if (q.type === 'multiple_choice') {
+        normalizedAnswer = parseInt(String(q.correctAnswer), 10)
+      } else if (q.type === 'true_false') {
+        // Store as string: 'true' or 'false'
+        normalizedAnswer = normalizeTrueFalseToString(q.correctAnswer)
+      } else {
+        normalizedAnswer = String(q.correctAnswer)
+      }
+      
+      return {
+        ...q,
+        correctAnswer: normalizedAnswer
+      }
+    })
+    
+    return {
+      ...quiz,
+      questions: normalizedQuestions
+    }
+  }
+
   // Fetch all quizzes
   const fetchQuizzes = async (level?: 'beginner' | 'advanced') => {
     loading.value = true
@@ -74,7 +144,8 @@ export const useQuizManagement = () => {
 
       if (fetchError) throw fetchError
 
-      return data
+      // Normalize quiz data to ensure correctAnswer is in the right format
+      return normalizeQuizData(data)
     } catch (err: any) {
       error.value = err.message
       console.error('Error fetching quiz:', err)
@@ -99,7 +170,8 @@ export const useQuizManagement = () => {
 
       if (fetchError) throw fetchError
 
-      return data
+      // Normalize quiz data to ensure correctAnswer is in the right format
+      return normalizeQuizData(data)
     } catch (err: any) {
       error.value = err.message
       console.error('Error fetching quiz for module:', err)
@@ -118,15 +190,24 @@ export const useQuizManagement = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // Normalize all questions before saving:
+      // - multiple_choice: correctAnswer as number (option index)
+      // - true_false: correctAnswer as string ('true' or 'false')
+      const normalizedQuestions = quiz.questions.map((q: QuizQuestion) => ({
+        ...q,
+        correctAnswer: normalizeCorrectAnswer(q),
+      }))
+
+      console.log('Saving questions with normalized correctAnswers:', normalizedQuestions)
+
       const { data, error: createError } = await supabase
         .from('quizzes')
         .insert({
           title: quiz.title,
           description: quiz.description,
-          // convert empty or undefined moduleId to null for the DB
           module_id: quiz.moduleId || null,
           level: quiz.level,
-          questions: quiz.questions,
+          questions: normalizedQuestions,
           passing_score: quiz.passingScore,
           created_by: user.id,
         })
@@ -152,6 +233,16 @@ export const useQuizManagement = () => {
     error.value = null
 
     try {
+      // Normalize all questions before saving:
+      // - multiple_choice: correctAnswer as number (option index)
+      // - true_false: correctAnswer as string ('true' or 'false')
+      const normalizedQuestions = quiz.questions.map((q: QuizQuestion) => ({
+        ...q,
+        correctAnswer: normalizeCorrectAnswer(q),
+      }))
+
+      console.log('Updating questions with normalized correctAnswers:', normalizedQuestions)
+
       const { data, error: updateError } = await supabase
         .from('quizzes')
         .update({
@@ -159,7 +250,7 @@ export const useQuizManagement = () => {
           description: quiz.description,
           module_id: quiz.moduleId || null,
           level: quiz.level,
-          questions: quiz.questions,
+          questions: normalizedQuestions,
           passing_score: quiz.passingScore,
           updated_at: new Date().toISOString(),
         })
@@ -218,22 +309,110 @@ export const useQuizManagement = () => {
       const quiz = await fetchQuizById(quizId)
       if (!quiz) throw new Error('Quiz not found')
 
-      // Calculate score
-      let correctAnswers = 0
-      const totalQuestions = quiz.questions.length
+      // Normalize answers to ensure consistent key format and types
+      const normalizedAnswers: { [key: string]: string | number } = {}
+      const submittedAnswersDebug: any[] = []
 
       quiz.questions.forEach((q: QuizQuestion | undefined, index: number) => {
-        if (!q) return // defensive – should never happen
-        // determine the key used by the caller; prefer question.id if available
+        if (!q) return
+
+        const keyByQuestionId = q.id
+        const keyByIndex = String(index)
+
+        let userAnswer = answers[keyByQuestionId] ?? answers[keyByIndex]
+
+        if (userAnswer !== undefined && userAnswer !== null && userAnswer !== '') {
+          let normalizedAnswer: string | number
+
+          if (q.type === 'multiple_choice') {
+            normalizedAnswer = parseInt(String(userAnswer), 10)
+            if (isNaN(normalizedAnswer)) {
+              console.warn(`Invalid multiple choice answer for question ${index}:`, userAnswer)
+              return
+            }
+          } else if (q.type === 'true_false') {
+            // Normalize to 'true' or 'false' string format
+            normalizedAnswer = normalizeTrueFalseToString(userAnswer)
+          } else {
+            normalizedAnswer = String(userAnswer)
+          }
+
+          normalizedAnswers[keyByQuestionId || keyByIndex] = normalizedAnswer
+          submittedAnswersDebug.push({
+            questionIndex: index,
+            questionId: q.id,
+            questionText: q.question.substring(0, 50),
+            userAnswer: normalizedAnswer,
+            correctAnswer: q.correctAnswer,
+          })
+        }
+      })
+
+      // Calculate score with normalized answers
+      let correctAnswers = 0
+      const totalQuestions = quiz.questions.length
+      const scoringDebug: any[] = []
+
+      quiz.questions.forEach((q: QuizQuestion | undefined, index: number) => {
+        if (!q) return
+
         const key = q.id ?? String(index)
-        const userAnswer = answers[key]
-        if (userAnswer != null && userAnswer.toString() === q.correctAnswer.toString()) {
-          correctAnswers++
+        const userAnswer = normalizedAnswers[key]
+
+        if (userAnswer !== undefined && userAnswer !== null) {
+          let isCorrect = false
+
+          if (q.type === 'multiple_choice') {
+            const userAnswerNum = typeof userAnswer === 'number' ? userAnswer : parseInt(String(userAnswer), 10)
+            const correctAnswerNum = parseInt(String(q.correctAnswer), 10)
+            isCorrect = !isNaN(userAnswerNum) && !isNaN(correctAnswerNum) && userAnswerNum === correctAnswerNum
+          } else if (q.type === 'true_false') {
+            // Both normalized to 'true' or 'false' strings for comparison
+            const userStr = String(userAnswer).toLowerCase().trim()
+            const correctStr = String(q.correctAnswer).toLowerCase().trim()
+            isCorrect = userStr === correctStr
+            
+            // Enhanced debugging for true/false
+            console.log(`Q${index} (true_false) - User: "${userAnswer}" → "${userStr}", Correct: "${q.correctAnswer}" → "${correctStr}", Match: ${isCorrect}`)
+          } else {
+            isCorrect = String(userAnswer) === String(q.correctAnswer)
+          }
+
+          if (isCorrect) {
+            correctAnswers++
+          }
+
+          scoringDebug.push({
+            questionIndex: index,
+            questionId: q.id,
+            questionType: q.type,
+            userAnswer,
+            correctAnswer: q.correctAnswer,
+            isCorrect,
+          })
+        } else {
+          scoringDebug.push({
+            questionIndex: index,
+            questionId: q.id,
+            userAnswer: 'NOT ANSWERED',
+            correctAnswer: q.correctAnswer,
+            isCorrect: false,
+          })
         }
       })
 
       const score = Math.round((correctAnswers / totalQuestions) * 100)
       const passed = score >= (quiz.passing_score ?? 0)
+
+      console.log('Quiz Submission Debug:', {
+        quizId,
+        submittedAnswers: submittedAnswersDebug,
+        scoring: scoringDebug,
+        correctAnswers,
+        totalQuestions,
+        score,
+        passed,
+      })
 
       // Save quiz result
       const { data, error: saveError } = await supabase
@@ -243,7 +422,7 @@ export const useQuizManagement = () => {
           quiz_id: quizId,
           score: score,
           passed: passed,
-          answers: answers,
+          answers: normalizedAnswers,
         }, { onConflict: 'user_id,quiz_id' })
         .select()
 
