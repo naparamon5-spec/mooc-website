@@ -138,7 +138,8 @@ const startCreateQuiz = () => {
 }
 
 const startEditQuiz = (quiz) => {
-  selectedQuiz.value = quiz
+  // Deep clone to avoid modifying the original quiz object
+  selectedQuiz.value = JSON.parse(JSON.stringify(quiz))
   isEditMode.value = true
   showForm.value = true
 }

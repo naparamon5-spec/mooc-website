@@ -269,15 +269,35 @@ const { createQuiz, updateQuiz, loading, error, fetchQuizzes, quizzes } = useQui
 const { fetchModules, modules } = useModuleManagement()
 
 const formData = reactive<Quiz>({
-  title: props.quiz?.title || '',
-  description: props.quiz?.description || '',
-  moduleId: props.quiz?.moduleId || props.quiz?.module_id || '',
-  level: props.quiz?.level || 'beginner',
-  questions: props.quiz?.questions || [],
-  passingScore: props.quiz?.passing_score || 70,
+  title: '',
+  description: '',
+  moduleId: '',
+  level: 'beginner',
+  questions: [],
+  passingScore: 70,
 })
 
+const initializeForm = () => {
+  if (props.quiz) {
+    formData.title = props.quiz.title || ''
+    formData.description = props.quiz.description || ''
+    formData.moduleId = props.quiz.moduleId || props.quiz.module_id || ''
+    formData.level = props.quiz.level || 'beginner'
+    formData.passingScore = props.quiz.passing_score || 70
+    // Deep clone questions to avoid reference issues
+    formData.questions = props.quiz.questions ? JSON.parse(JSON.stringify(props.quiz.questions)) : []
+  } else {
+    formData.title = ''
+    formData.description = ''
+    formData.moduleId = ''
+    formData.level = 'beginner'
+    formData.passingScore = 70
+    formData.questions = []
+  }
+}
+
 onMounted(async () => {
+  initializeForm()
   await fetchModules()
   await fetchQuizzes()
 })
@@ -319,15 +339,8 @@ const fifthBeginnerModuleId = computed(() => {
 })
 
 // Watch for changes to props
-watch(() => props.quiz, (newQuiz) => {
-  if (newQuiz) {
-    formData.title = newQuiz.title || ''
-    formData.description = newQuiz.description || ''
-    formData.moduleId = newQuiz.moduleId || newQuiz.module_id || ''
-    formData.level = newQuiz.level || 'beginner'
-    formData.questions = newQuiz.questions || []
-    formData.passingScore = newQuiz.passing_score || 70
-  }
+watch(() => props.quiz, () => {
+  initializeForm()
 }, { deep: true })
 
 const addQuestion = () => {
