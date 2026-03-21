@@ -4,7 +4,7 @@
     <DashboardHeader :activeModuleId="parseInt(moduleId)" />
 
     <!-- Instructor Character Modal for Module Intro -->
-    <InstructorCharacter
+    <!-- <InstructorCharacter
       :isOpen="showModuleCharacterModal"
       mode="module"
       :title="`Welcome to ${module?.title}! 🚀`"
@@ -24,7 +24,7 @@
       characterName="Alex"
       @close="handleModuleCharacterClose"
       @skip="handleModuleCharacterSkip"
-    />
+    /> -->
 
     <!-- Completion Modal -->
     <ModuleCompletionModal

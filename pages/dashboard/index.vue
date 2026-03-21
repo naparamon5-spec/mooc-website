@@ -11,7 +11,7 @@
     />
 
     <!-- Instructor Character Modal for Onboarding -->
-    <InstructorCharacter
+    <!-- <InstructorCharacter
       :isOpen="showCharacterModal"
       mode="onboarding"
       title="Welcome to Your Learning Journey!"
@@ -31,7 +31,7 @@
       characterName="Alex"
       @close="handleCharacterClose"
       @skip="handleCharacterSkip"
-    />
+    /> -->
 
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="text-center">
