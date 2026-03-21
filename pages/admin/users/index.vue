@@ -118,29 +118,39 @@ const handleModalSuccess = () => {
 
 const exportUsers = () => {
   const userList = users.value as UserData[]
-  
+
   if (userList.length === 0) {
     alert('No users to export')
     return
   }
 
-  // Prepare CSV data
   const headers = ['Name', 'Email', 'Role', 'Status', 'Created At']
-  const csvContent = [
-    headers.join(','),
-    ...userList.map(user =>
-      [
-        `"${user.name}"`,
-        user.email,
-        user.role,
-        user.status,
-        new Date(user.createdAt).toLocaleDateString()
-      ].join(',')
-    )
-  ].join('\n')
 
-  // Create blob and download
-  const blob = new Blob([csvContent], { type: 'text/csv' })
+  const csvRows = [
+    headers.join(','),
+    ...userList.map((user: UserData) => [
+      `"${user.name ?? ''}"`,
+      `"${user.email ?? ''}"`,
+      `"${user.role ?? ''}"`,
+      `"${user.status ?? ''}"`,
+      `"${user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) : ''}"`
+    ].join(','))
+  ]
+
+  const title = `"MIL MOOC — User Export"`
+  const generated = `"Generated: ${new Date().toLocaleString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })}"`
+  const totalRow = `"Total Users: ${userList.length}"`
+
+  const fullCsv = [title, generated, totalRow, '', ...csvRows].join('\n')
+
+  const blob = new Blob([fullCsv], { type: 'text/csv;charset=utf-8;' })
   const url = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
