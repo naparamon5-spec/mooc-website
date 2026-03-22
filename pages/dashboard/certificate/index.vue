@@ -119,6 +119,54 @@
       @backToDashboard="handleBackToDashboard"
     />
 
+    <!-- Certificate Preview Modal -->
+    <div
+      v-if="showCertificatePreviewModal && certificatePreviewData"
+      class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2"
+      @click="showCertificatePreviewModal = false"
+    >
+      <div
+        class="bg-white rounded-lg w-full max-w-6xl h-[95vh] overflow-hidden flex flex-col"
+        @click.stop
+      >
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b bg-primary-50">
+          <h2 class="text-2xl font-bold text-gray-800">{{ certificatePreviewData.badgeName }}</h2>
+          <button
+            @click="showCertificatePreviewModal = false"
+            class="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-200 rounded-full transition"
+          >
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- PDF Preview -->
+        <div class="flex-1 overflow-hidden bg-gray-200 p-6">
+          <div class="w-full h-full bg-white rounded-lg shadow-lg">
+            <CertificatePDFViewer :cert="certificatePreviewData" :student-name="studentName" />
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex gap-3 p-6 border-t bg-gray-50">
+          <button
+            @click="downloadCertificate(certificatePreviewData)"
+            class="flex-1 bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition text-base"
+          >
+            ⬇️ Download PDF
+          </button>
+          <button
+            @click="showCertificatePreviewModal = false"
+            class="flex-1 bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition text-base"
+          >
+            ✕ Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <footer class="bg-primary-600 text-white text-center py-4">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
@@ -130,6 +178,7 @@
 import { ref, computed, onMounted } from 'vue';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
 import CertificateModal from '~/components/CertificateModal.vue';
+import CertificatePDFViewer from '~/components/CertificatePDFViewer.vue';
 import { useUserProfile } from '~/composables/useUserProfile';
 import { useCourseProgress } from '~/composables/useCourseProgress';
 import { useCertificateTemplates } from '~/composables/useCertificateTemplates';
@@ -150,6 +199,8 @@ const studentName = ref('Student Name');
 const isLoading = ref(true);
 const showCertificateModal = ref(false);
 const dbCertificates = ref<any[]>([]);
+const showCertificatePreviewModal = ref(false);
+const certificatePreviewData = ref<any>(null);
 
 // Fetch user profile and progress on mount
 onMounted(async () => {
@@ -162,9 +213,14 @@ onMounted(async () => {
       studentName.value = userData.full_name;
     }
 
-    await loadProgressFromSupabase();
+    // Load certificate templates FIRST before fetching certificates
     await fetchCertificateTemplates();
+    console.log('Certificate templates loaded:', certificateTemplates.value);
+    
+    await loadProgressFromSupabase();
     await fetchCertificatesFromDatabase();
+  } catch (err) {
+    console.error('Error on mount:', err);
   } finally {
     isLoading.value = false;
   }
@@ -262,199 +318,77 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-// View certificate
-const viewCertificate = (cert: any) => {
-  showCertificateModal.value = true;
+// View certificate - shows the actual PDF template with name
+const viewCertificate = async (cert: any) => {
+  certificatePreviewData.value = cert;
+  showCertificatePreviewModal.value = true;
 };
 
 // Download certificate as PDF
 const downloadCertificate = async (cert: any) => {
-  const selectedTemplate = certificateTemplates.value.find(t => t.course_level === cert.courseLevel)
-
-  if (!selectedTemplate?.template_url) {
-    // No template - generate default certificate
-    await generateDefaultCertificate(cert)
-    return
-  }
-
-  // Check if template is an image or PDF
-  const isPdfTemplate = selectedTemplate.template_url.toLowerCase().includes('.pdf')
-
-  if (isPdfTemplate) {
-    // For PDF templates, we'll need to use a different approach
-    // For now, show a message that PDF templates need special handling
-    alert('PDF templates require special processing. Please contact administrator.')
-    return
-  }
-
-  // Handle image templates
-  await generateCertificateWithImageTemplate(cert, selectedTemplate)
-}
-
-// Generate certificate with image template as background
-const generateCertificateWithImageTemplate = async (cert: any, template: any) => {
-  const { jsPDF } = await import('jspdf')
-  const html2canvas = (await import('html2canvas')).default
-
-  // Create a temporary div with certificate content
-  const tempDiv = document.createElement('div')
-  tempDiv.style.width = '8.5in'
-  tempDiv.style.height = '11in'
-  tempDiv.style.position = 'absolute'
-  tempDiv.style.left = '-9999px'
-  tempDiv.style.top = '0'
-  tempDiv.style.fontFamily = 'Arial, sans-serif'
-  tempDiv.style.boxSizing = 'border-box'
-
-  // Use template as background if it's an image
-  if (template.template_url && !template.template_url.includes('.pdf')) {
-    tempDiv.style.backgroundImage = `url('${template.template_url}')`
-    tempDiv.style.backgroundSize = 'cover'
-    tempDiv.style.backgroundPosition = 'center'
-    tempDiv.style.backgroundRepeat = 'no-repeat'
-  }
-
-  // Add certificate content - positioned to work with template
-  tempDiv.innerHTML = `
-    <div style="width: 100%; height: 100%; position: relative; padding: 60px; box-sizing: border-box;">
-      <!-- Certificate content positioned to overlay on template -->
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 80%;">
-
-        <!-- Student Name - positioned prominently -->
-        <div style="margin-bottom: 20px;">
-          <h1 style="font-size: 42px; color: #083358; margin: 0; font-weight: bold; text-shadow: 2px 2px 4px rgba(255,255,255,0.8);">
-            ${studentName.value}
-          </h1>
-        </div>
-
-        <!-- Certificate Title -->
-        <div style="margin-bottom: 15px;">
-          <h2 style="font-size: 28px; color: #0c3a66; margin: 0; font-weight: bold; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
-            Certificate of Completion
-          </h2>
-        </div>
-
-        <!-- Course Name -->
-        <div style="margin-bottom: 15px;">
-          <h3 style="font-size: 24px; color: #083358; margin: 0; font-weight: bold; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
-            ${cert.badgeName}
-          </h3>
-        </div>
-
-        <!-- Course Level -->
-        <div style="margin-bottom: 20px;">
-          <p style="font-size: 18px; color: #374151; margin: 0; font-weight: 600; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
-            ${cert.courseLevel === 'beginner' ? 'Beginner Level Course' : 'Advanced Level Course'}
-          </p>
-        </div>
-
-        <!-- Date and ID -->
-        <div style="margin-top: 30px; font-size: 14px; color: #6b7280; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
-          <p style="margin: 5px 0;">Completed on: ${formatDate(cert.earnedAt)}</p>
-          <p style="margin: 5px 0; font-family: monospace;">Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}</p>
-        </div>
-      </div>
-    </div>
-  `
-
-  document.body.appendChild(tempDiv)
-
   try {
-    // Wait for background image to load
-    if (template.template_url && !template.template_url.includes('.pdf')) {
-      await new Promise((resolve) => {
-        const img = new Image()
-        img.onload = resolve
-        img.src = template.template_url
-      })
+    console.log('Downloading certificate:', cert.id);
+    
+    const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
+    
+    // Get template for this course level
+    const template = certificateTemplates.value.find(t => t.course_level === cert.courseLevel);
+    if (!template?.template_url) {
+      alert('Certificate template not found. Please contact support.');
+      return;
     }
 
-    // Convert HTML to canvas
-    const canvas = await html2canvas(tempDiv, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: null // Transparent background to let template show through
-    })
+    console.log('Template URL:', template.template_url);
 
-    // Create PDF from canvas (A4 size)
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    })
+    // Fetch the PDF template
+    const existingPdfBytes = await fetch(template.template_url).then(r => {
+      if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status} ${r.statusText}`)
+      return r.arrayBuffer()
+    });
 
-    const imgData = canvas.toDataURL('image/png')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
+    // Load and modify PDF
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const page = pdfDoc.getPages()[0];
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    // Embed font and add student name
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Download PDF
-    const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`
-    pdf.save(fileName)
-  } catch (error) {
-    console.error('Error generating certificate:', error)
-    // Fallback to default certificate
-    await generateDefaultCertificate(cert)
-  } finally {
-    // Clean up temporary div
-    document.body.removeChild(tempDiv)
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+
+    console.log('PDF loaded, page size:', pageWidth, 'x', pageHeight);
+
+    // Add name in center of page
+    page.drawText(studentName.value, {
+      x: pageWidth / 2 - (studentName.value.length * 8),
+      y: pageHeight / 2,
+      size: 48,
+      font,
+      color: rgb(0, 0, 0),
+    });
+
+    console.log('Added student name to PDF');
+
+    // Save as PDF
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+
+    // Trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    a.download = `Certificate_${studentName.value.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+    a.click();
+
+    // Clean up
+    URL.revokeObjectURL(url);
+
+    console.log('Certificate downloaded:', a.download);
+  } catch (err) {
+    console.error('Error downloading certificate:', err);
+    alert('Failed to download certificate. Please try again or contact support.');
   }
-}
-
-// Generate default certificate when no template is available
-const generateDefaultCertificate = async (cert: any) => {
-  const { jsPDF } = await import('jspdf')
-
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  })
-
-  const pdfWidth = pdf.internal.pageSize.getWidth()
-  const pdfHeight = pdf.internal.pageSize.getHeight()
-
-  // Add background color
-  pdf.setFillColor(240, 249, 255) // Light blue background
-  pdf.rect(0, 0, pdfWidth, pdfHeight, 'F')
-
-  // Add border
-  pdf.setDrawColor(12, 58, 102) // Dark blue border
-  pdf.setLineWidth(1)
-  pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20)
-
-  // Add title
-  pdf.setFontSize(24)
-  pdf.setTextColor(8, 51, 88) // Dark blue text
-  pdf.text('Certificate of Achievement', pdfWidth / 2, 40, { align: 'center' })
-
-  // Add course name
-  pdf.setFontSize(18)
-  pdf.text(cert.badgeName, pdfWidth / 2, 60, { align: 'center' })
-
-  // Add student name
-  pdf.setFontSize(20)
-  pdf.setTextColor(8, 51, 88)
-  pdf.text(studentName.value, pdfWidth / 2, 90, { align: 'center' })
-
-  // Add completion text
-  pdf.setFontSize(12)
-  pdf.setTextColor(55, 65, 81) // Gray text
-  pdf.text(`Successfully completed the ${cert.courseLevel} level course`, pdfWidth / 2, 110, { align: 'center' })
-
-  // Add date
-  pdf.setFontSize(10)
-  pdf.setTextColor(107, 114, 128) // Light gray text
-  pdf.text(`Earned on: ${formatDate(cert.earnedAt)}`, pdfWidth / 2, 130, { align: 'center' })
-
-  // Add certificate ID
-  pdf.text(`Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}`, pdfWidth / 2, 140, { align: 'center' })
-
-  // Download PDF
-  const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`
-  pdf.save(fileName)
 };
 
 // Navigation handlers

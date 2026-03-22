@@ -285,7 +285,7 @@
     <!--
       CERTIFICATE MODAL
       Shown after the badge modal closes, only when the last module of a course is completed.
-      Receives the template URL from the database (set by admin).
+      Template URL will be auto-resolved from database if not provided.
     -->
     <CertificateModal
       v-if="showCertificateModal"
@@ -528,41 +528,49 @@ const loadStudentName = async () => {
 }
 
 // Saves certificate record to DB — works for both beginner and advanced
-// Includes duplicate guard so re-attempts don't create extra rows
+// Uses actual table schema: module_id, course_level, student_id, issued_at
 const saveCertificateToDatabase = async () => {
   try {
     const { data: { user } } = await $supabase.auth.getUser()
-    if (!user || !quiz.value?.level) return
-
-    // Check for existing certificate to avoid duplicates
-    const { data: existing } = await $supabase
-      .from('certificates')
-      .select('id')
-      .eq('student_id', user.id)
-      .eq('course_level', quiz.value.level)
-      .maybeSingle()
-
-    if (existing) {
-      console.log('Certificate already exists for', quiz.value.level)
+    if (!user || !quiz.value?.level || !quiz.value?.module_id) {
+      console.log('❌ Missing user, quiz level, or module_id')
       return
     }
 
-    const { error: insertError } = await $supabase
+    console.log('💾 Saving certificate for:', quiz.value.level, 'Module:', quiz.value.module_id, 'User:', user.id)
+
+    // Verify template is available from already-loaded templates
+    const template = certificateTemplates.value.find(t => t.course_level === quiz.value.level)
+    if (!template?.template_url) {
+      console.error('❌ No certificate template found for', quiz.value.level)
+      return
+    }
+    console.log('✅ Template found:', template.course_level)
+
+    // Insert certificate record using actual table schema
+    const certificateData = {
+      student_id: user.id,
+      module_id: quiz.value.module_id,
+      course_level: quiz.value.level,
+      certificate_url: null, // Generated on-the-fly during download, not pre-generated
+      issued_at: new Date().toISOString()
+    }
+
+    console.log('📝 Inserting certificate with data:', certificateData)
+
+    const { data: insertedData, error: insertError } = await $supabase
       .from('certificates')
-      .insert({
-        student_id: user.id,
-        course_level: quiz.value.level,
-        issued_at: new Date().toISOString()
-      })
+      .insert([certificateData])
+      .select()
 
     if (insertError) {
-      console.error('Error saving certificate:', insertError)
+      console.error('❌ Error saving certificate:', insertError)
       return
     }
 
-    console.log('Certificate saved for', quiz.value.level)
+    console.log('✅ Certificate saved successfully:', insertedData)
   } catch (err) {
-    console.error('Error saving certificate to database:', err)
+    console.error('❌ Error saving certificate to database:', err)
   }
 }
 
@@ -615,14 +623,35 @@ const submitQuiz = async () => {
   }
 }
 
-// Watch result: when quiz is passed, save certificate if last module, then show badge modal
+// Watch result: when quiz is passed, save certificate and show it
 watch(result, async (val) => {
   if (val?.passed) {
     if (isLastCourseModule.value) {
+      // Ensure templates are loaded before showing certificate modal
+      if (certificateTemplates.value.length === 0) {
+        console.log('🔄 Templates not loaded yet, fetching...')
+        await fetchCertificateTemplates()
+      }
+      
+      const tmpl = certificateTemplates.value.find(t => t.course_level === quiz.value.level)
+      console.log('📜 Certificate template data:', {
+        courseLevelNeeded: quiz.value.level,
+        foundTemplate: tmpl,
+        templateUrl: tmpl?.template_url,
+        allTemplates: certificateTemplates.value.map(t => ({ level: t.course_level, url: t.template_url?.substring(0, 50) }))
+      })
+      
+      // Save certificate to database
       await saveCertificateToDatabase()
+      // Small delay to let save complete
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Show certificate modal immediately after quiz completion
+      showCertificateModal.value = true
+    } else {
+      // Not the last module - just show badge modal
+      showSuccessModal.value = true
     }
-    // Always show badge modal first — certificate modal opens after badge modal is dismissed
-    showSuccessModal.value = true
   }
 })
 
