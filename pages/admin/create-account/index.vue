@@ -305,7 +305,7 @@ const showModal = ref(false)
 const togglingUserId = ref<string | null>(null)
 const toggleError = ref('')
 
-const { users, loading: usersLoading, error: usersError, fetchUsers } = useAdminUserManagement()
+const { users, loading: usersLoading, error: usersError, fetchUsers, updateUserStatus } = useAdminUserManagement()
 
 const form = ref({
   fullName: '',
@@ -404,6 +404,8 @@ const toggleUserStatus = async (user: any) => {
   toggleError.value = ''
   togglingUserId.value = user.id
 
+  const newStatus = !user.isActive
+
   try {
     const { $supabase } = useNuxtApp()
     const { data: { session } } = await $supabase.auth.getSession()
@@ -417,12 +419,12 @@ const toggleUserStatus = async (user: any) => {
       headers: { Authorization: `Bearer ${session.access_token}` },
       body: {
         userId: user.id,
-        isActive: !user.isActive
+        isActive: newStatus
       }
     })
 
-    // Optimistically update local state
-    user.isActive = !user.isActive
+    // Update the ref array properly for Vue reactivity
+    updateUserStatus(user.id, newStatus)
   } catch (err: any) {
     toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to update account status'
     console.error('Error toggling user status:', err)

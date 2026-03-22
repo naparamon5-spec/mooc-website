@@ -18,7 +18,6 @@ export const useAdminUserManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Fetch all instructors and admins
   const fetchUsers = async () => {
     loading.value = true
     error.value = null
@@ -64,10 +63,22 @@ export const useAdminUserManagement = () => {
     }
   }
 
+  const updateUserStatus = (userId: string, isActive: boolean) => {
+    const index = users.value.findIndex(u => u.id === userId)
+    if (index !== -1) {
+      users.value[index] = {
+        ...users.value[index],
+        isActive,
+        status: isActive ? 'Active' : 'Inactive'
+      }
+    }
+  }
+
   return {
     users: computed(() => users.value),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
-    fetchUsers
+    fetchUsers,
+    updateUserStatus
   }
 }

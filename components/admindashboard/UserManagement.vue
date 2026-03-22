@@ -3,10 +3,10 @@
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-bold text-gray-900">User Management</h2>
     </div>
-    
+
     <!-- Action Buttons -->
     <div class="flex flex-wrap gap-3 mb-6">
-      <button 
+      <button
         @click="handleExport"
         class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
       >
@@ -85,8 +85,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="(user, index) in filteredUsers" 
+          <tr
+            v-for="(user, index) in filteredUsers"
             :key="index"
             class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
           >
@@ -96,31 +96,72 @@
               <span class="capitalize">{{ user.role }}</span>
             </td>
             <td class="py-3 px-4">
-              <span 
-                class="inline-block px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition"
+              <span
+                class="inline-block px-3 py-1 rounded-full text-xs font-medium"
                 :class="getStatusClass(user.status)"
-                @click="toggleStatus(user.id)"
-                :title="`Click to ${user.isActive ? 'deactivate' : 'activate'}`"
               >
                 {{ user.status }}
               </span>
             </td>
             <td class="py-3 px-4">
-              <div class="flex gap-2 justify-center">
+              <div class="flex gap-1 justify-center items-center">
+
+                <!-- Activate / Deactivate Button -->
+                <button
+                  @click="toggleStatus(user.id)"
+                  :disabled="togglingUserId === user.id"
+                  :title="user.isActive ? 'Deactivate user' : 'Activate user'"
+                  :class="[
+                    'inline-flex items-center justify-center w-8 h-8 rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed',
+                    user.isActive
+                      ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
+                      : 'border-green-200 text-green-600 bg-green-50 hover:bg-green-100'
+                  ]"
+                >
+                  <!-- Spinner -->
+                  <svg v-if="togglingUserId === user.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  <!-- Deactivate icon (ban/circle-slash) -->
+                  <svg v-else-if="user.isActive" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                  </svg>
+                  <!-- Activate icon (check-circle) -->
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </button>
+
+                <!-- Divider -->
+                <span class="w-px h-5 bg-gray-200 mx-0.5"></span>
+
+                <!-- Edit Button -->
                 <button
                   @click="openEditModal(user)"
-                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   title="Edit user"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
                 >
-                  Edit
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
                 </button>
+
+                <!-- Delete Button -->
                 <button
                   @click="handleDelete(user.id)"
-                  class="text-red-600 hover:text-red-800 text-sm font-medium"
                   title="Delete user"
+                  class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                 >
-                  Delete
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0a1 1 0 00-1-1h-4a1 1 0 00-1 1H5a1 1 0 000 2h14a1 1 0 000-2z"/>
+                  </svg>
                 </button>
+
               </div>
             </td>
           </tr>
@@ -128,11 +169,16 @@
       </table>
     </div>
 
+    <!-- Toggle Error -->
+    <div v-if="toggleError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+      <p class="text-sm text-red-700">{{ toggleError }}</p>
+    </div>
+
     <!-- Delete Confirmation Dialog -->
     <div v-if="showDeleteDialog" class="fixed inset-0 z-50 flex items-center justify-center">
       <!-- Backdrop -->
       <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showDeleteDialog = false" />
-      
+
       <!-- Dialog -->
       <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 flex flex-col items-center gap-4">
         <!-- Icon -->
@@ -170,7 +216,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -200,13 +245,15 @@ const showDeleteDialog = ref(false)
 const userToDelete = ref<UserItem | null>(null)
 const searchQuery = ref('')
 const statusFilter = ref('')
+const togglingUserId = ref<string | null>(null)
+const toggleError = ref('')
 
 const filteredUsers = computed(() => {
   if (!props.users) return []
   return props.users.filter(user => {
     const searchLower = searchQuery.value.toLowerCase()
-    const matchesSearch = searchLower === '' || 
-      user.name.toLowerCase().includes(searchLower) || 
+    const matchesSearch = searchLower === '' ||
+      user.name.toLowerCase().includes(searchLower) ||
       user.email.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter.value === '' || user.status === statusFilter.value
     return matchesSearch && matchesStatus
@@ -223,8 +270,18 @@ const openEditModal = (user: UserItem) => {
   emit('action', 'edit', user)
 }
 
-const toggleStatus = (userId: string) => {
-  emit('action', 'toggle-status', userId)
+const toggleStatus = async (userId: string) => {
+  if (togglingUserId.value) return
+  toggleError.value = ''
+  togglingUserId.value = userId
+
+  try {
+    await emit('action', 'toggle-status', userId)
+  } catch (err: any) {
+    toggleError.value = err?.message || 'Failed to update status'
+  } finally {
+    togglingUserId.value = null
+  }
 }
 
 const handleDelete = (userId: string) => {

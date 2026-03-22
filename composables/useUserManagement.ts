@@ -23,8 +23,7 @@ export const useUserManagement = () => {
     error.value = null
     try {
       console.log('Starting to fetch students from Supabase...')
-      
-      // Fetch only profiles with student_id (students)
+
       const { data, error: fetchError } = await $supabase
         .from('profiles')
         .select('id, email, full_name, role, is_active, created_at, updated_at')
@@ -43,7 +42,7 @@ export const useUserManagement = () => {
           code: fetchError.code,
           fullError: fetchError
         })
-        
+
         if (fetchError.code === '42P17') {
           error.value = 'Database policy error. Please disable RLS on the profiles table in Supabase settings.'
         }
@@ -66,7 +65,7 @@ export const useUserManagement = () => {
         createdAt: user.created_at,
         updatedAt: user.updated_at
       }))
-      
+
       console.log('Successfully loaded students:', users.value)
     } catch (err: any) {
       error.value = err.message
@@ -83,7 +82,6 @@ export const useUserManagement = () => {
     fullName: string
   }) => {
     try {
-      // Sign up user with Supabase Auth
       const { data: authData, error: authError } = await $supabase.auth.signUp({
         email: userData.email,
         password: userData.password
@@ -91,7 +89,6 @@ export const useUserManagement = () => {
 
       if (authError) throw authError
 
-      // Create profile entry
       const { data: profileData, error: profileError } = await $supabase
         .from('profiles')
         .insert({
@@ -137,7 +134,7 @@ export const useUserManagement = () => {
     }
   }
 
-  // Toggle user active status (suspend/activate)
+  // Toggle user active status — routes through server API to bypass RLS
   const toggleUserStatus = async (userId: string) => {
     try {
       const user = users.value.find(u => u.id === userId)
@@ -145,19 +142,31 @@ export const useUserManagement = () => {
 
       const newStatus = !user.isActive
 
-      const { error: updateError } = await $supabase
-        .from('profiles')
-        .update({
-          is_active: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
+      // Get session token for auth header
+      const { data: { session } } = await $supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Session expired. Please sign in again.')
+      }
 
-      if (updateError) throw updateError
+      // Call server API — uses service role key to bypass RLS
+      await $fetch('/api/admin/toggle-user-status', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {
+          userId,
+          isActive: newStatus
+        }
+      })
 
-      // Update local state
-      user.isActive = newStatus
-      user.status = newStatus ? 'Active' : 'Inactive'
+      // Update local state properly (immutable update for Vue reactivity)
+      const index = users.value.findIndex(u => u.id === userId)
+      if (index !== -1) {
+        users.value[index] = {
+          ...users.value[index],
+          isActive: newStatus,
+          status: newStatus ? 'Active' : 'Inactive'
+        }
+      }
 
       console.log(`User ${userId} status updated to ${newStatus ? 'Active' : 'Inactive'}`)
       return { success: true }
@@ -168,22 +177,21 @@ export const useUserManagement = () => {
     }
   }
 
- // Delete user account
-const deleteUser = async (userId: string) => {
-  try {
-    // Call server-side route to delete auth user + profile (requires service role)
-    await $fetch('/api/admin/delete-user', {
-      method: 'POST',
-      body: { userId }
-    })
+  // Delete user account
+  const deleteUser = async (userId: string) => {
+    try {
+      await $fetch('/api/admin/delete-user', {
+        method: 'POST',
+        body: { userId }
+      })
 
-    await fetchUsers()
-    return { success: true }
-  } catch (err: any) {
-    error.value = err.message
-    return { success: false, error: err.message }
+      await fetchUsers()
+      return { success: true }
+    } catch (err: any) {
+      error.value = err.message
+      return { success: false, error: err.message }
+    }
   }
-}
 
   return {
     users: computed(() => users.value),

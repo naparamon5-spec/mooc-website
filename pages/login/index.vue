@@ -8,10 +8,14 @@
         </NuxtLink>
       </div>
 
-       <!-- Title -->
+      <!-- Title -->
       <div class="text-center mb-4">
         <h1 class="text-2xl font-bold text-sky-800">Sign to your account</h1>
-        <!-- <p class="text-center text-sky-700 mb-6 text-sm">Join us and start your learning journey!</p> -->
+      </div>
+
+      <!-- Deactivated account error banner -->
+      <div v-if="loginError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-sm text-red-700">{{ loginError }}</p>
       </div>
 
       <form @submit.prevent="onSubmit" class="space-y-5">
@@ -63,14 +67,22 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import { validateEmail, validatePassword } from '~/utils/validation/auth'
+import { useRoute } from 'vue-router'
 
 useHead({
   title: 'Login - MIL MOOC',
 })
 
-import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
-import { validateEmail, validatePassword } from '~/utils/validation/auth'
+const route = useRoute()
+const loginError = ref('')
+
+// Show error if redirected from auth middleware
+if (route.query.error === 'deactivated') {
+  loginError.value = 'Your account has been deactivated. Please contact an administrator.'
+}
 
 const email = ref('')
 const password = ref('')
@@ -90,12 +102,9 @@ const inputClass =
 const errorClass =
   'border-red-400 focus:ring-red-300 focus:border-red-400'
 
-// Obtain Supabase client at runtime inside handlers to avoid server-side plugin timing issues
-
 function validateForm() {
   errors.value.email = validateEmail(email.value)
   errors.value.password = validatePassword(password.value)
-
   return !errors.value.email && !errors.value.password
 }
 
@@ -103,54 +112,52 @@ async function onSubmit() {
   if (!validateForm()) return
 
   loading.value = true
+  loginError.value = ''
 
   try {
-    // Sign in with Supabase (get client at runtime)
     const supabase = useNuxtApp().$supabase
+
+    // 1. Sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value
     })
 
-      console.log('signInWithPassword result:', { data, error })
-
     if (error) throw error
 
-    toast.add({ severity: 'success', summary: 'Login Successful', detail: 'Welcome back!', life: 3000 })
-
-    // Determine user role and navigate accordingly
     const userId = data.user?.id ?? data.session?.user?.id
 
     if (userId) {
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
+      // 2. Fetch role AND is_active together
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, is_active')
+        .eq('id', userId)
+        .maybeSingle()
 
-        console.log('fetched profile after login:', { profile, profileError })
+      if (profileError) {
+        console.error('Error fetching profile after login:', profileError)
+        return navigateTo('/dashboard')
+      }
 
-        if (profileError) {
-          console.error('Error fetching profile after login:', profileError)
-          return navigateTo('/dashboard')
-        }
+      // 3. Block deactivated accounts immediately after login
+      if (profile?.is_active === false) {
+        await supabase.auth.signOut()
+        loginError.value = 'Your account has been deactivated. Please contact an administrator.'
+        return
+      }
 
-        const role = profile && profile.role ? String(profile.role).toLowerCase() : ''
-
-        if (role === 'administrator' || role === 'admin' || role === 'instructor') {
-          return navigateTo('/admin')
-        }
-      } catch (e) {
-        console.error('Login redirect error:', e)
+      // 4. Redirect based on role
+      const role = profile?.role ? String(profile.role).toLowerCase() : ''
+      if (role === 'administrator' || role === 'admin' || role === 'instructor') {
+        return navigateTo('/admin')
       }
     }
 
-    // Default
-    navigateTo('/dashboard')
+    // Default redirect for students
+    return navigateTo('/dashboard')
 
   } catch (err: any) {
-    console.log(err)
     toast.add({ severity: 'error', summary: 'Login Failed', detail: err.message || 'Login failed', life: 3000 })
   } finally {
     loading.value = false

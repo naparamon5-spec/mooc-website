@@ -34,14 +34,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       console.error('Token refresh error:', e)
       // Don't redirect immediately, let them continue
     }
-    
-    // Check user role and validate access permissions
+
+    // Check user role, is_active status, and validate access permissions
     try {
       const userId = session.user?.id
       if (userId) {
         let { data: profile, error } = await $supabase
           .from('profiles')
-          .select('role')
+          .select('role, is_active')  // <-- added is_active
           .eq('id', userId)
           .single()
 
@@ -56,7 +56,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
               email: session.user.email || '',
               role: 'student'
             })
-            .select('role')
+            .select('role, is_active')  // <-- added is_active
             .single()
 
           if (!createError && newProfile) {
@@ -65,7 +65,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
           }
         }
 
-        if (!error && profile?.role) {
+        if (!error && profile) {
+          // Block deactivated accounts immediately
+          if (profile.is_active === false) {
+            await $supabase.auth.signOut()
+            return navigateTo('/login?error=deactivated')
+          }
+
           const role = String(profile.role).toLowerCase()
           const isAdmin = role === 'administrator' || role === 'admin' || role === 'instructor'
 
