@@ -168,23 +168,22 @@ export const useUserManagement = () => {
     }
   }
 
-  // Delete user account
-  const deleteUser = async (userId: string) => {
-    try {
-      const { error: deleteError } = await $supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId)
+ // Delete user account
+const deleteUser = async (userId: string) => {
+  try {
+    // Call server-side route to delete auth user + profile (requires service role)
+    await $fetch('/api/admin/delete-user', {
+      method: 'POST',
+      body: { userId }
+    })
 
-      if (deleteError) throw deleteError
-
-      await fetchUsers()
-      return { success: true }
-    } catch (err: any) {
-      error.value = err.message
-      return { success: false, error: err.message }
-    }
+    await fetchUsers()
+    return { success: true }
+  } catch (err: any) {
+    error.value = err.message
+    return { success: false, error: err.message }
   }
+}
 
   return {
     users: computed(() => users.value),

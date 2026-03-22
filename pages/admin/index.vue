@@ -54,10 +54,9 @@
       </div>
 
       <!-- Debug: Recent Module Completions (Last 2 Weeks) -->
-      <div class="mb-8 bg-white rounded-lg shadow p-6">
+      <!-- <div class="mb-8 bg-white rounded-lg shadow p-6">
         <h2 class="text-xl font-bold mb-4">Recent Module Completions (Last 2 Weeks)</h2>
 
-        <!-- Test Button -->
         <div class="mb-4">
           <button
             @click="testModuleCompletion"
@@ -89,7 +88,7 @@
           </table>
         </div>
         <p class="text-xs text-gray-500 mt-2">Total completions: {{ recentModuleCompletions.length }}</p>
-      </div>
+      </div> -->
 
       <!-- Test Console -->
       <!-- <div class="mb-8">
@@ -125,7 +124,7 @@ import CourseCompletionRate from '~/components/admindashboard/CourseCompletionRa
 import SystemHealth from '~/components/admindashboard/SystemHealth.vue'
 import CourseAgreementManagement from '~/components/admindashboard/CourseAgreementManagement.vue'
 import CourseReportDialog from '~/components/admindashboard/CourseReportDialog.vue'
-import NoticeSystemTestConsole from '~/components/admindashboard/NoticeSystemTestConsole.vue'
+// import NoticeSystemTestConsole from '~/components/admindashboard/NoticeSystemTestConsole.vue'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useAdminMetrics } from '~/composables/useAdminMetrics'
 import { useUserManagement } from '~/composables/useUserManagement'
