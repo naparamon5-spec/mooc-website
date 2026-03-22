@@ -3,6 +3,16 @@
     class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-primary-200 transition cursor-pointer flex flex-col h-full"
     @click="handleCardClick"
   >
+    <!-- Quiz Image (if available) -->
+    <div v-if="quiz.image_url" class="w-full h-40 overflow-hidden rounded-t-xl bg-gray-100">
+      <img 
+        :src="quiz.image_url" 
+        :alt="quiz.title"
+        class="w-full h-full object-cover"
+        @error="handleImageError"
+      />
+    </div>
+
     <!-- Quiz Header -->
     <div class="p-4 pb-3">
       <h3 class="font-semibold text-gray-900 line-clamp-2">
@@ -67,7 +77,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -108,6 +118,11 @@ const startQuiz = () => {
   if (props.isLocked) return
   loading.value = true
   router.push(`/quizzes/${props.quiz.id}`)
+}
+
+const handleImageError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  console.error('Failed to load quiz image:', img.src)
 }
 </script>
 

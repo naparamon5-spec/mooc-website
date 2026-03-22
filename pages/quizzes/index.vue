@@ -1,54 +1,55 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
+  <div class="h-screen flex flex-col bg-gray-50 overflow-hidden">
     <DashboardHeader :student-name="studentName" />
     
-    <main class="flex-grow">
-      <div class="max-w-full mx-auto px-4 md:px-8 lg:px-12 py-3">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">All Available Quizzes</h1>
+    <main class="flex-1 min-h-0 px-4 md:px-8 lg:px-12 py-3 flex flex-col">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">All Available Quizzes</h1>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-2">
-          <div class="text-center">
-            <svg class="w-12 h-12 text-primary-600 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center py-2">
+        <div class="text-center">
+          <svg class="w-12 h-12 text-primary-600 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-gray-600 mt-2 text-lg">Loading quizzes...</p>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!quizzes || quizzes.length === 0" class="flex items-center justify-center flex-1">
+        <div class="text-center max-w-md mx-auto">
+          <div class="mb-4">
+            <svg class="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            <p class="text-gray-600 mt-2 text-lg">Loading quizzes...</p>
           </div>
+          <h2 class="text-xl font-semibold text-gray-700 mb-2">No Quizzes Available</h2>
+          <p class="text-gray-500 mb-6">
+            There are no quizzes available at the moment. Check back later or continue with your modules.
+          </p>
+          <router-link 
+            to="/dashboard" 
+            class="inline-block bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+          >
+            Go to Dashboard
+          </router-link>
         </div>
+      </div>
 
-        <!-- Empty State -->
-        <div v-else-if="!quizzes || quizzes.length === 0" class="flex items-center justify-center py-2">
-          <div class="text-center max-w-md mx-auto">
-            <div class="mb-4">
-              <svg class="w-16 h-16 text-gray-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-            </div>
-            <h2 class="text-xl font-semibold text-gray-700 mb-2">No Quizzes Available</h2>
-            <p class="text-gray-500 mb-6">
-              There are no quizzes available at the moment. Check back later or continue with your modules.
-            </p>
-            <router-link 
-              to="/dashboard" 
-              class="inline-block bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
-            >
-              Go to Dashboard
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Quizzes Grid -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-          <QuizCard
-            v-for="quiz in quizzes"
-            :key="quiz.id"
-            :quiz="quiz"
-            :user-result="quizResultsById[String(quiz.id)] || null"
-            :is-locked="isQuizLocked(quiz)"
-            @show-result="openResultModal"
-          />
-        </div>
+      <!-- Quizzes Grid -->
+      <div
+        v-else
+        class="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 content-start"
+      >
+        <QuizCard
+          v-for="quiz in sortedQuizzes"
+          :key="quiz.id"
+          :quiz="quiz"
+          :user-result="quizResultsById[String(quiz.id)] || null"
+          :is-locked="isQuizLocked(quiz)"
+          @show-result="openResultModal"
+        />
       </div>
     </main>
 
@@ -102,14 +103,14 @@
       </div>
     </div>
 
-    <footer class="bg-primary-600 text-white text-center py-4">
+    <footer class="bg-primary-600 text-white text-center py-4 flex-shrink-0">
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
 import QuizCard from '~/components/QuizCard.vue';
 import { useQuizManagement } from '~/composables/useQuizManagement'
@@ -119,6 +120,15 @@ import { useRouter } from 'vue-router'
 const { quizzes, loading, fetchQuizzes } = useQuizManagement()
 const { courseProgress, loadProgressFromSupabase } = useCourseProgress()
 const router = useRouter()
+
+const sortedQuizzes = computed(() => {
+  if (!quizzes.value) return []
+  return [...quizzes.value].sort((a, b) => {
+    const dateA = new Date(a.created_at || a.createdAt || 0).getTime()
+    const dateB = new Date(b.created_at || b.createdAt || 0).getTime()
+    return dateA - dateB // oldest first, newest last
+  })
+})
 
 const studentName = ref('')
 const quizResultsById = ref<Record<string, any>>({})
@@ -182,7 +192,6 @@ const retakeSelectedQuiz = () => {
 }
 
 const isQuizLocked = (quiz: any) => {
-  // Lock quiz if it hasn't been taken yet
   return !quizResultsById.value[String(quiz.id)]
 }
 </script>

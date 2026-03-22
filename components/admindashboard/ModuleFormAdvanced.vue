@@ -70,6 +70,19 @@
                 <button @click="fileInput?.click()" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{{ imagePreview ? 'Change Image' : 'Upload Image' }}</button>
                 <span v-if="!imagePreview && !form.image_url" class="text-sm text-gray-500">JPG, PNG, WebP (Max 5MB)</span>
               </div>
+              <!-- Image Dimensions -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Image Width (px)</label>
+                  <input v-model="form.image_width" type="text" placeholder="e.g., 100%" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  <p class="text-xs text-gray-500 mt-1">Use % for responsive or px for fixed width</p>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Image Height (px)</label>
+                  <input v-model="form.image_height" type="text" placeholder="e.g., auto" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  <p class="text-xs text-gray-500 mt-1">Use auto to maintain aspect ratio</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -87,6 +100,40 @@
                 <input ref="cardImageFileInput" type="file" accept="image/*" @change="handleCardImageUpload" class="hidden" />
                 <button @click="cardImageFileInput?.click()" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{{ cardImagePreview ? 'Change Image' : 'Upload Image' }}</button>
                 <span v-if="!cardImagePreview && !form.card_image_url" class="text-sm text-gray-500">JPG, PNG, WebP (Max 5MB)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description Panel Image -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Description Panel Image</label>
+            <p class="text-xs text-gray-500 mb-3">
+              This image appears on the right side of the blue description card shown to students. If none is uploaded, the default Meli mascot will be shown.
+            </p>
+            <div class="space-y-3">
+              <div v-if="descPanelImagePreview || form.description_panel_image_url" class="relative">
+                <img
+                  :src="descPanelImagePreview || form.description_panel_image_url"
+                  alt="Description panel image preview"
+                  class="w-full h-48 object-contain rounded-lg border border-gray-300 bg-blue-50"
+                />
+                <button
+                  v-if="descPanelImagePreview || form.description_panel_image_url"
+                  @click="clearDescPanelImage"
+                  type="button"
+                  class="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div class="flex items-center gap-3">
+                <input ref="descPanelImageFileInput" type="file" accept="image/*" @change="handleDescPanelImageUpload" class="hidden" />
+                <button @click="descPanelImageFileInput?.click()" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                  {{ descPanelImagePreview || form.description_panel_image_url ? 'Change Image' : 'Upload Image' }}
+                </button>
+                <span v-if="!descPanelImagePreview && !form.description_panel_image_url" class="text-sm text-gray-500">JPG, PNG, WebP (Max 5MB)</span>
               </div>
             </div>
           </div>
@@ -286,6 +333,21 @@
                             </button>
                           </div>
                         </div>
+
+                        <!-- Image Size Controls -->
+                        <div class="grid grid-cols-2 gap-3">
+                          <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Width (Optional)</label>
+                            <input v-model="block.width" type="text" placeholder="e.g., 300px, 50%, auto" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            <p class="text-xs text-gray-400 mt-1">Leave empty for responsive width</p>
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Height (Optional)</label>
+                            <input v-model="block.height" type="text" placeholder="e.g., 200px, auto" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            <p class="text-xs text-gray-400 mt-1">Leave empty for auto height</p>
+                          </div>
+                        </div>
+
                         <input type="file" accept="image/*" @change="(e) => handleBlockImageUpload(e, index, blockIndex)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                         <div v-if="block.src" class="p-3 bg-gray-50 rounded border border-gray-200">
                           <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
@@ -343,6 +405,9 @@ const imageFile = ref<File | null>(null)
 const cardImageFileInput = ref<HTMLInputElement | null>(null)
 const cardImagePreview = ref<string>('')
 const cardImageFile = ref<File | null>(null)
+const descPanelImageFileInput = ref<HTMLInputElement | null>(null)
+const descPanelImagePreview = ref<string>('')
+const descPanelImageFile = ref<File | null>(null)
 const videoFileInput = ref<HTMLInputElement | null>(null)
 const videoPreview = ref<string>('')
 const videoFile = ref<File | null>(null)
@@ -350,14 +415,6 @@ const pptFileInput = ref<HTMLInputElement | null>(null)
 const pptFileName = ref<string>('')
 const pptFile = ref<File | null>(null)
 
-/**
- * Layout options for blocks.
- *
- * full-width : spans the entire content column
- * left       : occupies the left 50% of a two-column row
- * right      : occupies the right 50% of a two-column row
- * center     : 60% width, horizontally centered
- */
 const layoutOptions = [
   { value: 'full-width', label: 'Full',   icon: '⬛' },
   { value: 'left',       label: 'Left',   icon: '⬅️' },
@@ -372,8 +429,10 @@ interface LessonBlock {
   type: 'text' | 'image' | 'video'
   text?: string
   src?: string
-  layout?: BlockLayout   // NEW
-  align?: BlockAlign     // NEW — extra alignment hint for images inside full-width / center
+  layout?: BlockLayout
+  align?: BlockAlign
+  width?: string
+  height?: string
 }
 
 interface Lesson {
@@ -389,7 +448,10 @@ interface ModuleForm {
   description: string
   learning_outcomes_label: string
   image_url: string
+  image_width?: string
+  image_height?: string
   card_image_url: string
+  description_panel_image_url: string
   video_url: string
   ppt_url: string
   learning_outcomes: string[]
@@ -406,6 +468,7 @@ const form = ref<ModuleForm>({
   learning_outcomes_label: "DepEd's Most Essential Learning Competencies",
   image_url: '',
   card_image_url: '',
+  description_panel_image_url: '',
   video_url: '',
   ppt_url: '',
   learning_outcomes: [],
@@ -419,11 +482,13 @@ const resetForm = () => {
   form.value = {
     title: '', subtitle: '', introduction: '', level: '', description: '',
     learning_outcomes_label: "DepEd's Most Essential Learning Competencies",
-    image_url: '', card_image_url: '', video_url: '', ppt_url: '',
+    image_url: '', card_image_url: '', description_panel_image_url: '',
+    video_url: '', ppt_url: '',
     learning_outcomes: [], is_active: true, lessons: []
   }
   imagePreview.value = ''; imageFile.value = null
   cardImagePreview.value = ''; cardImageFile.value = null
+  descPanelImagePreview.value = ''; descPanelImageFile.value = null
   videoPreview.value = ''; videoFile.value = null
   pptFileName.value = ''; pptFile.value = null
 }
@@ -444,14 +509,28 @@ const normalizeLesson = (lesson: any) => {
     const htmlContent = typeof safeLesson.htmlContent === 'string' ? safeLesson.htmlContent.trim() : ''
     if (htmlContent) blocks.push({ type: 'text', text: stripHtmlToText(htmlContent), layout: 'full-width' })
     const imageUrl = typeof safeLesson.image_url === 'string' ? safeLesson.image_url.trim() : ''
-    if (imageUrl) blocks.push({ type: 'image', src: imageUrl, layout: 'full-width', align: 'center' })
+    if (imageUrl) blocks.push({
+      type: 'image',
+      src: imageUrl,
+      layout: 'full-width',
+      align: 'center',
+      width: safeLesson.image_width || undefined,
+      height: safeLesson.image_height || undefined
+    })
     safeLesson.blocks = blocks
   } else {
     safeLesson.blocks = safeLesson.blocks
       .filter((b: any) => b && (b.type === 'text' || b.type === 'image' || b.type === 'video'))
       .map((b: any) => {
         const base = { layout: (b.layout || 'full-width') as BlockLayout }
-        if (b.type === 'image') return { type: 'image', src: b.src || '', align: b.align || 'center', ...base }
+        if (b.type === 'image') return {
+          type: 'image',
+          src: b.src || '',
+          align: b.align || 'center',
+          width: b.width || undefined,
+          height: b.height || undefined,
+          ...base
+        }
         if (b.type === 'video') return { type: 'video', src: b.src || '', ...base }
         return { type: 'text', text: b.text || '', ...base }
       })
@@ -471,6 +550,7 @@ watch(
       form.value.learning_outcomes_label = newModule.learning_outcomes_label || "DepEd's Most Essential Learning Competencies"
       form.value.image_url = newModule.image_url || ''
       form.value.card_image_url = newModule.card_image_url || ''
+      form.value.description_panel_image_url = newModule.description_panel_image_url || ''
       form.value.video_url = newModule.video_url || ''
       form.value.ppt_url = newModule.ppt_url || ''
       form.value.learning_outcomes = Array.isArray(newModule.learning_outcomes) ? [...newModule.learning_outcomes] : []
@@ -479,6 +559,7 @@ watch(
         ? JSON.parse(JSON.stringify(newModule.lessons)).map((l: any) => normalizeLesson(l)) : []
       imagePreview.value = newModule.image_url || ''; imageFile.value = null
       cardImagePreview.value = newModule.card_image_url || ''; cardImageFile.value = null
+      descPanelImagePreview.value = newModule.description_panel_image_url || ''; descPanelImageFile.value = null
       videoPreview.value = newModule.video_url || ''; videoFile.value = null
       pptFileName.value = ''; pptFile.value = null
     } else {
@@ -514,7 +595,8 @@ const removeBlock = (lessonIndex: number, blockIndex: number) => {
   lesson.blocks.splice(blockIndex, 1)
 }
 
-// ── file handlers (unchanged) ──────────────────────────────────────────────
+// ── File handlers ──────────────────────────────────────────────────────────
+
 const handleModuleImageUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -525,7 +607,10 @@ const handleModuleImageUpload = (event: Event) => {
   reader.onload = (e) => { imagePreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearImage = () => { imagePreview.value = ''; imageFile.value = null; if (fileInput.value) fileInput.value.value = '' }
+const clearImage = () => {
+  imagePreview.value = ''; imageFile.value = null
+  if (fileInput.value) fileInput.value.value = ''
+}
 
 const handleCardImageUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -537,7 +622,27 @@ const handleCardImageUpload = (event: Event) => {
   reader.onload = (e) => { cardImagePreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearCardImage = () => { cardImagePreview.value = ''; cardImageFile.value = null; if (cardImageFileInput.value) cardImageFileInput.value.value = '' }
+const clearCardImage = () => {
+  cardImagePreview.value = ''; cardImageFile.value = null
+  if (cardImageFileInput.value) cardImageFileInput.value.value = ''
+}
+
+const handleDescPanelImageUpload = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
+  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
+  descPanelImageFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => { descPanelImagePreview.value = (e.target?.result as string) || '' }
+  reader.readAsDataURL(file)
+}
+const clearDescPanelImage = () => {
+  descPanelImagePreview.value = ''
+  descPanelImageFile.value = null
+  form.value.description_panel_image_url = ''
+  if (descPanelImageFileInput.value) descPanelImageFileInput.value.value = ''
+}
 
 const handleVideoUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -549,7 +654,10 @@ const handleVideoUpload = (event: Event) => {
   reader.onload = (e) => { videoPreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearVideo = () => { videoPreview.value = ''; videoFile.value = null; if (videoFileInput.value) videoFileInput.value.value = '' }
+const clearVideo = () => {
+  videoPreview.value = ''; videoFile.value = null
+  if (videoFileInput.value) videoFileInput.value.value = ''
+}
 
 const handlePptUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -627,6 +735,7 @@ const handleSubmit = () => {
     lessons: lessons.length > 0 ? lessons : undefined,
     imageFile: imageFile.value,
     cardImageFile: cardImageFile.value,
+    descPanelImageFile: descPanelImageFile.value,
     videoFile: videoFile.value,
     pptFile: pptFile.value
   })

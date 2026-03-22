@@ -421,6 +421,50 @@ export const useCourseAgreement = () => {
     }
   }
 
+  // Check if user has clicked the advanced welcome video
+const hasClickedAdvancedWelcome = async (userId: string): Promise<boolean> => {
+  try {
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('advanced_welcome_clicked_at')
+      .eq('id', userId)
+      .single()
+
+    // If column doesn't exist (400) or row not found, treat as not clicked
+    if (fetchError) {
+      if (fetchError.code !== 'PGRST116') {
+        console.warn('Could not fetch advanced_welcome_clicked_at:', fetchError.message)
+      }
+      return false  // ← was: throw fetchError
+    }
+
+    return !!data?.advanced_welcome_clicked_at
+  } catch (err: any) {
+    console.error('Error checking advanced welcome clicked status:', err)
+    return false
+  }
+}
+
+  // Mark that user clicked the advanced welcome video
+  const markAdvancedWelcomeClicked = async (userId: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          advanced_welcome_clicked_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      return { success: true }
+    } catch (err: any) {
+      error.value = err.message
+      console.error('Error marking advanced welcome as clicked:', err)
+      throw err
+    }
+  }
+
   // Mark course agreement as accepted
   const markCourseAgreementAccepted = async (userId: string) => {
     try {
@@ -461,6 +505,8 @@ export const useCourseAgreement = () => {
     getCourseAgreementAcceptedAt,
     markCourseAgreementAccepted,
     hasClickedWelcome,
-    markWelcomeClicked
+    markWelcomeClicked,
+    hasClickedAdvancedWelcome,
+    markAdvancedWelcomeClicked
   }
 }

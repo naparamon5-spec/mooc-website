@@ -1,10 +1,11 @@
 <template>
   <!-- Inline Course Agreement: only this card + Beginner tab; modules/description hidden by parent -->
   <div class="w-full">
-    <!-- Beginner / Advanced tabs (Advanced hidden here to match dashboard tab layout) -->
+    <!-- Beginner / Advanced tabs (only show the active one) -->
     <div class="mb-4">
       <div class="flex flex-wrap gap-2 items-center">
         <button
+          v-if="currentLevel === 'beginner'"
           type="button"
           class="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-base font-semibold text-white transition-all shadow-md"
           style="background-color: #001a4d;"
@@ -13,8 +14,10 @@
           Beginner Course
         </button>
         <button
+          v-if="currentLevel === 'advanced'"
           type="button"
-          class="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-base font-semibold bg-gray-200 text-gray-500 opacity-0 pointer-events-none"
+          class="inline-flex items-center justify-center px-6 py-2.5 rounded-full text-base font-semibold text-white transition-all shadow-md"
+          style="background-color: #001a4d;"
           disabled
         >
           Advanced Course
@@ -37,7 +40,7 @@
         <!-- Content right -->
         <div class="flex-1 min-w-0">
           <h1 class="text-2xl md:text-3xl font-bold mb-3" style="color: #001a4d;">
-            Hello there again!
+            {{ currentLevel === 'beginner' ? 'Beginner Course' : 'Advanced Course' }} - Course Agreement
           </h1>
           <p class="text-gray-700 mb-4 leading-relaxed">
             Before we continue learning Media and Information Literacy, I want to remind you that this course is here to help you think critically and use media responsibly at your own pace.
@@ -87,6 +90,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const props = defineProps<{
+  courseLevel?: 'beginner' | 'advanced'
+}>()
+
 const emit = defineEmits<{
   agree: []
 }>()
@@ -94,6 +101,7 @@ const emit = defineEmits<{
 const agreementChecked = ref(false)
 const isLoading = ref(false)
 const { $supabase } = useNuxtApp()
+const currentLevel = props.courseLevel || 'beginner'
 
 const handleAgree = async () => {
   if (!agreementChecked.value) return

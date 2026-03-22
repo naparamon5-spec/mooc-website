@@ -1,10 +1,5 @@
 <template>
   <div class="welcome-video-container">
-    <div class="welcome-header mb-4">
-      <h2 class="text-2xl font-bold text-gray-900">Welcome to Advanced Course! 🚀</h2>
-      <p class="text-gray-600 mt-2">You've completed the beginner course. Get ready for more advanced topics!</p>
-    </div>
-    
     <video
       v-if="videoUrl"
       :src="videoUrl"
@@ -41,31 +36,20 @@ const { $supabase } = useNuxtApp()
 const isSaving = ref(false)
 const videoUrl = ref<string>('')
 
-// Load welcome video on mount
+// Load advanced welcome video on mount
 onMounted(async () => {
   try {
-    const { data, error } = await $supabase
+    const { data } = await $supabase
       .from('welcome_video_metadata')
       .select('video_url')
-      .eq('id', '00000000-0000-0000-0000-000000000001')
-      .single()
-
-    // Suppress 406 and PGRST116 errors (not found or not acceptable) - just means no video uploaded yet
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.info('No welcome video found')
-        return
-      }
-      // Silently ignore 406 errors (common when table is empty)
-      console.info('Welcome video not ready')
-      return
-    }
+      .eq('id', '00000000-0000-0000-0000-000000000002') // ← advanced row (not 0001)
+      .maybeSingle()
 
     if (data?.video_url) {
       videoUrl.value = data.video_url
     }
   } catch (err) {
-    console.info('Welcome video check skipped')
+    console.info('Advanced welcome video check skipped')
   }
 })
 
@@ -96,10 +80,6 @@ const onContinue = async () => {
   margin-bottom: 12px;
   width: 100%;
   box-sizing: border-box;
-}
-
-.welcome-header {
-  text-align: center;
 }
 
 .welcome-video {
@@ -156,10 +136,6 @@ const onContinue = async () => {
 
   .welcome-video {
     max-height: 220px;
-  }
-
-  .welcome-header h2 {
-    font-size: 1.5rem;
   }
 }
 </style>

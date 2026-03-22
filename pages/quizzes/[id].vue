@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
+  <div class="min-h-screen bg-gray-50">
     <DashboardHeader />
 
     <main class="max-w-6xl w-full mx-auto px-6 lg:px-8 py-10 flex-grow flex">
@@ -60,9 +60,7 @@
             <div v-if="!isReviewOnly" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div class="text-sm text-gray-600">
                 Question
-                <span class="font-semibold">
-                  {{ currentQuestionIndex + 1 }} / {{ quiz.questions.length }}
-                </span>
+                <span class="font-semibold">{{ currentQuestionIndex + 1 }} / {{ quiz.questions.length }}</span>
               </div>
 
               <div class="w-full sm:w-1/2 lg:w-2/5">
@@ -80,12 +78,21 @@
             </div>
           </div>
 
-          <!-- Review-only mode (already taken): show score + ONLY selected answers -->
+          <!-- Quiz Image -->
+          <div v-if="quiz.image_url" class="mb-8">
+            <img
+              :src="quiz.image_url"
+              :alt="quiz.title"
+              class="w-full h-auto rounded-2xl shadow-md object-cover max-h-96"
+            />
+          </div>
+
+          <!-- Review-only mode -->
           <div v-if="isReviewOnly" class="bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100">
             <h2 class="text-2xl font-semibold mb-2">Quiz already taken</h2>
             <p class="text-gray-700 mb-4">
               Your score: <span class="font-semibold">{{ existingResult?.score ?? 0 }}%</span>
-              <span class="text-gray-500">/ {{ quiz.passing_score || 70 }}%</span>
+              <span class="text-gray-500"> / {{ quiz.passing_score || 70 }}%</span>
             </p>
             <p
               class="font-medium mb-6"
@@ -94,21 +101,15 @@
               {{ existingResult?.passed ? 'Passed' : 'Not passed — you can try again' }}
             </p>
 
-            <!-- Badge earned (only if passed and linked to a module) -->
+            <!-- Badge earned -->
             <div
               v-if="existingResult?.passed && quiz?.module_id"
               class="mb-8 flex items-center gap-4 p-4 rounded-xl border border-green-100 bg-green-50"
             >
-              <img
-                :src="badgeImage"
-                :alt="earnedBadgeName"
-                class="w-16 h-16 object-contain"
-              />
+              <img :src="badgeImage" :alt="earnedBadgeName" class="w-16 h-16 object-contain" />
               <div class="min-w-0">
                 <p class="text-sm text-green-800 font-semibold">Badge earned</p>
-                <p class="text-lg font-bold text-green-900 truncate">
-                  {{ earnedBadgeName }}
-                </p>
+                <p class="text-lg font-bold text-green-900 truncate">{{ earnedBadgeName }}</p>
               </div>
             </div>
 
@@ -118,14 +119,10 @@
                 :key="`review-${idx}`"
                 class="border border-gray-100 rounded-xl p-4"
               >
-                <p class="font-semibold text-gray-900 mb-2">
-                  {{ idx + 1 }}. {{ q.question }}
-                </p>
+                <p class="font-semibold text-gray-900 mb-2">{{ idx + 1 }}. {{ q.question }}</p>
                 <div class="text-sm text-gray-700">
                   <span class="font-medium text-gray-600">Your answer:</span>
-                  <span class="ml-2">
-                    {{ getSelectedAnswerText(q, idx) }}
-                  </span>
+                  <span class="ml-2">{{ getSelectedAnswerText(q, idx) }}</span>
                 </div>
               </div>
             </div>
@@ -148,8 +145,21 @@
             </div>
           </div>
 
+          <!-- Active quiz -->
           <div v-else-if="!result">
-            <div v-if="currentQuestion" class="mb-10 bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[260px] flex flex-col justify-between">
+            <div
+              v-if="currentQuestion"
+              class="mb-10 bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[260px] flex flex-col justify-between"
+            >
+              <!-- Question Image -->
+              <div v-if="currentQuestion.questionImageUrl" class="mb-6 rounded-lg overflow-hidden">
+                <img
+                  :src="currentQuestion.questionImageUrl"
+                  :alt="currentQuestion.question"
+                  class="w-full h-auto max-h-96 object-cover rounded-lg"
+                />
+              </div>
+
               <p class="font-semibold mb-6 text-xl leading-relaxed">
                 {{ currentQuestionIndex + 1 }}. {{ currentQuestion.question }}
               </p>
@@ -222,15 +232,13 @@
             </div>
           </div>
 
+          <!-- Result (failed) -->
           <div v-else class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <h2 class="text-2xl font-semibold mb-4">
               {{ result.passed ? 'Congratulations!' : 'Quiz Completed' }}
             </h2>
             <p class="mb-2">Your score: {{ result.score }}%</p>
-            <p
-              :class="result.passed ? 'text-green-600' : 'text-red-600'"
-              class="font-medium"
-            >
+            <p :class="result.passed ? 'text-green-600' : 'text-red-600'" class="font-medium">
               {{ result.passed ? 'You passed the quiz.' : 'You did not pass. Please try again.' }}
             </p>
             <div class="mt-6 flex gap-3">
@@ -249,7 +257,6 @@
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </main>
@@ -258,17 +265,37 @@
       <p class="text-sm">© 2025 MIL MOOC. All rights reserved.</p>
     </footer>
 
-    <!-- Success Modal for Passed Quiz -->
+    <!--
+      BADGE SUCCESS MODAL
+      Always shown first when quiz is passed.
+      Button label changes to "View Your Certificate" when it's the last module.
+    -->
     <SuccessModal
       v-if="result?.passed && showSuccessModal"
       :isOpen="showSuccessModal"
       :title="'Quiz Passed!'"
       :message="`Congratulations! You passed the quiz and earned the ${earnedBadgeName} badge.`"
-      :buttonText="continueButtonText"
+      :buttonText="isLastCourseModule ? 'View Your Certificate 🎓' : continueButtonText"
       :secondary-button-text="'Back to Dashboard'"
       :image-src="badgeImage"
       @close="handleSuccessModalClose"
       @secondary="handleSecondaryAction"
+    />
+
+    <!--
+      CERTIFICATE MODAL
+      Shown after the badge modal closes, only when the last module of a course is completed.
+      Receives the template URL from the database (set by admin).
+    -->
+    <CertificateModal
+      v-if="showCertificateModal"
+      :isOpen="showCertificateModal"
+      :student-name="studentName"
+      :template-url="certificateTemplateUrl"
+      :course-level="(quiz?.level as 'beginner' | 'advanced')"
+      @close="handleCertificateClose"
+      @nextCourse="handleCertificateNextCourse"
+      @backToDashboard="handleCertificateBackToDashboard"
     />
   </div>
 </template>
@@ -278,9 +305,12 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue'
 import SuccessModal from '~/components/SuccessModal.vue'
+import CertificateModal from '~/components/CertificateModal.vue'
 import { useQuizManagement } from '~/composables/useQuizManagement'
 import { useCourseProgress } from '~/composables/useCourseProgress'
 import { useModuleManagement } from '~/composables/useModuleManagement'
+import { useUserProfile } from '~/composables/useUserProfile'
+import { useCertificateTemplates } from '~/composables/useCertificateTemplates'
 
 const route = useRoute()
 const router = useRouter()
@@ -289,15 +319,15 @@ const quizId = computed(() => route.params.id as string)
 const { fetchQuizById, submitQuizAnswers } = useQuizManagement()
 const { completeModule, badgeMapping, courseProgress, loadProgressFromSupabase } = useCourseProgress()
 const { fetchModules, modules } = useModuleManagement()
+const { fetchUserProfile } = useUserProfile()
+const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates()
 
-// ✅ useNuxtApp() called at top-level setup, not inside async functions
+// useNuxtApp() called at top-level setup, not inside async functions
 const { $supabase } = useNuxtApp()
 
 const quiz = ref<any>(null)
 const loading = ref(false)
 const error = ref('')
-// ✅ Type matches submitQuizAnswers signature exactly:
-//    { [questionId: string]: string | number | undefined }
 const answers = ref<{ [key: string]: string | number | undefined }>({})
 const result = ref<any>(null)
 const existingResult = ref<any | null>(null)
@@ -305,10 +335,10 @@ const isRetaking = ref(false)
 const submitting = ref(false)
 const currentQuestionIndex = ref(0)
 const showSuccessModal = ref(false)
+const showCertificateModal = ref(false)
+const studentName = ref('Student')
 
-// ✅ Mirrors the key logic in submitQuizAnswers:
-//    prefer question.id if it exists, otherwise fall back to String(index)
-//    This ensures answers are stored and looked up under the same key used for scoring
+// Use question.id if present, else fallback to string index — must match submitQuizAnswers
 const answerKey = (index: number): string => {
   const q = quiz.value?.questions?.[index]
   return q?.id ?? String(index)
@@ -319,9 +349,7 @@ const isReviewOnly = computed(() => {
 })
 
 const isLocked = computed(() => {
-  // If the user already has a result for this quiz, show results/review mode.
   if (existingResult.value) return false
-
   if (!quiz.value?.module_id || !quiz.value?.level) return false
   const courseLevel = quiz.value.level
   if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return false
@@ -336,7 +364,7 @@ const nextModuleId = computed(() => {
   if (!quiz.value?.level || !quiz.value?.module_id || !modules.value.length) return null
   const courseLevel = quiz.value.level
   const sorted = modules.value
-    .filter((m: any) => m.level === courseLevel)
+    .filter((m: any) => m.level === courseLevel && m.is_active)
     .slice()
     .sort((a: any, b: any) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
@@ -348,6 +376,35 @@ const nextModuleId = computed(() => {
     return String(sorted[idx + 1].id)
   }
   return null
+})
+
+// True when the completed module is the LAST active module of its course level
+// Works for both beginner (module 5) and advanced (module 10)
+const isLastCourseModule = computed(() => {
+  if (!quiz.value?.level || !quiz.value?.module_id) return false
+  const courseLevel = quiz.value.level as 'beginner' | 'advanced'
+
+  const courseMods = modules.value
+    .filter((m: any) => m.level === courseLevel && m.is_active)
+    .slice()
+    .sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+      return aNum - bNum
+    })
+
+  if (courseMods.length === 0) return false
+  const lastModule = courseMods[courseMods.length - 1]
+  return String(quiz.value.module_id) === String(lastModule.id)
+})
+
+// Pull the certificate template URL from DB based on course level — not hardcoded
+const certificateTemplateUrl = computed((): string | undefined => {
+  if (!quiz.value?.level) return undefined
+  const tmpl = certificateTemplates.value.find(
+    (t: any) => t.course_level === quiz.value.level
+  )
+  return tmpl?.template_url || undefined
 })
 
 const continueButtonText = computed(() => {
@@ -381,7 +438,7 @@ const earnedBadgeName = computed(() => {
   if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return 'Unknown Badge'
   const moduleId = quiz.value.module_id
   const sortedModules = modules.value
-    .filter((m: any) => m.level === courseLevel)
+    .filter((m: any) => m.level === courseLevel && m.is_active)
     .slice()
     .sort((a: any, b: any) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
@@ -425,7 +482,9 @@ onMounted(async () => {
     }
     await fetchModules()
     await loadProgressFromSupabase()
+    await fetchCertificateTemplates()
     await fetchExistingResult()
+    await loadStudentName()
   } catch (err) {
     error.value = 'Failed to load quiz.'
     console.error('Error:', err)
@@ -434,7 +493,6 @@ onMounted(async () => {
   }
 })
 
-// ✅ $supabase used directly — no useNuxtApp() call inside async function
 const fetchExistingResult = async () => {
   try {
     const { data: { user } } = await $supabase.auth.getUser()
@@ -458,9 +516,58 @@ const fetchExistingResult = async () => {
   }
 }
 
+const loadStudentName = async () => {
+  try {
+    const userData = await fetchUserProfile()
+    if (userData?.full_name) {
+      studentName.value = userData.full_name
+    }
+  } catch (err) {
+    console.error('Error loading student profile:', err)
+  }
+}
+
+// Saves certificate record to DB — works for both beginner and advanced
+// Includes duplicate guard so re-attempts don't create extra rows
+const saveCertificateToDatabase = async () => {
+  try {
+    const { data: { user } } = await $supabase.auth.getUser()
+    if (!user || !quiz.value?.level) return
+
+    // Check for existing certificate to avoid duplicates
+    const { data: existing } = await $supabase
+      .from('certificates')
+      .select('id')
+      .eq('student_id', user.id)
+      .eq('course_level', quiz.value.level)
+      .maybeSingle()
+
+    if (existing) {
+      console.log('Certificate already exists for', quiz.value.level)
+      return
+    }
+
+    const { error: insertError } = await $supabase
+      .from('certificates')
+      .insert({
+        student_id: user.id,
+        course_level: quiz.value.level,
+        issued_at: new Date().toISOString()
+      })
+
+    if (insertError) {
+      console.error('Error saving certificate:', insertError)
+      return
+    }
+
+    console.log('Certificate saved for', quiz.value.level)
+  } catch (err) {
+    console.error('Error saving certificate to database:', err)
+  }
+}
+
 const getSelectedAnswerText = (question: any, idx: number) => {
   const saved = existingResult.value?.answers
-  // ✅ Use same key logic as answerKey() so review display matches saved data
   const key = question?.id ?? String(idx)
   const raw = saved ? (saved[key] ?? saved[String(idx)]) : undefined
   if (raw === undefined || raw === null) return 'No answer'
@@ -488,8 +595,6 @@ const startRetake = () => {
   currentQuestionIndex.value = 0
 }
 
-// ✅ answers.value passed directly — no conversion needed,
-//    type already matches { [questionId: string]: string | number | undefined }
 const submitQuiz = async () => {
   if (!quiz.value) return
   submitting.value = true
@@ -499,6 +604,8 @@ const submitQuiz = async () => {
       result.value = res
       if (res.passed && quiz.value?.module_id && quiz.value?.level) {
         completeModule(quiz.value.level, String(quiz.value.module_id))
+        // Small delay to ensure badge is persisted before modals open
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
   } catch (err) {
@@ -508,8 +615,13 @@ const submitQuiz = async () => {
   }
 }
 
-watch(result, (val) => {
+// Watch result: when quiz is passed, save certificate if last module, then show badge modal
+watch(result, async (val) => {
   if (val?.passed) {
+    if (isLastCourseModule.value) {
+      await saveCertificateToDatabase()
+    }
+    // Always show badge modal first — certificate modal opens after badge modal is dismissed
     showSuccessModal.value = true
   }
 })
@@ -520,17 +632,39 @@ const retakeQuiz = () => {
   currentQuestionIndex.value = 0
 }
 
+// Badge modal primary button handler
+// If last module → close badge modal and open certificate modal
+// Otherwise navigate to next module or dashboard
 const handleSuccessModalClose = () => {
   showSuccessModal.value = false
-  if (nextModuleId.value) {
+  if (isLastCourseModule.value) {
+    showCertificateModal.value = true
+  } else if (nextModuleId.value) {
     router.push(`/modules/${nextModuleId.value}`)
   } else {
     router.push('/dashboard')
   }
 }
 
+// Badge modal secondary button (Back to Dashboard)
 const handleSecondaryAction = () => {
   showSuccessModal.value = false
+  router.push('/dashboard')
+}
+
+// Certificate modal handlers
+const handleCertificateClose = () => {
+  showCertificateModal.value = false
+  router.push('/dashboard')
+}
+
+const handleCertificateNextCourse = () => {
+  showCertificateModal.value = false
+  router.push('/dashboard?course=advanced')
+}
+
+const handleCertificateBackToDashboard = () => {
+  showCertificateModal.value = false
   router.push('/dashboard')
 }
 
@@ -544,5 +678,5 @@ const goBack = () => {
 </script>
 
 <style scoped>
-/* optionally add global quiz styles */
+/* quiz styles */
 </style>

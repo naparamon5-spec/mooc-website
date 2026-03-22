@@ -3,6 +3,7 @@ import { ref } from 'vue'
 export interface QuizQuestion {
   id?: string
   question: string
+  questionImageUrl?: string | null
   type: 'multiple_choice' | 'true_false'
   options: string[]
   correctAnswer: string | number
@@ -13,14 +14,50 @@ export interface Quiz {
   id?: string
   title: string
   description: string
-  // may be null if not associated with a module
   moduleId?: string | null
   level: 'beginner' | 'advanced'
   questions: QuizQuestion[]
   passingScore: number
+  imageUrl?: string | null
   createdBy?: string
   createdAt?: string
   updatedAt?: string
+}
+
+const MAX_QUESTIONS_LAST_MODULE = 20
+const DEFAULT_MAX_QUESTIONS = 10
+
+/**
+ * Returns true if the given moduleId is the last active module
+ * for its level (highest numeric title).
+ * Beginner last = Module 5, Advanced last = Module 10.
+ */
+const isLastModuleForLevel = async (
+  supabase: any,
+  moduleId: string,
+  level: 'beginner' | 'advanced'
+): Promise<boolean> => {
+  try {
+    const { data } = await supabase
+      .from('modules')
+      .select('id, title')
+      .eq('level', level)
+      .eq('is_active', true)
+
+    if (!data || data.length === 0) return false
+
+    // Sort by numeric part of title ascending, pick the last one
+    const sorted = [...data].sort((a: any, b: any) => {
+      const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
+      const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
+      return aNum - bNum
+    })
+
+    const lastModule = sorted[sorted.length - 1]
+    return lastModule?.id === moduleId
+  } catch {
+    return false
+  }
 }
 
 export const useQuizManagement = () => {
@@ -31,33 +68,16 @@ export const useQuizManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  /**
-   * Normalize any true/false value to 'true' or 'false'
-   * Handles ALL formats:
-   *   → 'true': 'True', 'true', 'TRUE', 1, '1', 'yes'
-   *   → 'false': 'False', 'false', 'FALSE', 0, '0', 'no'
-   */
   const normalizeTrueFalseToString = (value: string | number | boolean): string => {
     const str = String(value).toLowerCase().trim()
     return str === 'true' || str === '1' || str === 'yes' ? 'true' : 'false'
   }
 
-  /**
-   * Normalize any true/false value to 1 (true) or 0 (false) for comparison
-   * Handles ALL formats:
-   *   → 1: 'True', 'true', 'TRUE', 1, '1', 'yes', 'true'
-   *   → 0: 'False', 'false', 'FALSE', 0, '0', 'no', 'false'
-   */
   const normalizeTrueFalseToInt = (value: string | number | boolean): number => {
     const str = String(value).toLowerCase().trim()
     return str === 'true' || str === '1' || str === 'yes' ? 1 : 0
   }
 
-  /**
-   * Normalize a question's correctAnswer to the correct stored type:
-   *   - multiple_choice → number (index)
-   *   - true_false      → string ('true' or 'false')
-   */
   const normalizeCorrectAnswer = (q: QuizQuestion): string | number => {
     if (q.type === 'multiple_choice') {
       return parseInt(String(q.correctAnswer), 10)
@@ -67,38 +87,26 @@ export const useQuizManagement = () => {
     return String(q.correctAnswer)
   }
 
-  /**
-   * Normalize all questions in a quiz fetched from database.
-   * Ensures correctAnswer is always in the right format for comparison.
-   */
   const normalizeQuizData = (quiz: any): any => {
     if (!quiz || !quiz.questions) return quiz
-    
+
     const normalizedQuestions = quiz.questions.map((q: any) => {
       if (!q) return q
-      
-      // Always normalize correctAnswer to ensure consistent format
+
       let normalizedAnswer: string | number
-      
+
       if (q.type === 'multiple_choice') {
         normalizedAnswer = parseInt(String(q.correctAnswer), 10)
       } else if (q.type === 'true_false') {
-        // Store as string: 'true' or 'false'
         normalizedAnswer = normalizeTrueFalseToString(q.correctAnswer)
       } else {
         normalizedAnswer = String(q.correctAnswer)
       }
-      
-      return {
-        ...q,
-        correctAnswer: normalizedAnswer
-      }
+
+      return { ...q, correctAnswer: normalizedAnswer }
     })
-    
-    return {
-      ...quiz,
-      questions: normalizedQuestions
-    }
+
+    return { ...quiz, questions: normalizedQuestions }
   }
 
   // Fetch all quizzes
@@ -112,12 +120,9 @@ export const useQuizManagement = () => {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (level) {
-        query = query.eq('level', level)
-      }
+      if (level) query = query.eq('level', level)
 
       const { data, error: fetchError } = await query
-
       if (fetchError) throw fetchError
 
       quizzes.value = data || []
@@ -143,8 +148,6 @@ export const useQuizManagement = () => {
         .single()
 
       if (fetchError) throw fetchError
-
-      // Normalize quiz data to ensure correctAnswer is in the right format
       return normalizeQuizData(data)
     } catch (err: any) {
       error.value = err.message
@@ -155,7 +158,7 @@ export const useQuizManagement = () => {
     }
   }
 
-  // Fetch quiz linked to a specific module (1 quiz per module)
+  // Fetch quiz linked to a specific module
   const fetchQuizForModule = async (moduleId: string) => {
     loading.value = true
     error.value = null
@@ -169,8 +172,6 @@ export const useQuizManagement = () => {
         .maybeSingle()
 
       if (fetchError) throw fetchError
-
-      // Normalize quiz data to ensure correctAnswer is in the right format
       return normalizeQuizData(data)
     } catch (err: any) {
       error.value = err.message
@@ -190,15 +191,28 @@ export const useQuizManagement = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Normalize all questions before saving:
-      // - multiple_choice: correctAnswer as number (option index)
-      // - true_false: correctAnswer as string ('true' or 'false')
+      // ── Enforce question limit ──────────────────────────────────
+      if (quiz.moduleId) {
+        const isLast = await isLastModuleForLevel(supabase, quiz.moduleId, quiz.level)
+        const max = isLast ? MAX_QUESTIONS_LAST_MODULE : DEFAULT_MAX_QUESTIONS
+        const label = quiz.level === 'beginner' ? 'Beginner Module 5' : 'Advanced Module 10'
+
+        if (isLast && quiz.questions.length !== MAX_QUESTIONS_LAST_MODULE) {
+          throw new Error(
+            `${label} requires exactly ${MAX_QUESTIONS_LAST_MODULE} questions. You have ${quiz.questions.length}.`
+          )
+        }
+        if (!isLast && quiz.questions.length > DEFAULT_MAX_QUESTIONS) {
+          throw new Error(
+            `This module allows a maximum of ${DEFAULT_MAX_QUESTIONS} questions. You have ${quiz.questions.length}.`
+          )
+        }
+      }
+
       const normalizedQuestions = quiz.questions.map((q: QuizQuestion) => ({
         ...q,
         correctAnswer: normalizeCorrectAnswer(q),
       }))
-
-      console.log('Saving questions with normalized correctAnswers:', normalizedQuestions)
 
       const { data, error: createError } = await supabase
         .from('quizzes')
@@ -209,6 +223,7 @@ export const useQuizManagement = () => {
           level: quiz.level,
           questions: normalizedQuestions,
           passing_score: quiz.passingScore,
+          image_url: quiz.imageUrl || null,
           created_by: user.id,
         })
         .select()
@@ -233,15 +248,27 @@ export const useQuizManagement = () => {
     error.value = null
 
     try {
-      // Normalize all questions before saving:
-      // - multiple_choice: correctAnswer as number (option index)
-      // - true_false: correctAnswer as string ('true' or 'false')
+      // ── Enforce question limit ──────────────────────────────────
+      if (quiz.moduleId) {
+        const isLast = await isLastModuleForLevel(supabase, quiz.moduleId, quiz.level)
+        const label = quiz.level === 'beginner' ? 'Beginner Module 5' : 'Advanced Module 10'
+
+        if (isLast && quiz.questions.length !== MAX_QUESTIONS_LAST_MODULE) {
+          throw new Error(
+            `${label} requires exactly ${MAX_QUESTIONS_LAST_MODULE} questions. You have ${quiz.questions.length}.`
+          )
+        }
+        if (!isLast && quiz.questions.length > DEFAULT_MAX_QUESTIONS) {
+          throw new Error(
+            `This module allows a maximum of ${DEFAULT_MAX_QUESTIONS} questions. You have ${quiz.questions.length}.`
+          )
+        }
+      }
+
       const normalizedQuestions = quiz.questions.map((q: QuizQuestion) => ({
         ...q,
         correctAnswer: normalizeCorrectAnswer(q),
       }))
-
-      console.log('Updating questions with normalized correctAnswers:', normalizedQuestions)
 
       const { data, error: updateError } = await supabase
         .from('quizzes')
@@ -252,6 +279,7 @@ export const useQuizManagement = () => {
           level: quiz.level,
           questions: normalizedQuestions,
           passing_score: quiz.passingScore,
+          image_url: quiz.imageUrl || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', quizId)
@@ -305,11 +333,9 @@ export const useQuizManagement = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Fetch the quiz to calculate score
       const quiz = await fetchQuizById(quizId)
       if (!quiz) throw new Error('Quiz not found')
 
-      // Normalize answers to ensure consistent key format and types
       const normalizedAnswers: { [key: string]: string | number } = {}
       const submittedAnswersDebug: any[] = []
 
@@ -318,7 +344,6 @@ export const useQuizManagement = () => {
 
         const keyByQuestionId = q.id
         const keyByIndex = String(index)
-
         let userAnswer = answers[keyByQuestionId] ?? answers[keyByIndex]
 
         if (userAnswer !== undefined && userAnswer !== null && userAnswer !== '') {
@@ -331,7 +356,6 @@ export const useQuizManagement = () => {
               return
             }
           } else if (q.type === 'true_false') {
-            // Normalize to 'true' or 'false' string format
             normalizedAnswer = normalizeTrueFalseToString(userAnswer)
           } else {
             normalizedAnswer = String(userAnswer)
@@ -348,7 +372,6 @@ export const useQuizManagement = () => {
         }
       })
 
-      // Calculate score with normalized answers
       let correctAnswers = 0
       const totalQuestions = quiz.questions.length
       const scoringDebug: any[] = []
@@ -367,20 +390,15 @@ export const useQuizManagement = () => {
             const correctAnswerNum = parseInt(String(q.correctAnswer), 10)
             isCorrect = !isNaN(userAnswerNum) && !isNaN(correctAnswerNum) && userAnswerNum === correctAnswerNum
           } else if (q.type === 'true_false') {
-            // Both normalized to 'true' or 'false' strings for comparison
             const userStr = String(userAnswer).toLowerCase().trim()
             const correctStr = String(q.correctAnswer).toLowerCase().trim()
             isCorrect = userStr === correctStr
-            
-            // Enhanced debugging for true/false
             console.log(`Q${index} (true_false) - User: "${userAnswer}" → "${userStr}", Correct: "${q.correctAnswer}" → "${correctStr}", Match: ${isCorrect}`)
           } else {
             isCorrect = String(userAnswer) === String(q.correctAnswer)
           }
 
-          if (isCorrect) {
-            correctAnswers++
-          }
+          if (isCorrect) correctAnswers++
 
           scoringDebug.push({
             questionIndex: index,
@@ -414,32 +432,49 @@ export const useQuizManagement = () => {
         passed,
       })
 
-      // Save quiz result
       const { data, error: saveError } = await supabase
         .from('quiz_results')
         .upsert({
           user_id: user.id,
           quiz_id: quizId,
-          score: score,
-          passed: passed,
+          score,
+          passed,
           answers: normalizedAnswers,
         }, { onConflict: 'user_id,quiz_id' })
         .select()
 
       if (saveError) throw saveError
 
-      return {
-        score,
-        passed,
-        correctAnswers,
-        totalQuestions,
-      }
+      return { score, passed, correctAnswers, totalQuestions }
     } catch (err: any) {
       error.value = err.message
       console.error('Error submitting quiz:', err)
       return null
     } finally {
       loading.value = false
+    }
+  }
+
+  const uploadImage = async (file: File): Promise<string> => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `quiz-images/${fileName}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('quiz-images')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('quiz-images')
+        .getPublicUrl(filePath)
+
+      return publicUrl
+    } catch (err: any) {
+      error.value = err.message || 'Failed to upload image'
+      throw err
     }
   }
 
@@ -454,5 +489,6 @@ export const useQuizManagement = () => {
     updateQuiz,
     deleteQuiz,
     submitQuizAnswers,
+    uploadImage,
   }
 }

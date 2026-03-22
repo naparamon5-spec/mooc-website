@@ -136,11 +136,9 @@
                     v-if="row.wrapLayout && row.wrapSide === 'left' && row.blocks.length === 2"
                     class="text-wrap-container"
                   >
-                    <!-- Image floated LEFT -->
                     <div class="wrap-image-float-left">
                       <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
-                    <!-- Text flows to the right -->
                     <div class="wrap-text-content">
                       <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
@@ -151,11 +149,9 @@
                     v-else-if="row.wrapLayout && row.wrapSide === 'right' && row.blocks.length === 2"
                     class="text-wrap-container"
                   >
-                    <!-- Image floated RIGHT (must be rendered first in DOM for float to work) -->
                     <div class="wrap-image-float-right">
                       <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
-                    <!-- Text flows to the left -->
                     <div class="wrap-text-content">
                       <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
                     </div>
@@ -490,22 +486,9 @@ interface LessonBlock {
 interface RowGroup {
   blocks: LessonBlock[]
   wrapLayout?: boolean
-  /**
-   * 'right' → image floats RIGHT  (text block comes first in blocks[])
-   * 'left'  → image floats LEFT   (image block comes first in blocks[])
-   */
   wrapSide?: 'left' | 'right'
 }
 
-/**
- * Groups blocks into display rows.
- *
- * Newspaper wrap rules:
- *   • IMAGE block first, TEXT block next  → image floats LEFT,  text wraps on the right
- *   • TEXT block first, IMAGE block next  → image floats RIGHT, text wraps on the left
- *   • left-layout + right-layout pair     → two-column flex row
- *   • anything else                       → single-block row
- */
 const renderRows = (blocks: LessonBlock[]): RowGroup[] => {
   const rows: RowGroup[] = []
   let i = 0
@@ -537,9 +520,6 @@ const renderRows = (blocks: LessonBlock[]): RowGroup[] => {
   return rows
 }
 
-/**
- * Returns a CSS class string that wraps a single (non-paired) block.
- */
 const getSingleBlockWrapperClass = (block: LessonBlock): string => {
   switch (block.layout) {
     case 'center': return 'mx-auto w-full sm:w-3/5'
@@ -660,24 +640,22 @@ watch(lessonParam, (val) => {
    ═══════════════════════════════════════════════════════════════════ */
 
 .text-wrap-container {
-  display: flow-root; /* new block formatting context — clears floats */
+  display: flow-root;
   overflow: hidden;
   margin-bottom: 1.5rem;
 }
 
-/* ── Image floated RIGHT  (text wraps on the LEFT / default screenshot look) ── */
 .wrap-image-float-right {
   float: right;
-  margin-left: 1.5rem;   /* gap between image and text */
+  margin-left: 1.5rem;
   margin-bottom: 1rem;
-  max-width: 42%;        /* image takes up to 42% of the container */
+  max-width: 42%;
   clear: none;
 }
 
-/* ── Image floated LEFT  (text wraps on the RIGHT) ── */
 .wrap-image-float-left {
   float: left;
-  margin-right: 1.5rem;  /* gap between image and text */
+  margin-right: 1.5rem;
   margin-bottom: 1rem;
   max-width: 42%;
   clear: none;
@@ -691,7 +669,6 @@ watch(lessonParam, (val) => {
   display: block;
 }
 
-/* Text flows naturally around whichever float is active */
 .wrap-text-content {
   overflow: visible;
 }
@@ -710,7 +687,6 @@ watch(lessonParam, (val) => {
   margin-bottom: 0.5em;
 }
 
-/* ── Mobile: stack vertically ── */
 @media (max-width: 640px) {
   .wrap-image-float-right,
   .wrap-image-float-left {

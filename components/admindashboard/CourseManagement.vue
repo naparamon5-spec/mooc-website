@@ -79,6 +79,12 @@ const groupedActions = computed(() => {
         { label: 'Upload Welcome Video', type: 'change-welcome-card' }
       ]
     },
+    {
+      title: 'Certificates',
+      options: [
+        { label: 'Edit Course Certificate', type: 'edit-course-certificate' }
+      ]
+    },
     // {
     //   title: 'Create Announcements',
     //   options: [

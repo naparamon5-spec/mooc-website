@@ -12,6 +12,7 @@ export const useAdminMetrics = () => {
   const dailyCompletions = ref<Array<{ date: string, completions: number }>>([])
   const dailyEnrollments = ref<Array<{ date: string, enrollments: number }>>([])
   const courseCompletionRates = ref<Array<{ year: string, percentage: number }>>([])
+  const recentModuleCompletions = ref<Array<{ user_id: string, module_id: string, course_level: string, completed_at: string }>>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -161,27 +162,35 @@ export const useAdminMetrics = () => {
       const fourteenDaysAgo = new Date()
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
 
+      // First try to get data with module title
       const { data, error: fetchError } = await supabase
         .from('module_completion')
         .select(`
+          id,
           module_id,
           created_at,
-          modules!inner(title)
+          completed_at,
+          modules(id, title)
         `)
-        .gte('created_at', fourteenDaysAgo.toISOString())
-        .order('created_at', { ascending: true })
+        .gte('completed_at', fourteenDaysAgo.toISOString())
+        .order('completed_at', { ascending: true })
 
-      if (fetchError) throw fetchError
+      if (fetchError) {
+        console.warn('Error fetching module completions with join:', fetchError.message)
+        throw fetchError
+      }
+
+      console.log('Module completion data fetched:', data?.length ?? 0, 'records')
 
       // Group by module title
       const moduleStats: { [key: string]: number } = {}
       const dailyStats: { [key: string]: number } = {}
 
       data?.forEach((item: any) => {
-        const title = item.modules?.title || item.module_id
+        const title = item.modules?.title || `Module ${item.module_id}`
         moduleStats[title] = (moduleStats[title] || 0) + 1
 
-        const date = new Date(item.created_at).toISOString().split('T')[0] // YYYY-MM-DD
+        const date = new Date(item.completed_at || item.created_at).toISOString().split('T')[0] // YYYY-MM-DD
         dailyStats[date] = (dailyStats[date] || 0) + 1
       })
 
@@ -196,8 +205,14 @@ export const useAdminMetrics = () => {
           completions
         }))
         .sort((a, b) => a.date.localeCompare(b.date))
+
+      console.log('✓ Module Completion Stats:', {
+        totalRecords: data?.length ?? 0,
+        uniqueModules: moduleCompletionStats.value.length,
+        dailyDays: dailyCompletions.value.length
+      })
     } catch (err: any) {
-      console.error('Error fetching module completion stats:', err)
+      console.error('Error fetching module completion stats:', err.message || err)
       moduleCompletionStats.value = []
       dailyCompletions.value = []
     }
@@ -226,6 +241,34 @@ export const useAdminMetrics = () => {
     }
   }
 
+  // Fetch all completed modules in the last 2 weeks
+  const fetchRecentModuleCompletions = async () => {
+    try {
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+
+      const { data, error: fetchError } = await supabase
+        .from('module_completion')
+        .select('user_id, module_id, course_level, completed_at')
+        .gte('completed_at', fourteenDaysAgo.toISOString())
+        .order('completed_at', { ascending: false })
+
+      if (fetchError) throw fetchError
+
+      recentModuleCompletions.value = data?.map(item => ({
+        user_id: item.user_id,
+        module_id: item.module_id,
+        course_level: item.course_level,
+        completed_at: item.completed_at || new Date().toISOString()
+      })) || []
+
+      console.log('Recent module completions fetched:', recentModuleCompletions.value.length, 'records')
+    } catch (err: any) {
+      console.error('Error fetching recent module completions:', err)
+      recentModuleCompletions.value = []
+    }
+  }
+
   return {
     totalEnrolled,
     activeStudents,
@@ -235,11 +278,13 @@ export const useAdminMetrics = () => {
     dailyCompletions,
     dailyEnrollments,
     courseCompletionRates,
+    recentModuleCompletions,
     isLoading,
     error,
     fetchMetrics,
     fetchDailyEnrollments,
     fetchModuleCompletionStats,
-    fetchCourseCompletionRates
+    fetchCourseCompletionRates,
+    fetchRecentModuleCompletions
   }
 }

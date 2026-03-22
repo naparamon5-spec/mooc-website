@@ -132,6 +132,7 @@ import DashboardHeader from '~/components/studentdashboard/DashboardHeader.vue';
 import CertificateModal from '~/components/CertificateModal.vue';
 import { useUserProfile } from '~/composables/useUserProfile';
 import { useCourseProgress } from '~/composables/useCourseProgress';
+import { useCertificateTemplates } from '~/composables/useCertificateTemplates';
 
 definePageMeta({ middleware: 'auth' });
 
@@ -141,6 +142,7 @@ useHead({
 
 const { fetchUserProfile } = useUserProfile();
 const { getAllBadges, badgeMapping, courseProgress, loadProgressFromSupabase, clearProgress } = useCourseProgress();
+const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates();
 const nuxtApp = useNuxtApp();
 const supabase = nuxtApp.$supabase;
 
@@ -161,6 +163,7 @@ onMounted(async () => {
     }
 
     await loadProgressFromSupabase();
+    await fetchCertificateTemplates();
     await fetchCertificatesFromDatabase();
   } finally {
     isLoading.value = false;
@@ -194,16 +197,20 @@ const fetchCertificatesFromDatabase = async () => {
 const earnedCertificates = computed(() => {
   // Use certificates from database first
   if (dbCertificates.value.length > 0) {
-    return dbCertificates.value.map((cert) => ({
-      id: cert.id,
-      badgeName: cert.course_level === 'beginner' 
-        ? 'Media and Information Literacy (MIL) Beginner Course'
-        : 'Media and Information Literacy (MIL) Advanced Course',
-      courseLevel: cert.course_level,
-      modulePosition: null,
-      earnedAt: cert.issued_at,
-      description: `Successfully completed all 5 modules of the ${cert.course_level === 'beginner' ? 'Beginner' : 'Advanced'} Course`
-    }));
+    return dbCertificates.value.map((cert) => {
+      const template = certificateTemplates.value.find(t => t.course_level === cert.course_level)
+      return {
+        id: cert.id,
+        badgeName: cert.course_level === 'beginner' 
+          ? 'Media and Information Literacy (MIL) Beginner Course'
+          : 'Media and Information Literacy (MIL) Advanced Course',
+        courseLevel: cert.course_level,
+        modulePosition: null,
+        earnedAt: cert.issued_at,
+        template_url: template?.template_url || null,
+        description: `Successfully completed all 5 modules of the ${cert.course_level === 'beginner' ? 'Beginner' : 'Advanced'} Course`
+      }
+    });
   }
 
   // Fallback to computed certificates from progress (for display during session before save)
@@ -214,12 +221,14 @@ const earnedCertificates = computed(() => {
   const beginnerCompleted = beginnerBadges.filter(b => b.earned).length;
   
   if (beginnerCompleted === 5) {
+    const template = certificateTemplates.value.find(t => t.course_level === 'beginner')
     certificates.push({
       id: `beginner-course`,
       badgeName: 'Media and Information Literacy (MIL) Beginner Course',
       courseLevel: 'beginner',
       modulePosition: null,
       earnedAt: new Date().toISOString(),
+      template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Beginner Course'
     });
   }
@@ -229,12 +238,14 @@ const earnedCertificates = computed(() => {
   const advancedCompleted = advancedBadges.filter(b => b.earned).length;
   
   if (advancedCompleted === 5) {
+    const template = certificateTemplates.value.find(t => t.course_level === 'advanced')
     certificates.push({
       id: `advanced-course`,
       badgeName: 'Media and Information Literacy (MIL) Advanced Course',
       courseLevel: 'advanced',
       modulePosition: null,
       earnedAt: new Date().toISOString(),
+      template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Advanced Course'
     });
   }
@@ -258,86 +269,192 @@ const viewCertificate = (cert: any) => {
 
 // Download certificate as PDF
 const downloadCertificate = async (cert: any) => {
-  const { jsPDF } = await import('jspdf');
-  const html2canvas = (await import('html2canvas')).default;
+  const selectedTemplate = certificateTemplates.value.find(t => t.course_level === cert.courseLevel)
+
+  if (!selectedTemplate?.template_url) {
+    // No template - generate default certificate
+    await generateDefaultCertificate(cert)
+    return
+  }
+
+  // Check if template is an image or PDF
+  const isPdfTemplate = selectedTemplate.template_url.toLowerCase().includes('.pdf')
+
+  if (isPdfTemplate) {
+    // For PDF templates, we'll need to use a different approach
+    // For now, show a message that PDF templates need special handling
+    alert('PDF templates require special processing. Please contact administrator.')
+    return
+  }
+
+  // Handle image templates
+  await generateCertificateWithImageTemplate(cert, selectedTemplate)
+}
+
+// Generate certificate with image template as background
+const generateCertificateWithImageTemplate = async (cert: any, template: any) => {
+  const { jsPDF } = await import('jspdf')
+  const html2canvas = (await import('html2canvas')).default
 
   // Create a temporary div with certificate content
-  const tempDiv = document.createElement('div');
-  tempDiv.style.width = '8.5in';
-  tempDiv.style.height = '11in';
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.top = '0';
-  tempDiv.style.backgroundColor = '#f0f9ff';
-  tempDiv.style.padding = '40px';
-  tempDiv.style.fontFamily = 'Arial, sans-serif';
-  tempDiv.style.boxSizing = 'border-box';
-  tempDiv.style.border = '8px solid #0c3a66';
+  const tempDiv = document.createElement('div')
+  tempDiv.style.width = '8.5in'
+  tempDiv.style.height = '11in'
+  tempDiv.style.position = 'absolute'
+  tempDiv.style.left = '-9999px'
+  tempDiv.style.top = '0'
+  tempDiv.style.fontFamily = 'Arial, sans-serif'
+  tempDiv.style.boxSizing = 'border-box'
 
+  // Use template as background if it's an image
+  if (template.template_url && !template.template_url.includes('.pdf')) {
+    tempDiv.style.backgroundImage = `url('${template.template_url}')`
+    tempDiv.style.backgroundSize = 'cover'
+    tempDiv.style.backgroundPosition = 'center'
+    tempDiv.style.backgroundRepeat = 'no-repeat'
+  }
+
+  // Add certificate content - positioned to work with template
   tempDiv.innerHTML = `
-    <div style="text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-      <div style="margin-bottom: 30px;">
-        <div style="width: 80px; height: 80px; background: linear-gradient(to bottom right, #0c3a66, #0a2d52); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-          <svg style="width: 40px; height: 40px; color: white;" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
+    <div style="width: 100%; height: 100%; position: relative; padding: 60px; box-sizing: border-box;">
+      <!-- Certificate content positioned to overlay on template -->
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 80%;">
+
+        <!-- Student Name - positioned prominently -->
+        <div style="margin-bottom: 20px;">
+          <h1 style="font-size: 42px; color: #083358; margin: 0; font-weight: bold; text-shadow: 2px 2px 4px rgba(255,255,255,0.8);">
+            ${studentName.value}
+          </h1>
+        </div>
+
+        <!-- Certificate Title -->
+        <div style="margin-bottom: 15px;">
+          <h2 style="font-size: 28px; color: #0c3a66; margin: 0; font-weight: bold; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
+            Certificate of Completion
+          </h2>
+        </div>
+
+        <!-- Course Name -->
+        <div style="margin-bottom: 15px;">
+          <h3 style="font-size: 24px; color: #083358; margin: 0; font-weight: bold; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
+            ${cert.badgeName}
+          </h3>
+        </div>
+
+        <!-- Course Level -->
+        <div style="margin-bottom: 20px;">
+          <p style="font-size: 18px; color: #374151; margin: 0; font-weight: 600; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
+            ${cert.courseLevel === 'beginner' ? 'Beginner Level Course' : 'Advanced Level Course'}
+          </p>
+        </div>
+
+        <!-- Date and ID -->
+        <div style="margin-top: 30px; font-size: 14px; color: #6b7280; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);">
+          <p style="margin: 5px 0;">Completed on: ${formatDate(cert.earnedAt)}</p>
+          <p style="margin: 5px 0; font-family: monospace;">Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}</p>
         </div>
       </div>
-
-      <h1 style="font-size: 36px; color: #083358; margin: 0 0 10px 0; font-weight: bold;">Certificate of Achievement</h1>
-      
-      <h2 style="font-size: 24px; color: #0c3a66; margin: 0 0 20px 0; font-weight: bold;">${cert.badgeName}</h2>
-
-      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
-
-      <p style="font-size: 16px; color: #374151; margin: 0 0 10px 0;">This certifies that</p>
-
-      <h3 style="font-size: 28px; color: #083358; margin: 0 0 15px 0; font-weight: bold;">${studentName.value}</h3>
-
-      <p style="font-size: 16px; color: #374151; margin: 0 0 5px 0;">has successfully completed all modules of the</p>
-
-      <p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0; font-weight: bold;">${cert.badgeName}</p>
-
-      <p style="font-size: 14px; color: #6b7280; margin: 0 0 30px 0;">${cert.courseLevel === 'beginner' ? 'Beginner' : 'Advanced'} Level Course</p>
-
-      <div style="width: 200px; height: 2px; background: linear-gradient(to right, transparent, #083358, transparent); margin: 0 auto 30px;"></div>
-
-      <p style="font-size: 14px; color: #6b7280; margin: 0 0 10px 0;">Earned on: <strong>${formatDate(cert.earnedAt)}</strong></p>
-
-      <p style="font-size: 11px; color: #9ca3af; margin: 0;">Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}</p>
     </div>
-  `;
+  `
 
-  document.body.appendChild(tempDiv);
+  document.body.appendChild(tempDiv)
 
   try {
+    // Wait for background image to load
+    if (template.template_url && !template.template_url.includes('.pdf')) {
+      await new Promise((resolve) => {
+        const img = new Image()
+        img.onload = resolve
+        img.src = template.template_url
+      })
+    }
+
     // Convert HTML to canvas
     const canvas = await html2canvas(tempDiv, {
       scale: 2,
       useCORS: true,
-      backgroundColor: '#f0f9ff'
-    });
+      allowTaint: true,
+      backgroundColor: null // Transparent background to let template show through
+    })
 
     // Create PDF from canvas (A4 size)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
-    });
+    })
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png')
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = pdf.internal.pageSize.getHeight()
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
 
     // Download PDF
-    const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`;
-    pdf.save(fileName);
+    const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`
+    pdf.save(fileName)
+  } catch (error) {
+    console.error('Error generating certificate:', error)
+    // Fallback to default certificate
+    await generateDefaultCertificate(cert)
   } finally {
     // Clean up temporary div
-    document.body.removeChild(tempDiv);
+    document.body.removeChild(tempDiv)
   }
+}
+
+// Generate default certificate when no template is available
+const generateDefaultCertificate = async (cert: any) => {
+  const { jsPDF } = await import('jspdf')
+
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+
+  const pdfWidth = pdf.internal.pageSize.getWidth()
+  const pdfHeight = pdf.internal.pageSize.getHeight()
+
+  // Add background color
+  pdf.setFillColor(240, 249, 255) // Light blue background
+  pdf.rect(0, 0, pdfWidth, pdfHeight, 'F')
+
+  // Add border
+  pdf.setDrawColor(12, 58, 102) // Dark blue border
+  pdf.setLineWidth(1)
+  pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20)
+
+  // Add title
+  pdf.setFontSize(24)
+  pdf.setTextColor(8, 51, 88) // Dark blue text
+  pdf.text('Certificate of Achievement', pdfWidth / 2, 40, { align: 'center' })
+
+  // Add course name
+  pdf.setFontSize(18)
+  pdf.text(cert.badgeName, pdfWidth / 2, 60, { align: 'center' })
+
+  // Add student name
+  pdf.setFontSize(20)
+  pdf.setTextColor(8, 51, 88)
+  pdf.text(studentName.value, pdfWidth / 2, 90, { align: 'center' })
+
+  // Add completion text
+  pdf.setFontSize(12)
+  pdf.setTextColor(55, 65, 81) // Gray text
+  pdf.text(`Successfully completed the ${cert.courseLevel} level course`, pdfWidth / 2, 110, { align: 'center' })
+
+  // Add date
+  pdf.setFontSize(10)
+  pdf.setTextColor(107, 114, 128) // Light gray text
+  pdf.text(`Earned on: ${formatDate(cert.earnedAt)}`, pdfWidth / 2, 130, { align: 'center' })
+
+  // Add certificate ID
+  pdf.text(`Certificate ID: ${cert.id.slice(0, 12).toUpperCase()}`, pdfWidth / 2, 140, { align: 'center' })
+
+  // Download PDF
+  const fileName = `${cert.badgeName.replace(/\s+/g, '-')}-${studentName.value.replace(/\s+/g, '-')}.pdf`
+  pdf.save(fileName)
 };
 
 // Navigation handlers

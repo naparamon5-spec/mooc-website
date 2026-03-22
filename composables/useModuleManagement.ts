@@ -7,15 +7,12 @@ export const useModuleManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Helper: consistently sort modules by the numeric part in their title
-  // e.g. "Module 1", "Module 2" so that Module 1 always appears first
   const sortByModuleNumber = (a: any, b: any) => {
     const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
     const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
     return aNum - bNum
   }
 
-  // Normalize module data from Supabase
   const normalizeModule = (module: any) => {
     return {
       ...module,
@@ -24,188 +21,107 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Helper: Delete file from storage by URL
   const deleteFileFromUrl = async (publicUrl: string | null, bucketName: string) => {
     if (!publicUrl) return
     try {
-      // Extract file path from public URL
       const urlParts = publicUrl.split('/object/public/')
       if (urlParts.length !== 2) return
-      
-      const filePath = urlParts[1] // Get everything after bucket name
+      const filePath = urlParts[1]
       await supabase.storage.from(bucketName).remove([filePath])
     } catch (err: any) {
       console.warn(`Could not delete old file: ${err.message}`)
-      // Don't throw - old file not being deleted shouldn't break the process
     }
   }
 
-  // Upload image to Supabase Storage
   const uploadModuleImage = async (file: File, moduleId?: string) => {
     try {
       const fileName = `module-${moduleId || Date.now()}-${file.name}`
-      const filePath = fileName
-
       const { data, error: uploadError } = await supabase.storage
         .from('module-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
-      }
-
-      if (!data?.path) {
-        throw new Error('File upload completed but no path returned')
-      }
-
-      // Get the public URL
-      const { data: publicData } = supabase.storage
-        .from('module-images')
-        .getPublicUrl(filePath)
-
-      if (!publicData?.publicUrl) {
-        throw new Error('Could not generate public URL for uploaded file')
-      }
-
+        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!data?.path) throw new Error('File upload completed but no path returned')
+      const { data: publicData } = supabase.storage.from('module-images').getPublicUrl(fileName)
+      if (!publicData?.publicUrl) throw new Error('Could not generate public URL for uploaded file')
       return publicData.publicUrl
     } catch (err: any) {
-      const errorMsg = err.message || 'Unknown error uploading image'
-      console.error('Error uploading image:', errorMsg)
-      throw new Error(errorMsg)
+      throw new Error(err.message || 'Unknown error uploading image')
     }
   }
 
-  // Upload card image to Supabase Storage
   const uploadCardImage = async (file: File, moduleId?: string) => {
     try {
       const fileName = `card-${moduleId || Date.now()}-${file.name}`
-      const filePath = fileName
-
       const { data, error: uploadError } = await supabase.storage
         .from('module-card-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
-      }
-
-      if (!data?.path) {
-        throw new Error('File upload completed but no path returned')
-      }
-
-      // Get the public URL
-      const { data: publicData } = supabase.storage
-        .from('module-card-images')
-        .getPublicUrl(filePath)
-
-      if (!publicData?.publicUrl) {
-        throw new Error('Could not generate public URL for uploaded file')
-      }
-
+        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!data?.path) throw new Error('File upload completed but no path returned')
+      const { data: publicData } = supabase.storage.from('module-card-images').getPublicUrl(fileName)
+      if (!publicData?.publicUrl) throw new Error('Could not generate public URL for uploaded file')
       return publicData.publicUrl
     } catch (err: any) {
-      const errorMsg = err.message || 'Unknown error uploading card image'
-      console.error('Error uploading card image:', errorMsg)
-      throw new Error(errorMsg)
+      throw new Error(err.message || 'Unknown error uploading card image')
     }
   }
 
-  // Upload video to Supabase Storage
+  // Upload description panel image to Supabase Storage
+  const uploadDescPanelImage = async (file: File, moduleId?: string) => {
+    try {
+      const fileName = `desc-panel-${moduleId || Date.now()}-${file.name}`
+      const { data, error: uploadError } = await supabase.storage
+        .from('module-images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!data?.path) throw new Error('File upload completed but no path returned')
+      const { data: publicData } = supabase.storage.from('module-images').getPublicUrl(fileName)
+      if (!publicData?.publicUrl) throw new Error('Could not generate public URL for uploaded file')
+      return publicData.publicUrl
+    } catch (err: any) {
+      throw new Error(err.message || 'Unknown error uploading description panel image')
+    }
+  }
+
   const uploadModuleVideo = async (file: File, moduleId?: string) => {
     try {
       const fileName = `video-${moduleId || Date.now()}-${file.name}`
-      const filePath = fileName
-
       const { data, error: uploadError } = await supabase.storage
         .from('module-videos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
-      }
-
-      if (!data?.path) {
-        throw new Error('File upload completed but no path returned')
-      }
-
-      // Get the public URL
-      const { data: publicData } = supabase.storage
-        .from('module-videos')
-        .getPublicUrl(filePath)
-
-      if (!publicData?.publicUrl) {
-        throw new Error('Could not generate public URL for uploaded file')
-      }
-
+        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!data?.path) throw new Error('File upload completed but no path returned')
+      const { data: publicData } = supabase.storage.from('module-videos').getPublicUrl(fileName)
+      if (!publicData?.publicUrl) throw new Error('Could not generate public URL for uploaded file')
       return publicData.publicUrl
     } catch (err: any) {
-      const errorMsg = err.message || 'Unknown error uploading video'
-      console.error('Error uploading video:', errorMsg)
-      throw new Error(errorMsg)
+      throw new Error(err.message || 'Unknown error uploading video')
     }
   }
 
-  // Upload PPT to Supabase Storage
   const uploadModulePpt = async (file: File, moduleId?: string) => {
     try {
       const fileName = `ppt-${moduleId || Date.now()}-${file.name}`
-      const filePath = fileName
-
       const { data, error: uploadError } = await supabase.storage
         .from('module-ppts')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
-      }
-
-      if (!data?.path) {
-        throw new Error('File upload completed but no path returned')
-      }
-
-      const { data: publicData } = supabase.storage
-        .from('module-ppts')
-        .getPublicUrl(filePath)
-
-      if (!publicData?.publicUrl) {
-        throw new Error('Could not generate public URL for uploaded file')
-      }
-
+        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!data?.path) throw new Error('File upload completed but no path returned')
+      const { data: publicData } = supabase.storage.from('module-ppts').getPublicUrl(fileName)
+      if (!publicData?.publicUrl) throw new Error('Could not generate public URL for uploaded file')
       return publicData.publicUrl
     } catch (err: any) {
-      const errorMsg = err.message || 'Unknown error uploading PPT'
-      console.error('Error uploading PPT:', errorMsg)
-      throw new Error(errorMsg)
+      throw new Error(err.message || 'Unknown error uploading PPT')
     }
   }
 
-  // Fetch all modules from Supabase
   const fetchModules = async (level?: string) => {
     loading.value = true
     error.value = null
     try {
       let query = supabase.from('modules').select('*')
-      
-      if (level) {
-        query = query.eq('level', level)
-      }
-      
+      if (level) query = query.eq('level', level)
       const { data, error: fetchError } = await query.order('created_at', { ascending: true })
-
       if (fetchError) throw fetchError
-
       modules.value = (data || []).map(normalizeModule).sort(sortByModuleNumber)
       return modules.value
     } catch (err: any) {
@@ -217,7 +133,6 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Fetch a single module by ID
   const fetchModuleById = async (moduleId: string) => {
     loading.value = true
     error.value = null
@@ -227,9 +142,7 @@ export const useModuleManagement = () => {
         .select('*')
         .eq('id', moduleId)
         .single()
-
       if (fetchError) throw fetchError
-
       return normalizeModule(data)
     } catch (err: any) {
       error.value = err.message
@@ -240,67 +153,64 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Create a new module
   const createModule = async (moduleData: any) => {
     loading.value = true
     error.value = null
     try {
       const { data: userData } = await supabase.auth.getUser()
-      
+
       let imageUrl = moduleData.image_url
       let cardImageUrl = moduleData.card_image_url
+      let descPanelImageUrl = moduleData.description_panel_image_url
       let videoUrl = moduleData.video_url
       let pptUrl = moduleData.ppt_url
-      
-      // Upload image if provided
+
       if (moduleData.imageFile) {
         try {
           imageUrl = await uploadModuleImage(moduleData.imageFile)
         } catch (uploadErr: any) {
           const msg = `Failed to upload module image: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Image upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload card image if provided
       if (moduleData.cardImageFile) {
         try {
           cardImageUrl = await uploadCardImage(moduleData.cardImageFile)
         } catch (uploadErr: any) {
           const msg = `Failed to upload card image: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Card image upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload video if provided
+      // Upload description panel image if provided
+      if (moduleData.descPanelImageFile) {
+        try {
+          descPanelImageUrl = await uploadDescPanelImage(moduleData.descPanelImageFile)
+        } catch (uploadErr: any) {
+          const msg = `Failed to upload description panel image: ${uploadErr.message || 'Unknown error'}`
+          error.value = msg; throw new Error(msg)
+        }
+      }
+
       if (moduleData.videoFile) {
         try {
           videoUrl = await uploadModuleVideo(moduleData.videoFile)
         } catch (uploadErr: any) {
           const msg = `Failed to upload video: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Video upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload PPT if provided
       if (moduleData.pptFile) {
         try {
           pptUrl = await uploadModulePpt(moduleData.pptFile)
         } catch (uploadErr: any) {
           const msg = `Failed to upload PowerPoint: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('PPT upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
-      
-      // Prepare data for Supabase
+
       const dataToSave = {
         title: moduleData.title,
         subtitle: moduleData.subtitle,
@@ -311,11 +221,12 @@ export const useModuleManagement = () => {
         emoji: moduleData.emoji,
         image_url: imageUrl,
         card_image_url: cardImageUrl,
+        description_panel_image_url: descPanelImageUrl || null, // ← ADDED
         video_url: videoUrl,
         ppt_url: pptUrl,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
-        is_active: moduleData.is_active !== false, // Default to true if not specified
+        is_active: moduleData.is_active !== false,
         created_by: userData?.user?.id
       }
 
@@ -341,81 +252,69 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Update an existing module
   const updateModule = async (moduleId: string, moduleData: any) => {
     loading.value = true
     error.value = null
     try {
       let imageUrl = moduleData.image_url
       let cardImageUrl = moduleData.card_image_url
+      let descPanelImageUrl = moduleData.description_panel_image_url
       let videoUrl = moduleData.video_url
       let pptUrl = moduleData.ppt_url
-      
-      // Upload image if provided
+
       if (moduleData.imageFile) {
         try {
-          // Delete old image first if it exists
-          if (moduleData.image_url) {
-            await deleteFileFromUrl(moduleData.image_url, 'module-images')
-          }
+          if (moduleData.image_url) await deleteFileFromUrl(moduleData.image_url, 'module-images')
           imageUrl = await uploadModuleImage(moduleData.imageFile, moduleId)
         } catch (uploadErr: any) {
           const msg = `Failed to upload module image: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Image upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload card image if provided
       if (moduleData.cardImageFile) {
         try {
-          // Delete old card image first if it exists
-          if (moduleData.card_image_url) {
-            await deleteFileFromUrl(moduleData.card_image_url, 'module-card-images')
-          }
+          if (moduleData.card_image_url) await deleteFileFromUrl(moduleData.card_image_url, 'module-card-images')
           cardImageUrl = await uploadCardImage(moduleData.cardImageFile, moduleId)
         } catch (uploadErr: any) {
           const msg = `Failed to upload card image: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Card image upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload video if provided
+      // Upload description panel image if a new file was selected
+      if (moduleData.descPanelImageFile) {
+        try {
+          if (moduleData.description_panel_image_url) {
+            await deleteFileFromUrl(moduleData.description_panel_image_url, 'module-images')
+          }
+          descPanelImageUrl = await uploadDescPanelImage(moduleData.descPanelImageFile, moduleId)
+        } catch (uploadErr: any) {
+          const msg = `Failed to upload description panel image: ${uploadErr.message || 'Unknown error'}`
+          error.value = msg; throw new Error(msg)
+        }
+      }
+
       if (moduleData.videoFile) {
         try {
-          // Delete old video first if it exists
-          if (moduleData.video_url) {
-            await deleteFileFromUrl(moduleData.video_url, 'module-videos')
-          }
+          if (moduleData.video_url) await deleteFileFromUrl(moduleData.video_url, 'module-videos')
           videoUrl = await uploadModuleVideo(moduleData.videoFile, moduleId)
         } catch (uploadErr: any) {
           const msg = `Failed to upload video: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('Video upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
 
-      // Upload PPT if provided
       if (moduleData.pptFile) {
         try {
-          // Delete old PPT first if it exists
-          if (moduleData.ppt_url) {
-            await deleteFileFromUrl(moduleData.ppt_url, 'module-ppts')
-          }
+          if (moduleData.ppt_url) await deleteFileFromUrl(moduleData.ppt_url, 'module-ppts')
           pptUrl = await uploadModulePpt(moduleData.pptFile, moduleId)
         } catch (uploadErr: any) {
           const msg = `Failed to upload PowerPoint: ${uploadErr.message || 'Unknown error'}`
-          error.value = msg
-          console.error('PPT upload error:', uploadErr)
-          throw new Error(msg)
+          error.value = msg; throw new Error(msg)
         }
       }
-      
-      // Prepare data for Supabase
+
       const dataToSave = {
         title: moduleData.title,
         subtitle: moduleData.subtitle,
@@ -426,11 +325,12 @@ export const useModuleManagement = () => {
         emoji: moduleData.emoji,
         image_url: imageUrl || moduleData.image_url,
         card_image_url: cardImageUrl || moduleData.card_image_url,
+        description_panel_image_url: descPanelImageUrl ?? null, // ← ADDED (null clears it if removed)
         video_url: videoUrl || moduleData.video_url,
         ppt_url: pptUrl || moduleData.ppt_url,
         lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
-        is_active: moduleData.is_active !== false, // Default to true if not specified
+        is_active: moduleData.is_active !== false,
         updated_at: new Date().toISOString()
       }
 
@@ -445,9 +345,7 @@ export const useModuleManagement = () => {
       if (data && data[0]) {
         const module = normalizeModule(data[0])
         const index = modules.value.findIndex(m => m.id === moduleId)
-        if (index !== -1) {
-          modules.value[index] = module
-        }
+        if (index !== -1) modules.value[index] = module
         return module
       }
       return null
@@ -460,7 +358,6 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Delete a module
   const deleteModule = async (moduleId: string) => {
     loading.value = true
     error.value = null
@@ -469,9 +366,7 @@ export const useModuleManagement = () => {
         .from('modules')
         .delete()
         .eq('id', moduleId)
-
       if (deleteError) throw deleteError
-
       modules.value = modules.value.filter(m => m.id !== moduleId)
       return true
     } catch (err: any) {
@@ -483,34 +378,16 @@ export const useModuleManagement = () => {
     }
   }
 
-  // Get module by ID from local state
-  const getModuleById = (moduleId: string) => {
-    return modules.value.find(m => m.id === moduleId)
-  }
+  const getModuleById = (moduleId: string) => modules.value.find(m => m.id === moduleId)
+  const getModulesByLevel = (level: string) => modules.value.filter(m => m.level === level)
 
-  // Get modules by level (beginner or advanced)
-  const getModulesByLevel = (level: string) => {
-    return modules.value.filter(m => m.level === level)
-  }
-
-  // Computed properties
-  const beginnerModules = computed(() => {
-    return modules.value
-      .filter(m => m.level === 'beginner')
-      .slice()
-      .sort(sortByModuleNumber)
-  })
-
-  const advancedModules = computed(() => {
-    return modules.value
-      .filter(m => m.level === 'advanced')
-      .slice()
-      .sort(sortByModuleNumber)
-  })
-
-  const totalModules = computed(() => {
-    return modules.value.length
-  })
+  const beginnerModules = computed(() =>
+    modules.value.filter(m => m.level === 'beginner').slice().sort(sortByModuleNumber)
+  )
+  const advancedModules = computed(() =>
+    modules.value.filter(m => m.level === 'advanced').slice().sort(sortByModuleNumber)
+  )
+  const totalModules = computed(() => modules.value.length)
 
   return {
     modules,

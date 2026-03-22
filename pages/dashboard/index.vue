@@ -2,13 +2,6 @@
   <div class="bg-gray-50 flex flex-col min-h-screen">
     <DashboardHeader :student-name="studentName" />
 
-    <CourseAgreementModal
-      :isOpen="showAgreementModal"
-      :allowCancel="false"
-      @agree="handleAgreementAccepted"
-      @decline="handleAgreementDeclined"
-    />
-
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="text-center">
         <div class="inline-block mb-1">
@@ -49,7 +42,7 @@
         <!-- Main Content -->
         <div class="lg:col-span-3 min-w-0">
           <template v-if="showAgreementStep">
-            <CourseAgreementCard @agree="handleAgreementAccepted" />
+            <CourseAgreementCard :course-level="currentCourseLevel as 'beginner' | 'advanced'" @agree="handleAgreementAccepted" />
           </template>
 
           <template v-else>
@@ -60,12 +53,12 @@
                   v-for="level in courseLevels"
                   :key="level.id"
                   @click="switchCourseLevel(level.id)"
-                  :disabled="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+                  :disabled="level.id === 'advanced' && !isBeginnerCourseCompleted(beginnerModules.length)"
                   class="px-4 py-2 rounded-full text-base font-semibold transition-all relative group"
                   :class="
                     currentCourseLevel === level.id
                       ? 'text-white shadow-md'
-                      : level.id === 'advanced' && !isBeginnerCourseCompleted()
+                      : level.id === 'advanced' && !isBeginnerCourseCompleted(beginnerModules.length)
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-60'
                       : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                   "
@@ -73,7 +66,7 @@
                 >
                   {{ level.name }}
                   <div
-                    v-if="level.id === 'advanced' && !isBeginnerCourseCompleted()"
+                    v-if="level.id === 'advanced' && !isBeginnerCourseCompleted(beginnerModules.length)"
                     class="invisible group-hover:visible absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded z-20 whitespace-nowrap"
                   >
                     Complete the Beginner Course to unlock Advanced
@@ -83,14 +76,8 @@
               </div>
             </div>
 
-            <!-- Advanced Welcome Video -->
-            <AdvancedWelcomeVideo
-              v-if="showAdvancedWelcomeVideo && currentCourseLevel === 'advanced'"
-              @continue="handleAdvancedWelcomeContinue"
-            />
-
-            <!-- Modules Grid -->
-            <div v-else-if="currentModules.length > 0">
+            <!-- Modules Grid (for beginner) -->
+            <div v-if="currentModules.length > 0 && currentCourseLevel === 'beginner'">
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2">
                 <ModuleCard
                   v-for="(module, index) in currentModules"
@@ -110,14 +97,41 @@
               </div>
             </div>
 
-            <!-- Welcome Video -->
+            <!-- Modules Grid (for advanced) -->
+            <div v-if="currentModules.length > 0 && currentCourseLevel === 'advanced'" class="mb-2">
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2">
+                <ModuleCard
+                  v-for="(module, index) in currentModules"
+                  :key="`${currentCourseLevel}-${module.id}`"
+                  :title="module.title"
+                  :subtitle="module.subtitle"
+                  :is-active="selectedModule?.id === module.id"
+                  :is-restricted="showAdvancedWelcomeVideo || !isModuleAccessible(module.id, index)"
+                  :restriction-message="showAdvancedWelcomeVideo ? 'Click continue on the welcome video to proceed' : !hasAcceptedAgreement ? 'Accept the course agreement to unlock modules' : 'Complete previous module'"
+                  :is-completed="isModuleCompleted(currentCourseLevel as 'beginner' | 'advanced', module.id)"
+                  :emoji="module.emoji"
+                  :module-id="module.id"
+                  :card-image-url="module.card_image_url"
+                  :image-url="module.image_url"
+                  @click="selectModule(module)"
+                />
+              </div>
+            </div>
+
+            <!-- Welcome Video (Beginner) -->
             <WelcomeVideo
               v-if="showWelcomeVideo && currentCourseLevel === 'beginner'"
               @open-agreement="onOpenAgreement"
             />
 
+            <!-- Welcome Video (Advanced) -->
+            <AdvancedWelcomeVideo
+              v-if="showAdvancedWelcomeVideo && currentCourseLevel === 'advanced'"
+              @continue="handleAdvancedWelcomeContinue"
+            />
+
             <!-- Module Video -->
-            <div v-else-if="selectedModule" class="mb-2">
+            <div v-if="selectedModule && !showWelcomeVideo && !showAdvancedWelcomeVideo" class="mb-2">
               <ModuleVideoPanel :module="selectedModule" />
             </div>
 
@@ -146,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, watch, onMounted } from "vue";
+import { ref, computed, watchEffect, onMounted } from "vue";
 definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
@@ -156,7 +170,6 @@ import NoticesCard from "~/components/studentdashboard/NoticesCard.vue";
 import WelcomeCard from "~/components/studentdashboard/WelcomeCard.vue";
 import WelcomeVideo from "~/components/studentdashboard/WelcomeVideo.vue";
 import AdvancedWelcomeVideo from "~/components/studentdashboard/AdvancedWelcomeVideo.vue";
-import CourseAgreementModal from "~/components/studentdashboard/CourseAgreementModal.vue";
 import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useUserProfile } from "~/composables/useUserProfile";
@@ -171,7 +184,6 @@ useHead({ title: "Dashboard - MIL MOOC" });
 const route = useRoute();
 const studentName = ref("Student's name");
 const showCharacterModal = ref(false);
-const showAgreementModal = ref(false);
 const isLoading = ref(true);
 const { fetchUserProfile } = useUserProfile();
 const { hasSeenOnboarding, initializeOnboarding, markOnboardingAsSeen } = useOnboarding();
@@ -182,6 +194,41 @@ const showWelcomeVideo = ref(false);
 const showAgreementStep = ref(false);
 const showAdvancedWelcomeVideo = ref(false);
 const noticeCardKey = ref(0);
+
+const {
+  getCompletedModules,
+  getEarnedBadges,
+  getAllBadges,
+  getProgressPercentage,
+  getCompletionStatus,
+  getCurrentModule,
+  getCompletedCount,
+  isBeginnerCourseCompleted,
+  isModuleCompleted,
+  courseProgress,
+  getTotalProgressPercentage,
+  completeLessonInModule,
+  getCompletedLessons,
+  badgeMapping,
+  completeModule,
+  loadProgressFromSupabase,
+  clearProgress,
+} = useCourseProgress();
+
+const { fetchModuleById, modules, fetchModules } = useModuleManagement();
+
+const selectedModule = ref<any>(null);
+const courseLevels = ref([
+  { id: "beginner", name: "Beginner Course" },
+  { id: "advanced", name: "Advanced Course" },
+]);
+const currentCourseLevel = ref("beginner");
+
+// Real count of active beginner modules from DB — passed to isBeginnerCourseCompleted()
+// so it works regardless of how many modules exist, not hardcoded to 5
+const beginnerModules = computed(() =>
+  modules.value.filter((m: any) => m.level === 'beginner' && m.is_active)
+)
 
 onMounted(async () => {
   try {
@@ -224,9 +271,24 @@ onMounted(async () => {
       await checkDeadlineStatus(user.id);
     }
 
+    // Fetch modules first so beginnerModules.value.length is accurate below
     if (modules.value.length === 0) await fetchModules();
     initializeOnboarding();
     if (!hasSeenOnboarding.value) showCharacterModal.value = true;
+
+    // Restore active tab AFTER progress + modules are loaded
+    const courseParam = route.query.course as string;
+    const totalBeginner = beginnerModules.value.length;
+
+    if (courseParam === 'advanced' && isBeginnerCourseCompleted(totalBeginner)) {
+      currentCourseLevel.value = 'advanced';
+    } else if (!courseParam) {
+      const saved = sessionStorage.getItem('activeCourseTab');
+      if (saved === 'advanced' && isBeginnerCourseCompleted(totalBeginner)) {
+        currentCourseLevel.value = 'advanced';
+      }
+    }
+
   } finally {
     isLoading.value = false;
   }
@@ -248,8 +310,8 @@ const onOpenAgreement = () => {
 };
 
 const handleAgreementAccepted = async () => {
-  showAgreementModal.value = false;
   showWelcomeVideo.value = false;
+  showAdvancedWelcomeVideo.value = false;
   showAgreementStep.value = false;
   noticeCardKey.value += 1;
   hasAcceptedAgreement.value = true;
@@ -269,51 +331,10 @@ const handleAgreementAccepted = async () => {
   }
 };
 
-const handleAgreementDeclined = () => {
-  showAgreementModal.value = false;
-};
-
 const handleAdvancedWelcomeContinue = () => {
   showAdvancedWelcomeVideo.value = false;
+  showAgreementStep.value = true;
 };
-
-const {
-  getCompletedModules,
-  getEarnedBadges,
-  getAllBadges,
-  getProgressPercentage,
-  getCompletionStatus,
-  getCurrentModule,
-  getCompletedCount,
-  isBeginnerCourseCompleted,
-  isModuleCompleted,
-  courseProgress,
-  getTotalProgressPercentage,
-  completeLessonInModule,
-  getCompletedLessons,
-  badgeMapping,
-  completeModule,
-  loadProgressFromSupabase,
-  clearProgress,
-} = useCourseProgress();
-
-const { fetchModuleById, modules, fetchModules } = useModuleManagement();
-
-const selectedModule = ref<any>(null);
-const courseLevels = ref([
-  { id: "beginner", name: "Beginner Course" },
-  { id: "advanced", name: "Advanced Course" },
-]);
-const currentCourseLevel = ref("beginner");
-
-watchEffect(() => {
-  const courseParam = route.query.course as string;
-  if (courseParam === 'advanced' && isBeginnerCourseCompleted()) {
-    currentCourseLevel.value = 'advanced';
-  } else if (courseParam === 'advanced' && !isBeginnerCourseCompleted()) {
-    currentCourseLevel.value = 'beginner';
-  }
-});
 
 const currentCourseData = computed(() => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
@@ -339,9 +360,9 @@ const currentCourseData = computed(() => {
 const currentModules = computed(() => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
   return modules.value
-    .filter(m => m.level === courseLevel && m.is_active)
+    .filter((m: any) => m.level === courseLevel && m.is_active)
     .slice()
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10);
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10);
       return aNum - bNum;
@@ -349,26 +370,21 @@ const currentModules = computed(() => {
 });
 
 const isModuleAccessible = (moduleId: string, index: number): boolean => {
-  const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-  if (courseLevel === 'beginner') {
-    if (!hasAcceptedAgreement.value) return false;
-  }
+  if (!hasAcceptedAgreement.value) return false;
   if (index === 0) return true;
-  if (index > 0) {
-    const previousModule = currentModules.value[index - 1];
-    return isModuleCompleted(courseLevel, previousModule.id);
-  }
-  return false;
+  const previousModule = currentModules.value[index - 1];
+  return isModuleCompleted(currentCourseLevel.value as 'beginner' | 'advanced', previousModule.id);
 };
 
 const switchCourseLevel = async (levelId: string) => {
-  if (levelId === 'advanced' && !isBeginnerCourseCompleted()) return;
+  if (levelId === 'advanced' && !isBeginnerCourseCompleted(beginnerModules.value.length)) return;
   if (levelId === 'advanced') {
     const { $supabase } = useNuxtApp();
     const { data: { user } } = await $supabase.auth.getUser();
     if (user?.id) await checkAndShowAdvancedWelcome(user.id);
   }
   currentCourseLevel.value = levelId;
+  sessionStorage.setItem('activeCourseTab', levelId);
 };
 
 const checkAndShowAdvancedWelcome = async (userId: string) => {
@@ -383,8 +399,8 @@ const checkAndShowAdvancedWelcome = async (userId: string) => {
 watchEffect(() => {
   if (currentModules.value && currentModules.value.length > 0) {
     const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced'
-    const firstIncompleteModule = currentModules.value.find(m => !isModuleCompleted(courseLevel, m.id));
-    if (!selectedModule.value || !currentModules.value.some(m => m.id === selectedModule.value.id)) {
+    const firstIncompleteModule = currentModules.value.find((m: any) => !isModuleCompleted(courseLevel, m.id));
+    if (!selectedModule.value || !currentModules.value.some((m: any) => m.id === selectedModule.value.id)) {
       selectedModule.value = firstIncompleteModule ?? currentModules.value[0];
     }
   } else {
@@ -393,7 +409,7 @@ watchEffect(() => {
 });
 
 const selectModule = (module: any) => {
-  const index = currentModules.value.findIndex(m => m.id === module.id);
+  const index = currentModules.value.findIndex((m: any) => m.id === module.id);
   if (isModuleAccessible(module.id, index)) {
     if (selectedModule.value?.id === module.id) {
       navigateTo(`/modules/${module.id}`);
@@ -421,7 +437,7 @@ const isLessonCompleted = (moduleId: string, lessonIndex: number): boolean => {
 const getBadgeForModule = (moduleId: string): string => {
   const courseLevel = currentCourseLevel.value as 'beginner' | 'advanced';
   const courseBadges = badgeMapping[courseLevel];
-  const moduleIndex = currentModules.value.findIndex(m => m.id === moduleId);
+  const moduleIndex = currentModules.value.findIndex((m: any) => m.id === moduleId);
   if (moduleIndex >= 0 && courseBadges) {
     const badgeName = (courseBadges as any)[moduleIndex + 1];
     if (badgeName) return badgeName;

@@ -9,20 +9,11 @@
       <div class="flex flex-col md:flex-row gap-6">
         <!-- Content left -->
         <div class="flex-1 min-w-0">
-          <h1 class="font-bold text-gray-700 mb-1">Hi there! Here's what you need to learn for</h1>
-          <!-- <h3
-            v-if="showTitle"
-            class="text-xl font-bold mb-3"
-            style="color: #001a4d;"
-          >
-            {{ module.title }}
-          </h3> -->
-
           <p class="text-gray-700 mb-4 leading-relaxed text-base">
             {{ module.description }}
           </p>
 
-          <!-- DepEd's Most Essential Learning Competencies -->
+          <!-- Learning Outcomes -->
           <div v-if="outcomesList.length" class="mt-4">
             <h4 class="text-sm font-bold text-gray-800 mb-2">
               {{ module.learning_outcomes_label || "DepEd's Most Essential Learning Competencies" }}
@@ -39,9 +30,16 @@
           </div>
         </div>
 
-        <!-- Meli on the right, facing left -->
+        <!-- Right image: custom panel image, or fallback to Meli -->
         <div class="flex-shrink-0 w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
           <img
+            v-if="module.description_panel_image_url"
+            :src="module.description_panel_image_url"
+            alt="Module illustration"
+            class="w-full h-full object-contain rounded-lg"
+          />
+          <img
+            v-else
             src="~/assets/welcome.png"
             alt="Meli - your MIL guide"
             class="w-full h-full object-contain meli-face-left"
@@ -51,7 +49,6 @@
     </div>
   </Transition>
 </template>
-
 
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -65,7 +62,7 @@ const props = defineProps({
     type: Boolean,
     default: true
   }
-});
+})
 
 // Handle both learning_outcomes (snake_case from DB) and learningOutcomes (camelCase)
 const outcomesList = computed(() => {

@@ -84,16 +84,45 @@
         />
       </div>
 
+      <!-- Image Upload -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Quiz Image
+        </label>
+        <div class="flex items-center gap-2 mb-2">
+          <input
+            ref="quizImageInput"
+            type="file"
+            accept="image/*"
+            @change="handleQuizImageUpload"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+          />
+          <span v-if="imageUploadingQuiz" class="text-sm text-blue-600">Uploading...</span>
+        </div>
+        <p class="text-xs text-gray-500 mb-3">Select an image file to upload at the top of the quiz</p>
+        <div v-if="formData.imageUrl" class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+          <p class="text-xs text-gray-600 mb-2">Image preview:</p>
+          <img 
+            :src="formData.imageUrl" 
+            :alt="formData.title"
+            class="w-full h-48 object-cover rounded"
+            @error="handleImageError"
+          />
+        </div>
+      </div>
+
       <!-- Questions Section -->
       <div class="border-t border-gray-200 pt-6">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h4 class="text-md font-semibold text-gray-900">Questions</h4>
-            <p class="text-xs text-gray-500 mt-1">{{ 
-              formData.level === 'beginner' && fifthBeginnerModuleId && formData.moduleId === fifthBeginnerModuleId 
-                ? 'Beginner Module 5 requires exactly 20 questions'
-                : 'Add up to 10 questions (maximum)'
-            }}</p>
+            <!-- Dynamic hint based on selected module -->
+            <p class="text-xs mt-1" :class="isLastModule ? 'text-amber-600 font-semibold' : 'text-gray-500'">
+              {{ isLastModule
+                ? `Last module (${formData.level === 'beginner' ? 'Module 5' : 'Module 10'}) requires exactly 20 questions — ${formData.questions.length}/20`
+                : `Add up to 10 questions — ${formData.questions.length}/10`
+              }}
+            </p>
           </div>
           <button
             type="button"
@@ -108,11 +137,12 @@
         <!-- Empty State -->
         <div v-if="formData.questions.length === 0" class="text-center py-8 bg-gray-50 rounded">
           <p class="text-gray-500">No questions added yet. Click "Add Question" to start.</p>
-          <p class="text-xs text-gray-400 mt-2">{{ 
-            formData.level === 'beginner' && fifthBeginnerModuleId && formData.moduleId === fifthBeginnerModuleId 
-              ? 'Beginner Module 5: exactly 20 questions required'
+          <p class="text-xs text-gray-400 mt-2">
+            {{ isLastModule
+              ? `${formData.level === 'beginner' ? 'Beginner Module 5' : 'Advanced Module 10'}: exactly 20 questions required`
               : 'Maximum: 10 questions per quiz'
-          }}</p>
+            }}
+          </p>
         </div>
 
         <!-- Questions List -->
@@ -146,6 +176,34 @@
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 ></textarea>
+              </div>
+
+              <!-- Question Image -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Question Image (Optional)
+                </label>
+                <div class="flex items-center gap-2 mb-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="(e) => handleQuestionImageUpload(e, idx)"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  <span v-if="imageUploadingQuestions[idx]" class="text-sm text-blue-600">Uploading...</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">Upload an image instead of text for visual questions</p>
+                
+                <!-- Image Preview -->
+                <div v-if="question.questionImageUrl" class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <p class="text-xs text-gray-600 mb-2">Image preview:</p>
+                  <img 
+                    :src="question.questionImageUrl" 
+                    :alt="question.question"
+                    class="w-full h-48 object-cover rounded"
+                    @error="handleImageError"
+                  />
+                </div>
               </div>
 
               <!-- Question Type -->
@@ -233,11 +291,11 @@
                 </select>
               </div>
 
-            </div><!-- end question card -->
-          </template><!-- end v-for -->
-        </div><!-- end v-else -->
+            </div>
+          </template>
+        </div>
 
-      </div><!-- end Questions Section -->
+      </div>
 
       <!-- Form Actions -->
       <div class="flex gap-3 pt-6 border-t border-gray-200">
@@ -285,8 +343,11 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'cancel'])
 
-const { createQuiz, updateQuiz, loading, error, fetchQuizzes, quizzes } = useQuizManagement()
+const { createQuiz, updateQuiz, loading, error, fetchQuizzes, quizzes, uploadImage } = useQuizManagement()
 const { fetchModules, modules } = useModuleManagement()
+
+const imageUploadingQuiz = ref(false)
+const imageUploadingQuestions = ref<Record<number, boolean>>({})
 
 const formData = reactive<Quiz>({
   title: '',
@@ -295,6 +356,7 @@ const formData = reactive<Quiz>({
   level: 'beginner',
   questions: [],
   passingScore: 70,
+  imageUrl: '',
 })
 
 const initializeForm = () => {
@@ -304,7 +366,7 @@ const initializeForm = () => {
     formData.moduleId = props.quiz.moduleId || props.quiz.module_id || ''
     formData.level = props.quiz.level || 'beginner'
     formData.passingScore = props.quiz.passing_score || 70
-    // Deep clone questions to avoid reference issues
+    formData.imageUrl = props.quiz.imageUrl || props.quiz.image_url || ''
     formData.questions = props.quiz.questions ? JSON.parse(JSON.stringify(props.quiz.questions)) : []
   } else {
     formData.title = ''
@@ -312,6 +374,7 @@ const initializeForm = () => {
     formData.moduleId = ''
     formData.level = 'beginner'
     formData.passingScore = 70
+    formData.imageUrl = ''
     formData.questions = []
   }
 }
@@ -325,55 +388,49 @@ onMounted(async () => {
 // Filter modules by selected course level and exclude modules that already have quizzes
 const availableModules = computed(() => {
   if (!formData.level) return []
-  
-  // Get modules that match the selected level
+
   let levelModules = modules.value.filter((m: any) => m.level === formData.level)
-  
-  // Get module IDs that already have quizzes assigned (handle both moduleId and module_id)
+
   const assignedModuleIds = quizzes.value
-    .filter(q => q.moduleId || q.module_id) // Handle both naming conventions
+    .filter(q => q.moduleId || q.module_id)
     .map(q => q.moduleId || q.module_id)
-  
-  // Filter out modules that already have quizzes, but keep the current module in edit mode
+
   levelModules = levelModules.filter(module => {
     if (props.isEditMode && (props.quiz?.moduleId === module.id || props.quiz?.module_id === module.id)) {
-      return true // Keep current module in edit mode
+      return true
     }
     return !assignedModuleIds.includes(module.id)
   })
-  
+
   return levelModules
 })
 
-// Identify the 5th beginner module based on numeric part in title
-const fifthBeginnerModuleId = computed(() => {
-  const beginnerModules = modules.value
-    .filter((m: any) => m.level === 'beginner')
+// Get the last module ID for the currently selected level
+// Beginner → last is Module 5, Advanced → last is Module 10
+const lastModuleId = computed(() => {
+  const levelModules = modules.value
+    .filter((m: any) => m.level === formData.level && m.is_active)
     .slice()
     .sort((a: any, b: any) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
       return aNum - bNum
     })
-  return beginnerModules[4]?.id || null
+  return levelModules[levelModules.length - 1]?.id || null
 })
 
-// Watch for changes to props
+// True when the selected module is the last module of its level
+const isLastModule = computed(() => {
+  if (!formData.moduleId || !lastModuleId.value) return false
+  return formData.moduleId === lastModuleId.value
+})
+
 watch(() => props.quiz, () => {
   initializeForm()
 }, { deep: true })
 
-// Calculate max questions based on module
-const maxQuestions = computed(() => {
-  if (
-    formData.level === 'beginner' &&
-    fifthBeginnerModuleId.value &&
-    formData.moduleId === fifthBeginnerModuleId.value
-  ) {
-    return 20 // Module 5 needs exactly 20 questions
-  }
-  return 10 // Default max is 10 questions
-})
+// Max questions: 20 for last module, 10 for all others
+const maxQuestions = computed(() => isLastModule.value ? 20 : 10)
 
 const addQuestion = () => {
   const newQuestion: QuizQuestion = {
@@ -404,11 +461,16 @@ const updateQuestionType = (questionIndex: number) => {
   if (!question) return
   if (question.type === 'true_false') {
     question.options = ['True', 'False']
-    question.correctAnswer = 'false' // Store as string for true/false
+    question.correctAnswer = 'false'
   } else {
     question.options = ['', '']
     question.correctAnswer = 0
   }
+}
+
+const handleImageError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  console.error('Failed to load option image:', img.src)
 }
 
 const submitForm = async () => {
@@ -427,18 +489,15 @@ const submitForm = async () => {
     return
   }
 
-  // Special rule: Beginner Module 5 quiz must have exactly 20 questions
-  if (
-    formData.level === 'beginner' &&
-    fifthBeginnerModuleId.value &&
-    formData.moduleId === fifthBeginnerModuleId.value
-  ) {
+  // Last module (Module 5 beginner / Module 10 advanced) → exactly 20 questions required
+  if (isLastModule.value) {
     if (formData.questions.length !== 20) {
-      alert('The quiz for Beginner Module 5 must have exactly 20 questions.')
+      const label = formData.level === 'beginner' ? 'Beginner Module 5' : 'Advanced Module 10'
+      alert(`The quiz for ${label} must have exactly 20 questions. You currently have ${formData.questions.length}.`)
       return
     }
   } else {
-    // For all other quizzes: maximum 10 questions
+    // All other modules → max 10 questions
     if (formData.questions.length > 10) {
       alert('Maximum 10 questions allowed per quiz')
       return
@@ -484,6 +543,44 @@ const submitForm = async () => {
 
   if (!error.value) {
     emit('save')
+  }
+}
+
+const handleQuizImageUpload = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  try {
+    imageUploadingQuiz.value = true
+    const file = target.files[0]
+    const publicUrl = await uploadImage(file)
+    formData.imageUrl = publicUrl
+    target.value = '' // Reset file input
+  } catch (err) {
+    console.error('Failed to upload quiz image:', err)
+    alert('Failed to upload image. Please try again.')
+  } finally {
+    imageUploadingQuiz.value = false
+  }
+}
+
+const handleQuestionImageUpload = async (e: Event, questionIdx: number) => {
+  const target = e.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  try {
+    imageUploadingQuestions.value[questionIdx] = true
+    const file = target.files[0]
+    const publicUrl = await uploadImage(file)
+    if (formData.questions[questionIdx]) {
+      formData.questions[questionIdx].questionImageUrl = publicUrl
+    }
+    target.value = '' // Reset file input
+  } catch (err) {
+    console.error('Failed to upload question image:', err)
+    alert('Failed to upload image. Please try again.')
+  } finally {
+    imageUploadingQuestions.value[questionIdx] = false
   }
 }
 </script>

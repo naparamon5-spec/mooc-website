@@ -53,6 +53,44 @@
         <CourseAgreementManagement />
       </div>
 
+      <!-- Debug: Recent Module Completions (Last 2 Weeks) -->
+      <div class="mb-8 bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4">Recent Module Completions (Last 2 Weeks)</h2>
+
+        <!-- Test Button -->
+        <div class="mb-4">
+          <button
+            @click="testModuleCompletion"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Test Module Completion (Add Sample Data)
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-2 text-left">Module ID</th>
+                <th class="px-4 py-2 text-left">Course Level</th>
+                <th class="px-4 py-2 text-left">Completed At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="recentModuleCompletions.length === 0" class="border-t">
+                <td colspan="3" class="px-4 py-2 text-center text-gray-500">No module completions found</td>
+              </tr>
+              <tr v-for="(completion, index) in recentModuleCompletions.slice(0, 10)" :key="index" class="border-t hover:bg-gray-50">
+                <td class="px-4 py-2 font-mono text-xs">{{ completion.module_id }}</td>
+                <td class="px-4 py-2"><span class="inline-block px-2 py-1 rounded text-xs font-semibold" :class="completion.course_level === 'beginner' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'">{{ completion.course_level }}</span></td>
+                <td class="px-4 py-2">{{ new Date(completion.completed_at).toLocaleDateString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Total completions: {{ recentModuleCompletions.length }}</p>
+      </div>
+
       <!-- Test Console -->
       <!-- <div class="mb-8">
         <NoticeSystemTestConsole />
@@ -77,6 +115,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import MetricCard from '~/components/admindashboard/MetricCard.vue'
 import CourseManagement from '~/components/admindashboard/CourseManagement.vue'
@@ -98,7 +137,7 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
-const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, dailyCompletions, dailyEnrollments, courseCompletionRates, fetchMetrics, fetchDailyEnrollments, fetchModuleCompletionStats, fetchCourseCompletionRates } = useAdminMetrics()
+const { totalEnrolled, activeStudents, pendingEnrollments, completed, moduleCompletionStats, dailyCompletions, dailyEnrollments, courseCompletionRates, recentModuleCompletions, fetchMetrics, fetchDailyEnrollments, fetchModuleCompletionStats, fetchCourseCompletionRates, fetchRecentModuleCompletions } = useAdminMetrics()
 const { users: dbUsers, loading: usersLoading, error: usersError, fetchUsers } = useUserManagement()
 const adminName = ref("Admin User")
 const inactiveStudents = ref(0)
@@ -123,6 +162,8 @@ onMounted(async () => {
     await fetchDailyEnrollments();
     // Fetch module completion stats (last 2 weeks)
     await fetchModuleCompletionStats();
+    // Fetch recent module completions (last 2 weeks)
+    await fetchRecentModuleCompletions();
     // Fetch course completion rates by year
     await fetchCourseCompletionRates();
     
@@ -195,12 +236,16 @@ const handleUserAction = (actionType: string) => {
   // Handle user management actions
 }
 
+const router = useRouter()
+
 const handleCourseAction = (actionType: string) => {
   console.log('Course action:', actionType)
   if (actionType === 'upload-resources') {
-    navigateTo('/admin/resources')
+    router.push('/admin/resources')
   } else if (actionType === 'change-welcome-card') {
-    navigateTo('/admin/welcome-video')
+    router.push('/admin/welcome-video')
+  } else if (actionType === 'edit-course-certificate') {
+    router.push('/admin/course-certificates')
   } else if (actionType === 'download-report') {
     showReportDialog.value = true
   } else {
@@ -211,6 +256,56 @@ const handleCourseAction = (actionType: string) => {
 const handleRetry = (activity: any) => {
   console.log('Retry activity:', activity)
   // Handle retry logic
+}
+
+const testModuleCompletion = async () => {
+  try {
+    // Get first beginner module
+    const { data: modules } = await supabase
+      .from('modules')
+      .select('id, title')
+      .eq('level', 'beginner')
+      .order('created_at', { ascending: true })
+      .limit(1)
+
+    if (!modules || modules.length === 0) {
+      alert('No beginner modules found')
+      return
+    }
+
+    const testModule = modules[0]
+    console.log('Testing module completion with:', testModule)
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('No authenticated user found')
+      return
+    }
+
+    // Insert a test completion
+    const { error } = await supabase
+      .from('module_completion')
+      .insert({
+        user_id: user.id,
+        course_level: 'beginner',
+        module_id: testModule!.id,
+        completed_at: new Date().toISOString()
+      })
+
+    if (error) {
+      console.error('Test completion failed:', error)
+      alert('Test failed: ' + error.message)
+    } else {
+      console.log('Test completion successful')
+      alert('Test completion added! Refreshing data...')
+      // Refresh the data
+      await fetchRecentModuleCompletions()
+    }
+  } catch (err) {
+    console.error('Test error:', err)
+    alert('Test error: ' + (err instanceof Error ? err.message : String(err)))
+  }
 }
 </script>
 
