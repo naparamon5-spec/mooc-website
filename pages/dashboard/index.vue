@@ -130,8 +130,14 @@
               @continue="handleAdvancedWelcomeContinue"
             />
 
-            <!-- Module Video -->
-            <div v-if="selectedModule && !showWelcomeVideo && !showAdvancedWelcomeVideo" class="mb-2">
+            <!-- Beginner Course Completed Card (replaces video panel when beginner course completed) -->
+            <BeginnerCourseCompletedCard
+              v-if="currentCourseLevel === 'beginner' && isBeginnerCourseCompleted(beginnerModules.length) && !showWelcomeVideo && !showAdvancedWelcomeVideo && !cardDismissed"
+              @dismissed="cardDismissed = true"
+            />
+
+            <!-- Module Video (shows when beginner course not complete or card dismissed) -->
+            <div v-if="selectedModule && !showWelcomeVideo && !showAdvancedWelcomeVideo && !(currentCourseLevel === 'beginner' && isBeginnerCourseCompleted(beginnerModules.length) && !cardDismissed)" class="mb-2">
               <ModuleVideoPanel :module="selectedModule" />
             </div>
 
@@ -171,6 +177,7 @@ import WelcomeCard from "~/components/studentdashboard/WelcomeCard.vue";
 import WelcomeVideo from "~/components/studentdashboard/WelcomeVideo.vue";
 import AdvancedWelcomeVideo from "~/components/studentdashboard/AdvancedWelcomeVideo.vue";
 import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
+import BeginnerCourseCompletedCard from "~/components/studentdashboard/BeginnerCourseCompletedCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useUserProfile } from "~/composables/useUserProfile";
 import { useOnboarding } from "~/composables/useOnboarding";
@@ -178,6 +185,7 @@ import { useModuleAutoAssignment } from "~/composables/useModuleAutoAssignment";
 import { useCourseAgreement } from "~/composables/useCourseAgreement";
 import { useRoute } from 'vue-router';
 import { useModuleManagement } from "~/composables/useModuleManagement";
+import { useBadgeManagement } from "~/composables/useBadgeManagement";
 
 useHead({ title: "Dashboard - MIL MOOC" });
 
@@ -194,6 +202,7 @@ const showWelcomeVideo = ref(false);
 const showAgreementStep = ref(false);
 const showAdvancedWelcomeVideo = ref(false);
 const noticeCardKey = ref(0);
+const cardDismissed = ref(false);
 
 const {
   getCompletedModules,
@@ -216,6 +225,13 @@ const {
 } = useCourseProgress();
 
 const { fetchModuleById, modules, fetchModules } = useModuleManagement();
+const { badges: uploadedBadges, fetchBadges } = useBadgeManagement();
+type UploadedBadge = {
+  course_level: string;
+  module_position: number;
+  badge_name?: string | null;
+  image_url?: string | null;
+};
 
 const selectedModule = ref<any>(null);
 const courseLevels = ref([
@@ -270,6 +286,8 @@ onMounted(async () => {
       await ensureModulesAssigned(user.id);
       await checkDeadlineStatus(user.id);
     }
+
+    await fetchBadges();
 
     // Fetch modules first so beginnerModules.value.length is accurate below
     if (modules.value.length === 0) await fetchModules();
@@ -342,10 +360,25 @@ const currentCourseData = computed(() => {
   const completedModulesCount = getCompletedCount(courseLevel);
   let completedLessonsInCurrent = 0;
   const firstIncompleteModule = dbModules.find((m: any) => !isModuleCompleted(courseLevel, m.id));
+
   if (firstIncompleteModule) {
     const completedLessons = getCompletedLessons(courseLevel, firstIncompleteModule.id);
     completedLessonsInCurrent = completedLessons.length;
   }
+
+  const mergedBadges = getAllBadges(courseLevel).map((badge: any, index: number) => {
+    const uploadedBadge = (uploadedBadges.value as UploadedBadge[]).find(
+      (b) => b.course_level === courseLevel && Number(b.module_position) === index + 1
+    );
+
+    return {
+      ...badge,
+      name: uploadedBadge?.badge_name || badge.name,
+      imageUrl: uploadedBadge?.image_url || null,
+      modulePosition: index + 1,
+    };
+  });
+
   return {
     modules: dbModules,
     totalModules: dbModules.length,
@@ -353,7 +386,7 @@ const currentCourseData = computed(() => {
     currentModule: getCurrentModule(courseLevel, dbModules),
     completedModules: completedModulesCount,
     completedLessonsInCurrentModule: completedLessonsInCurrent,
-    badges: getAllBadges(courseLevel),
+    badges: mergedBadges,
   }
 });
 
@@ -378,6 +411,12 @@ const isModuleAccessible = (moduleId: string, index: number): boolean => {
 
 const switchCourseLevel = async (levelId: string) => {
   if (levelId === 'advanced' && !isBeginnerCourseCompleted(beginnerModules.value.length)) return;
+  
+  // Reset card dismissal when returning to beginner course
+  if (levelId === 'beginner') {
+    cardDismissed.value = false;
+  }
+  
   if (levelId === 'advanced') {
     const { $supabase } = useNuxtApp();
     const { data: { user } } = await $supabase.auth.getUser();

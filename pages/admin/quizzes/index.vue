@@ -24,7 +24,7 @@
         </div>
 
         <QuizList
-          :quizzes="quizzes"
+          :quizzes="sortedQuizzes"
           :loading="loading"
           @edit="startEditQuiz"
           @deleted="handleQuizDeleted"
@@ -98,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import QuizForm from '~/components/admindashboard/QuizForm.vue'
 import QuizList from '~/components/admindashboard/QuizList.vue'
@@ -118,6 +118,13 @@ const selectedQuiz = ref(null)
 
 const { quizzes, loading, fetchQuizzes } = useQuizManagement()
 const { fetchUserProfile } = useUserProfile()
+
+// Sort quizzes: oldest (first created) at the top
+const sortedQuizzes = computed(() =>
+  [...(quizzes.value ?? [])].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+)
 
 onMounted(async () => {
   try {

@@ -85,13 +85,13 @@ const groupedActions = computed(() => {
         { label: 'Edit Course Certificate', type: 'edit-course-certificate' }
       ]
     },
-    // {
-    //   title: 'Create Announcements',
-    //   options: [
-    //     { label: 'Schedule announcements', type: 'schedule-announcements' },
-    //     { label: 'Track announcement reach and views', type: 'track-announcements' }
-    //   ]
-    // }
+    {
+      title: 'Badges',
+      options: [
+        { label: 'Upload Badge', type: 'upload-badge' },
+        // { label: 'Track announcement reach and views', type: 'track-announcements' }
+      ]
+    }
   ]
 
   return defaultGroups

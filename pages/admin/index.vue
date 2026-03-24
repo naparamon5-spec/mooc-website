@@ -245,6 +245,8 @@ const handleCourseAction = (actionType: string) => {
     router.push('/admin/welcome-video')
   } else if (actionType === 'edit-course-certificate') {
     router.push('/admin/course-certificates')
+  } else if (actionType === 'upload-badge') {
+    router.push('/admin/badges')
   } else if (actionType === 'download-report') {
     showReportDialog.value = true
   } else {
@@ -307,4 +309,3 @@ const testModuleCompletion = async () => {
   }
 }
 </script>
-

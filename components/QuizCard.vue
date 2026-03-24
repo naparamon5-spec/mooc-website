@@ -48,7 +48,7 @@
               : 'bg-red-100 text-red-800'"
             class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
           >
-            {{ userScore }}% / {{ quiz.passing_score || 70 }}%
+            {{ userScore }}%
           </span>
         </div>
         <p class="text-[11px]">

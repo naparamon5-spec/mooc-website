@@ -12,9 +12,10 @@
           :class="badge.earned ? 'border-primary-600 shadow-md' : 'border-gray-300 opacity-50 grayscale'"
         >
           <img 
-            :src="getBadgeImage(badge.name)"
+            :src="getBadgeImageSrc(badge)"
             :alt="badge.name"
             class="w-full h-full object-cover"
+            @error="handleBadgeImageError"
           />
         </div>
         <p
@@ -32,6 +33,7 @@
 interface Badge {
   name: string
   earned: boolean
+  imageUrl?: string | null
 }
 
 const props = defineProps({
@@ -62,5 +64,16 @@ const badgeImages: Record<string, string> = {
 
 const getBadgeImage = (badgeName: string): string => {
   return badgeImages[badgeName] || '/assets/default-badge.png'
+}
+
+const getBadgeImageSrc = (badge: Badge): string => {
+  const uploadedImageUrl = typeof badge.imageUrl === 'string' ? badge.imageUrl.trim() : ''
+  return uploadedImageUrl || getBadgeImage(badge.name)
+}
+
+const handleBadgeImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  const badgeName = target.alt || ''
+  target.src = getBadgeImage(badgeName)
 }
 </script>

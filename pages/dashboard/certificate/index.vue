@@ -51,24 +51,40 @@
             <div class="bg-gradient-to-br from-primary-50 to-primary-100 p-8 relative border-t-4 border-primary-600">
               <!-- Badge Icon -->
               <div class="flex justify-center mb-4">
-                <img src="/assets/logo.png" alt="MIL MOOC" class="h-16 w-20border-primary-600" />
+                <img src="/assets/logo.png" alt="MIL MOOC" class="h-16 w-20 border-primary-600" />
               </div>
 
               <!-- Certificate Info -->
               <div class="text-center">
                 <h3 class="text-lg font-bold text-primary-600 mb-1">{{ cert.badgeName }}</h3>
-                <p class="text-sm text-gray-600 mb-3">{{ cert.courseLevel === 'beginner' ? 'Beginner Course' : 'Advanced Course' }}</p>
-                <p class="text-xs text-gray-500">Earned on {{ formatDate(cert.earnedAt) }}</p>
+                <p class="text-sm text-gray-600 mb-2">{{ cert.courseLevel === 'beginner' ? 'Beginner Course' : 'Advanced Course' }}</p>
+                <!-- ✅ FIX: Student name displayed -->
+                <p class="text-sm font-semibold text-gray-800 mb-1">{{ getCertificateStudentName(cert) }}</p>
+                <p class="text-xs text-gray-500">Completed on {{ getCertificateCompletionDate(cert) }}</p>
               </div>
             </div>
 
             <!-- Certificate Details -->
             <div class="p-6">
               <div class="space-y-3 mb-6">
+
+                <!-- ✅ FIX: Awarded To -->
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 text-sm">Awarded To</span>
+                  <span class="font-semibold text-gray-800 text-sm text-right max-w-[60%] truncate" :title="getCertificateStudentName(cert)">{{ getCertificateStudentName(cert) }}</span>
+                </div>
+
+                <!-- ✅ FIX: Completed on with formatted date -->
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600 text-sm">Completed on</span>
+                  <span class="font-semibold text-gray-800 text-sm">{{ getCertificateCompletionDate(cert) }}</span>
+                </div>
+
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600 text-sm">Modules Completed</span>
                   <span class="font-semibold text-gray-800">5 / 5</span>
                 </div>
+
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600 text-sm">Course Level</span>
                   <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
@@ -76,10 +92,18 @@
                     {{ cert.courseLevel === 'beginner' ? 'Beginner' : 'Advanced' }}
                   </span>
                 </div>
+
+                <!-- ✅ FIX: Certificate Number (MIL-B2026-00001 / MIL-A2026-00001) -->
                 <div class="flex justify-between items-center">
-                  <span class="text-gray-600 text-sm">Certificate ID</span>
-                  <span class="font-mono text-xs text-gray-700">{{ cert.id.slice(0, 8).toUpperCase() }}</span>
+                  <span class="text-gray-600 text-sm">Certificate No.</span>
+                  <span
+                    class="font-mono text-xs font-bold px-2 py-1 rounded"
+                    :class="cert.certificateNumber ? 'text-primary-700 bg-primary-50' : 'text-gray-400 bg-gray-100'"
+                  >
+                    {{ cert.certificateNumber || 'Pending' }}
+                  </span>
                 </div>
+
               </div>
 
               <!-- Action Buttons -->
@@ -114,6 +138,8 @@
     <CertificateModal
       :is-open="showCertificateModal"
       :student-name="studentName"
+      :course-level="(certificatePreviewData?.courseLevel || 'beginner') as 'beginner' | 'advanced'"
+      :template-url="certificatePreviewData?.template_url || ''"
       @close="showCertificateModal = false"
       @nextCourse="handleNextCourse"
       @backToDashboard="handleBackToDashboard"
@@ -144,8 +170,8 @@
 
         <!-- PDF Preview -->
         <div class="flex-1 overflow-hidden bg-gray-200 p-6">
-          <div class="w-full h-full bg-white rounded-lg shadow-lg">
-            <CertificatePDFViewer :cert="certificatePreviewData" :student-name="studentName" />
+          <div class="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
+            <CertificatePDFViewer :cert="certificatePreviewData" :student-name="getCertificateStudentName(certificatePreviewData)" />
           </div>
         </div>
 
@@ -202,21 +228,48 @@ const dbCertificates = ref<any[]>([]);
 const showCertificatePreviewModal = ref(false);
 const certificatePreviewData = ref<any>(null);
 
+const formatDate = (dateString?: string | null): string => {
+  if (!dateString) return '—';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const getCertificateStudentName = (cert: any): string => {
+  return cert?.studentName || studentName.value || 'Student Name';
+};
+
+const getCertificateCompletionDate = (cert: any): string => {
+  return formatDate(cert?.earnedAt || cert?.issued_at || cert?.completed_at || cert?.created_at);
+};
+
+const buildCertificateNumber = (courseLevel: 'beginner' | 'advanced', year: number, sequence: number): string => {
+  const levelCode = courseLevel === 'beginner' ? 'B' : 'A';
+  return `MIL-${levelCode}${year}-${String(sequence).padStart(5, '0')}`;
+};
+
+const getCertificateSequenceOnly = (cert: any): string => {
+  const fullCertificateNumber = cert?.certificateNumber || cert?.certificate_number || '';
+  const match = String(fullCertificateNumber).match(/(\d{5})$/);
+  return match?.[1] || 'Pending';
+};
+
 // Fetch user profile and progress on mount
 onMounted(async () => {
   try {
-    // Clear any previous user's progress first
     clearProgress();
-    
+
     const userData = await fetchUserProfile();
     if (userData?.full_name) {
       studentName.value = userData.full_name;
     }
 
-    // Load certificate templates FIRST before fetching certificates
     await fetchCertificateTemplates();
-    console.log('Certificate templates loaded:', certificateTemplates.value);
-    
     await loadProgressFromSupabase();
     await fetchCertificatesFromDatabase();
   } catch (err) {
@@ -226,7 +279,7 @@ onMounted(async () => {
   }
 });
 
-// Fetch certificates from database
+// Fetch certificates from database — includes certificate_number
 const fetchCertificatesFromDatabase = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -249,58 +302,81 @@ const fetchCertificatesFromDatabase = async () => {
   }
 };
 
-// Get all earned certificates from database
+// ✅ FIX: earnedCertificates now maps certificate_number from DB
 const earnedCertificates = computed(() => {
-  // Use certificates from database first
   if (dbCertificates.value.length > 0) {
+    const sequenceMap = new Map<string, number>();
+    const sortedCertificates = [...dbCertificates.value].sort((a, b) => {
+      const aDate = new Date(a.issued_at || a.completed_at || a.created_at || 0).getTime();
+      const bDate = new Date(b.issued_at || b.completed_at || b.created_at || 0).getTime();
+      return aDate - bDate;
+    });
+
+    sortedCertificates.forEach((cert) => {
+      const certDate = cert.issued_at || cert.completed_at || cert.created_at || new Date().toISOString();
+      const certYear = new Date(certDate).getFullYear();
+      const key = `${cert.course_level}-${certYear}`;
+      const nextSequence = (sequenceMap.get(key) || 0) + 1;
+      sequenceMap.set(key, nextSequence);
+      cert.generated_certificate_number = cert.certificate_number || buildCertificateNumber(cert.course_level, certYear, nextSequence);
+    });
+
     return dbCertificates.value.map((cert) => {
-      const template = certificateTemplates.value.find(t => t.course_level === cert.course_level)
+      const template = certificateTemplates.value.find(t => t.course_level === cert.course_level);
+      const earnedAt = cert.completed_at || cert.issued_at || cert.created_at || new Date().toISOString();
+
       return {
         id: cert.id,
-        badgeName: cert.course_level === 'beginner' 
+        badgeName: cert.course_level === 'beginner'
           ? 'Media and Information Literacy (MIL) Beginner Course'
           : 'Media and Information Literacy (MIL) Advanced Course',
         courseLevel: cert.course_level,
         modulePosition: null,
-        earnedAt: cert.issued_at,
+        earnedAt,
+        issued_at: cert.issued_at,
+        completed_at: cert.completed_at || null,
+        created_at: cert.created_at || null,
+        studentName: studentName.value,
+        certificateNumber: cert.certificate_number || cert.generated_certificate_number || null,
+        certificate_number: cert.certificate_number || cert.generated_certificate_number || null,
         template_url: template?.template_url || null,
         description: `Successfully completed all 5 modules of the ${cert.course_level === 'beginner' ? 'Beginner' : 'Advanced'} Course`
-      }
+      };
     });
   }
 
-  // Fallback to computed certificates from progress (for display during session before save)
+  // Fallback: progress-based (no cert number yet)
   const certificates: any[] = [];
 
-  // Get beginner certificates - only if all 5 modules completed
   const beginnerBadges = getAllBadges('beginner');
-  const beginnerCompleted = beginnerBadges.filter(b => b.earned).length;
-  
-  if (beginnerCompleted === 5) {
-    const template = certificateTemplates.value.find(t => t.course_level === 'beginner')
+  if (beginnerBadges.filter(b => b.earned).length === 5) {
+    const template = certificateTemplates.value.find(t => t.course_level === 'beginner');
     certificates.push({
-      id: `beginner-course`,
+      id: 'beginner-course',
       badgeName: 'Media and Information Literacy (MIL) Beginner Course',
       courseLevel: 'beginner',
       modulePosition: null,
       earnedAt: new Date().toISOString(),
+      issued_at: new Date().toISOString(),
+      studentName: studentName.value,
+      certificateNumber: null,
       template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Beginner Course'
     });
   }
 
-  // Get advanced certificates - only if all 5 modules completed
   const advancedBadges = getAllBadges('advanced');
-  const advancedCompleted = advancedBadges.filter(b => b.earned).length;
-  
-  if (advancedCompleted === 5) {
-    const template = certificateTemplates.value.find(t => t.course_level === 'advanced')
+  if (advancedBadges.filter(b => b.earned).length === 5) {
+    const template = certificateTemplates.value.find(t => t.course_level === 'advanced');
     certificates.push({
-      id: `advanced-course`,
+      id: 'advanced-course',
       badgeName: 'Media and Information Literacy (MIL) Advanced Course',
       courseLevel: 'advanced',
       modulePosition: null,
       earnedAt: new Date().toISOString(),
+      issued_at: new Date().toISOString(),
+      studentName: studentName.value,
+      certificateNumber: null,
       template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Advanced Course'
     });
@@ -309,89 +385,86 @@ const earnedCertificates = computed(() => {
   return certificates.sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
 });
 
-// Format date helper
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-// View certificate - shows the actual PDF template with name
 const viewCertificate = async (cert: any) => {
   certificatePreviewData.value = cert;
   showCertificatePreviewModal.value = true;
 };
 
-// Download certificate as PDF
 const downloadCertificate = async (cert: any) => {
   try {
-    console.log('Downloading certificate:', cert.id);
-    
     const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
-    
-    // Get template for this course level
+
     const template = certificateTemplates.value.find(t => t.course_level === cert.courseLevel);
     if (!template?.template_url) {
       alert('Certificate template not found. Please contact support.');
       return;
     }
 
-    console.log('Template URL:', template.template_url);
-
-    // Fetch the PDF template
     const existingPdfBytes = await fetch(template.template_url).then(r => {
-      if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status} ${r.statusText}`)
-      return r.arrayBuffer()
+      if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status} ${r.statusText}`);
+      return r.arrayBuffer();
     });
 
-    // Load and modify PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const page = pdfDoc.getPages()[0];
 
-    // Embed font and add student name
-    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    if (!page) {
+      throw new Error('Certificate template has no pages.');
+    }
 
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const pageWidth = page.getWidth();
     const pageHeight = page.getHeight();
 
-    console.log('PDF loaded, page size:', pageWidth, 'x', pageHeight);
+    const studentDisplayName = getCertificateStudentName(cert);
+    const nameSize = 38;
+    const nameWidth = font.widthOfTextAtSize(studentDisplayName, nameSize);
 
-    // Add name in center of page
-    page.drawText(studentName.value, {
-      x: pageWidth / 2 - (studentName.value.length * 8),
-      y: pageHeight / 2,
-      size: 48,
+    page.drawText(studentDisplayName, {
+      x: ((pageWidth - nameWidth) / 2) + 100,
+      y: pageHeight * 0.45,
+      size: nameSize,
       font,
       color: rgb(0, 0, 0),
     });
 
-    console.log('Added student name to PDF');
+    const metaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const certificateDate = getCertificateCompletionDate(cert);
+    page.drawText(certificateDate, {
+      x: pageWidth / 2 + 176,
+      y: pageHeight * 0.365 - 9.6,
+      size: 12,
+      font: metaFont,
+      color: rgb(0.1, 0.16, 0.32),
+    });
 
-    // Save as PDF
+    const certificateNumberText = getCertificateSequenceOnly(cert);
+    const certificateNumberWidth = metaFont.widthOfTextAtSize(certificateNumberText, 11);
+
+    page.drawText(certificateNumberText, {
+      x: pageWidth - certificateNumberWidth - 52,
+      y: 48,
+      size: 11,
+      font: metaFont,
+      color: rgb(0.1, 0.16, 0.32),
+    });
+
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
 
-    // Trigger download
     const a = document.createElement('a');
     a.href = url;
     const timestamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    a.download = `Certificate_${studentName.value.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+    a.download = `Certificate_${getCertificateStudentName(cert).replace(/\s+/g, '_')}_${timestamp}.pdf`;
     a.click();
-
-    // Clean up
     URL.revokeObjectURL(url);
-
-    console.log('Certificate downloaded:', a.download);
   } catch (err) {
     console.error('Error downloading certificate:', err);
     alert('Failed to download certificate. Please try again or contact support.');
   }
 };
 
-// Navigation handlers
 const handleNextCourse = () => {
   showCertificateModal.value = false;
   navigateTo('/dashboard?course=advanced');

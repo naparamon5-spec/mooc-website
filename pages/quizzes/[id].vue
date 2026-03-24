@@ -119,10 +119,10 @@
                 :key="`review-${idx}`"
                 class="border border-gray-100 rounded-xl p-4"
               >
-                <p class="font-semibold text-gray-900 mb-2">{{ idx + 1 }}. {{ q.question }}</p>
+                <p class="font-semibold text-gray-900 mb-2">{{ (idx as number) + 1 }}. {{ q.question }}</p>
                 <div class="text-sm text-gray-700">
                   <span class="font-medium text-gray-600">Your answer:</span>
-                  <span class="ml-2">{{ getSelectedAnswerText(q, idx) }}</span>
+                  <span class="ml-2">{{ getSelectedAnswerText(q, idx as number) }}</span>
                 </div>
               </div>
             </div>
@@ -311,6 +311,7 @@ import { useCourseProgress } from '~/composables/useCourseProgress'
 import { useModuleManagement } from '~/composables/useModuleManagement'
 import { useUserProfile } from '~/composables/useUserProfile'
 import { useCertificateTemplates } from '~/composables/useCertificateTemplates'
+import { useBadgeManagement } from '~/composables/useBadgeManagement'
 
 const route = useRoute()
 const router = useRouter()
@@ -321,6 +322,7 @@ const { completeModule, badgeMapping, courseProgress, loadProgressFromSupabase }
 const { fetchModules, modules } = useModuleManagement()
 const { fetchUserProfile } = useUserProfile()
 const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates()
+const { getBadgeImageUrlByName } = useBadgeManagement()
 
 // useNuxtApp() called at top-level setup, not inside async functions
 const { $supabase } = useNuxtApp()
@@ -337,6 +339,8 @@ const currentQuestionIndex = ref(0)
 const showSuccessModal = ref(false)
 const showCertificateModal = ref(false)
 const studentName = ref('Student')
+const badgeImage = ref('/assets/default-badge.png')
+const certificateSaved = ref(false)
 
 // Use question.id if present, else fallback to string index — must match submitQuizAnswers
 const answerKey = (index: number): string => {
@@ -453,21 +457,18 @@ const earnedBadgeName = computed(() => {
   return 'Unknown Badge'
 })
 
-const badgeImage = computed(() => {
-  const map: Record<string, string> = {
-    'LITERACY SCHOLAR': '/assets/MODULE1.png',
-    'MEDIA SYSTEMS ADEPT': '/assets/MODULE2.png',
-    'MEDIA LINGUIST': '/assets/MODULE3.png',
-    'EQUITY ADVOCATE': '/assets/MODULE4.png',
-    'RESPONSIBLE CITIZEN': '/assets/MODULE5.png',
-    'CYBER GUARDIAN': '/assets/MODULE6.png',
-    'GENERATIVE THINKER': '/assets/MODULE7.png',
-    'DIGITAL MAVEN': '/assets/MODULE8.png',
-    'MEDIA ANALYST': '/assets/MODULE9.png',
-    'ETHICAL MEDIA CREATOR': '/assets/MODULE10.png',
+// Watch for badge name changes and fetch the image URL from database
+watch(earnedBadgeName, async (newBadgeName) => {
+  if (newBadgeName && newBadgeName !== 'Unknown Badge') {
+    try {
+      const imageUrl = await getBadgeImageUrlByName(newBadgeName)
+      badgeImage.value = imageUrl
+    } catch (err) {
+      console.error('Error fetching badge image:', err)
+      badgeImage.value = '/assets/default-badge.png'
+    }
   }
-  return map[earnedBadgeName.value] || '/assets/default-badge.png'
-})
+}, { immediate: true })
 
 onMounted(async () => {
   loading.value = true
@@ -547,6 +548,25 @@ const saveCertificateToDatabase = async () => {
     }
     console.log('✅ Template found:', template.course_level)
 
+    // Check if certificate already exists for this user, module, and course level to prevent duplicates
+    const { data: existingCerts, error: checkError } = await $supabase
+      .from('certificates')
+      .select('id')
+      .eq('student_id', user.id)
+      .eq('module_id', quiz.value.module_id)
+      .eq('course_level', quiz.value.level)
+
+    if (checkError) {
+      console.error('❌ Error checking for existing certificate:', checkError)
+      return
+    }
+
+    // If certificate already exists, don't create a duplicate
+    if (existingCerts && existingCerts.length > 0) {
+      console.log('✅ Certificate already exists for this module, skipping duplicate creation')
+      return
+    }
+
     // Insert certificate record using actual table schema
     const certificateData = {
       student_id: user.id,
@@ -581,8 +601,8 @@ const getSelectedAnswerText = (question: any, idx: number) => {
   if (raw === undefined || raw === null) return 'No answer'
 
   if (question?.type === 'multiple_choice') {
-    const oi = typeof raw === 'number' ? raw : parseInt(String(raw), 10)
-    if (Number.isFinite(oi) && Array.isArray(question.options) && question.options[oi] != null) {
+    const oi: number = typeof raw === 'number' ? raw : parseInt(String(raw), 10)
+    if (Number.isFinite(oi) && Array.isArray(question.options) && oi >= 0 && question.options[oi] != null) {
       return question.options[oi]
     }
     return 'Answer recorded'
@@ -627,6 +647,12 @@ const submitQuiz = async () => {
 watch(result, async (val) => {
   if (val?.passed) {
     if (isLastCourseModule.value) {
+      // Prevent saving certificate multiple times for the same quiz completion
+      if (certificateSaved.value) {
+        console.log('✅ Certificate already saved for this quiz, skipping duplicate call')
+        return
+      }
+      
       // Ensure templates are loaded before showing certificate modal
       if (certificateTemplates.value.length === 0) {
         console.log('🔄 Templates not loaded yet, fetching...')
@@ -640,6 +666,9 @@ watch(result, async (val) => {
         templateUrl: tmpl?.template_url,
         allTemplates: certificateTemplates.value.map(t => ({ level: t.course_level, url: t.template_url?.substring(0, 50) }))
       })
+      
+      // Mark certificate as saved to prevent duplicates
+      certificateSaved.value = true
       
       // Save certificate to database
       await saveCertificateToDatabase()
@@ -659,6 +688,7 @@ const retakeQuiz = () => {
   result.value = null
   answers.value = {}
   currentQuestionIndex.value = 0
+  certificateSaved.value = false
 }
 
 // Badge modal primary button handler

@@ -5,6 +5,47 @@
     <main class="w-full px-4 md:px-8 lg:px-12 py-3 flex-grow">
       <h2 class="text-4xl font-bold text-gray-800 mb-4">All Available Modules</h2>
 
+      <!-- Tabs -->
+      <div class="flex gap-4 mb-8 border-b border-gray-200">
+        <button
+          @click="activeLevel = 'beginner'"
+          :class="[
+            'px-6 py-3 font-semibold text-lg transition-colors',
+            activeLevel === 'beginner'
+              ? 'text-primary-600 border-b-2 border-primary-600'
+              : 'text-gray-600 hover:text-gray-800'
+          ]"
+        >
+          Beginner
+        </button>
+        <div class="relative group">
+          <button
+            @click="activeLevel = 'advanced'"
+            :disabled="!allBeginnerModulesCompleted"
+            :class="[
+              'px-6 py-3 font-semibold text-lg transition-colors',
+              allBeginnerModulesCompleted
+                ? [
+                    activeLevel === 'advanced'
+                      ? 'text-primary-600 border-b-2 border-primary-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  ]
+                : 'text-gray-400 cursor-not-allowed'
+            ]"
+          >
+            Advanced
+          </button>
+          <!-- Tooltip -->
+          <div
+            v-if="!allBeginnerModulesCompleted"
+            class="invisible group-hover:visible absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded z-20 whitespace-nowrap"
+          >
+            Complete all beginner modules first
+            <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="loading" class="text-center py-2 flex items-center justify-center">
         <p class="text-gray-600">Loading modules...</p>
       </div>
@@ -17,7 +58,7 @@
         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2"
       >
         <ModuleCard
-          v-for="(module, index) in allAvailableModules"
+          v-for="(module, index) in filteredModules"
           :key="module.id"
           :title="module.title"
           :subtitle="module.subtitle"
@@ -50,6 +91,7 @@ import { useModuleManagement } from "~/composables/useModuleManagement";
 import { useCourseAgreement } from "~/composables/useCourseAgreement";
 
 const studentName = ref("Student's name");
+const activeLevel = ref("beginner");
 
 const { isModuleCompleted } = useCourseProgress();
 const { modules, loading, error, fetchModules } = useModuleManagement();
@@ -80,6 +122,16 @@ const allAvailableModules = computed(() => {
   return [...beginnerModules, ...advancedModules];
 });
 
+const filteredModules = computed(() => {
+  return allAvailableModules.value.filter(m => m.level === activeLevel.value);
+});
+
+const allBeginnerModulesCompleted = computed(() => {
+  return modules.value
+    .filter(m => m.level === 'beginner' && m.is_active)
+    .every(m => isModuleCompleted('beginner', m.id));
+});
+
 watch(
   () => allAvailableModules.value,
   (newModules) => {
@@ -90,12 +142,23 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => allBeginnerModulesCompleted.value,
+  (isCompleted) => {
+    if (!isCompleted && activeLevel.value === 'advanced') {
+      activeLevel.value = 'beginner';
+    }
+  }
+);
+
 const isModuleAccessible = (moduleId, index) => {
   if (!hasAcceptedAgreement.value) return false;
   if (index === 0) return true;
 
-  const currentModule = allAvailableModules.value[index];
-  const previousModule = allAvailableModules.value[index - 1];
+  const currentModule = filteredModules.value[index];
+  const previousModule = filteredModules.value[index - 1];
+
+  if (!previousModule || !currentModule) return false;
 
   if (previousModule.level === 'beginner' && currentModule.level === 'advanced') {
     const allBeginnerCompleted = modules.value
@@ -109,7 +172,7 @@ const isModuleAccessible = (moduleId, index) => {
 
 const selectModule = (module) => {
   selectedModule.value = module;
-  const index = allAvailableModules.value.findIndex((m) => m.id === module.id);
+  const index = filteredModules.value.findIndex((m) => m.id === module.id);
   if (isModuleAccessible(module.id, index)) {
     router.push(`/modules/${module.id}`);
   }

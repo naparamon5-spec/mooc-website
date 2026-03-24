@@ -125,10 +125,12 @@ const generatePDF = (title: string, filename: string, renderContent: (doc: jsPDF
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 15
   const contentWidth = pageWidth - 2 * margin
+  const footerHeight = 10
+  const maxContentHeight = pageHeight - footerHeight - margin
 
   let currentY = margin
 
-  // Header
+  // Header on first page
   doc.setFillColor(37, 99, 235) // Blue
   doc.rect(0, 0, pageWidth, 30, 'F')
   
@@ -144,260 +146,872 @@ const generatePDF = (title: string, filename: string, renderContent: (doc: jsPDF
 
   currentY = 45
 
+  // Content - store original render function
+  const originalRenderContent = renderContent
+  
+  // Wrapped render function that handles page breaks
+  const renderWithPageBreaks = (doc: jsPDF, startY: number): number => {
+    let y = startY
+    let pageNum = 1
+    
+    const render = (doc: jsPDF, y: number): number => {
+      return originalRenderContent(doc, y)
+    }
+    
+    y = render(doc, y)
+    
+    // Footer for all pages
+    const addFooter = (pageNumber: number) => {
+      doc.setFontSize(9)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Page ${pageNumber}`, margin, pageHeight - 10)
+      doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+    }
+    
+    addFooter(1)
+    return y
+  }
+
   // Content
   doc.setTextColor(0, 0, 0)
-  currentY = renderContent(doc, currentY)
-
-  // Footer
-  doc.setFontSize(9)
-  doc.setTextColor(150, 150, 150)
-  doc.text(`Page 1`, margin, pageHeight - 10)
-  doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+  currentY = renderWithPageBreaks(doc, currentY)
 
   doc.save(filename)
 }
 
-const downloadModuleCompletion = () => {
-  generatePDF('Module Completion Report', `module-completion-${new Date().toISOString().split('T')[0]}.pdf`, (doc, startY) => {
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const margin = 15
-    const contentWidth = pageWidth - 2 * margin
-    let currentY = startY
+// Helper function to add a new page with proper setup
+const addNewPage = (doc: jsPDF, pageNumber: number) => {
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  
+  doc.addPage()
+  
+  // Add header on new page
+  doc.setFillColor(37, 99, 235) // Blue
+  doc.rect(0, 0, pageWidth, 25, 'F')
+  
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(14)
+  doc.setFont(undefined, 'bold')
+  doc.text(`Page ${pageNumber}`, margin, 17)
+  
+  // Add footer
+  doc.setFontSize(9)
+  doc.setTextColor(150, 150, 150)
+  doc.text(`Page ${pageNumber}`, margin, pageHeight - 10)
+  doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+  
+  return 35 // Return Y position after header
+}
 
-    // Title
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.text('Module Completion (Last 14 Days)', margin, currentY)
-    currentY += 12
+// Helper to check if we need a new page
+const checkPageBreak = (doc: jsPDF, currentY: number, requiredSpace: number): number => {
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const footerHeight = 15
+  
+  if (currentY + requiredSpace > pageHeight - footerHeight) {
+    const pageNum = doc.getNumberOfPages() + 1
+    return addNewPage(doc, pageNum)
+  }
+  return currentY
+}
 
-    // Module data
-    const stats = props.moduleCompletionStats as any[]
+const downloadModuleCompletion = async () => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
 
-    if (stats.length === 0) {
-      doc.setFontSize(10)
-      doc.text('No module completion data available', margin, currentY)
-      return currentY + 10
-    }
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  const contentWidth = pageWidth - 2 * margin
+  let currentY = margin
+  let pageNum = 1
 
-    // Calculate max for percentage
-    const maxCompletions = Math.max(...stats.map(m => m.completions))
+  const nuxtApp = useNuxtApp()
+  const supabase = nuxtApp.$supabase
 
-    // Draw chart
-    const chartStartY = currentY
-    const chartHeight = 60
+  // Helper to calculate days/weeks ago
+  const getTimeAgo = (date: string): string => {
+    const completionDate = new Date(date)
+    const today = new Date()
+    const diffTime = Math.abs(today.getTime() - completionDate.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
-    // Draw bars
-    const barWidth = contentWidth / stats.length - 2
-    let barX = margin + 5
-    const maxChartValue = Math.max(...stats.map(m => m.completions))
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    
+    const weeks = Math.floor(diffDays / 7)
+    if (weeks === 1) return '1 week ago'
+    return `${weeks} weeks ago`
+  }
 
-    stats.forEach((module, index) => {
-      const percentage = (module.completions / maxChartValue) * 100
-      const scaledHeight = (chartHeight * percentage) / 100
-      
-      // Draw bar
-      doc.setFillColor(59, 130, 246) // Blue
-      const barHeight = Math.max(scaledHeight, 2)
-      doc.rect(barX, chartStartY + chartHeight - barHeight, barWidth - 1, barHeight, 'F')
-      
-      // Draw value
-      doc.setFontSize(8)
-      doc.text(`${module.completions}`, barX + barWidth / 2 - 2, chartStartY + chartHeight + 3)
-      
-      barX += barWidth + 1
-    })
+  // Helper to add new page
+  const newPage = () => {
+    doc.addPage()
+    pageNum++
+    currentY = 20
+  }
 
-    currentY = chartStartY + chartHeight + 12
+  // Header on first page
+  doc.setFillColor(37, 99, 235)
+  doc.rect(0, 0, pageWidth, 30, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(20)
+  doc.setFont(undefined, 'bold')
+  doc.text('Module Completion Report', margin, 20)
+  doc.setTextColor(200, 200, 200)
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 27)
+  currentY = 45
 
-    // Legend/Table
-    doc.setFontSize(9)
-    doc.setFont(undefined, 'bold')
-    doc.text('Module Details', margin, currentY)
-    currentY += 6
+  // Title
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(14)
+  doc.setFont(undefined, 'bold')
+  doc.text('Module Completion Report (Last 14 Days)', margin, currentY)
+  currentY += 12
 
-    doc.setFont(undefined, 'normal')
-    doc.setFontSize(8)
-    stats.forEach((module, index) => {
-      doc.text(`${index + 1}. ${module.title}: ${module.completions} completions`, margin + 5, currentY)
-      currentY += 5
-    })
+  try {
+    // Fetch module completion data from last 14 days
+    const fourteenDaysAgo = new Date()
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
 
-    return currentY + 5
-  })
-}
+    const { data: completions, error } = await supabase
+      .from('module_completion')
+      .select('module_id, modules(id, title, level), completed_at, user_id')
+      .gte('completed_at', fourteenDaysAgo.toISOString())
+      .order('completed_at', { ascending: false })
 
-const downloadEnrollment = () => {
-  generatePDF('Enrollment Analytics Report', `enrollment-analytics-${new Date().toISOString().split('T')[0]}.pdf`, (doc, startY) => {
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const margin = 15
-    const contentWidth = pageWidth - 2 * margin
-    let currentY = startY
-
-    // Title
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.text('Enrollment Analytics (Last 14 Days)', margin, currentY)
-    currentY += 12
-
-    const enrollData = props.enrollmentData as any[]
-
-    if (enrollData.length === 0) {
+    if (error) {
+      console.error('Error fetching module completions:', error)
       doc.setFontSize(10)
-      doc.text('No enrollment data available', margin, currentY)
-      return currentY + 10
-    }
+      doc.setTextColor(200, 0, 0)
+      doc.text(`Error loading data: ${error.message}`, margin, currentY)
+    } else if (!completions || completions.length === 0) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text('No module completions in the last 14 days.', margin, currentY)
+    } else {
+      // Group completions by module
+      const moduleStats = new Map<string, { title: string; count: number; completions: any[] }>()
 
-    // Summary
-    const totalSignups = enrollData.reduce((sum, e) => sum + (e.enrollments || 0), 0)
-    const avgSignups = (totalSignups / enrollData.length).toFixed(1)
+      completions.forEach((completion: any) => {
+        const moduleId = completion.module_id
+        const moduleName = completion.modules?.title || `Module ${moduleId}`
+        
+        if (!moduleStats.has(moduleId)) {
+          moduleStats.set(moduleId, {
+            title: moduleName,
+            count: 0,
+            completions: []
+          })
+        }
 
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.text(`Total Signups: ${totalSignups}`, margin, currentY)
-    currentY += 6
-    doc.text(`Average per Day: ${avgSignups}`, margin, currentY)
-    currentY += 10
+        const stats = moduleStats.get(moduleId)!
+        stats.count++
+        stats.completions.push({
+          date: completion.completed_at,
+          timeAgo: getTimeAgo(completion.completed_at)
+        })
+      })
 
-    // Draw line chart
-    const chartStartY = currentY
-    const chartWidth = contentWidth
-    const chartHeight = 50
-    const maxValue = Math.max(...enrollData.map(e => e.enrollments || 0))
+      // Sort by completion count (descending)
+      const sortedModules = Array.from(moduleStats.values()).sort((a, b) => b.count - a.count)
 
-    // Chart border
-    doc.setDrawColor(200, 200, 200)
-    doc.rect(margin, chartStartY, chartWidth, chartHeight)
-
-    // Grid lines
-    doc.setDrawColor(230, 230, 230)
-    for (let i = 0; i <= 4; i++) {
-      const y = chartStartY + (i * chartHeight) / 4
-      doc.line(margin, y, margin + chartWidth, y)
-    }
-
-    // Draw lines and points
-    doc.setDrawColor(34, 197, 94) // Green
-    const pointSpacing = chartWidth / (enrollData.length - 1 || 1)
-    let prevX = margin
-    let prevY = chartStartY + chartHeight
-
-    enrollData.forEach((item, index) => {
-      const x = margin + index * pointSpacing
-      const y = chartStartY + chartHeight - (((item.enrollments || 0) / maxValue) * chartHeight)
+      // Summary
+      const totalCompletions = completions.length
+      const avgCompletions = (totalCompletions / sortedModules.length).toFixed(1)
       
-      // Draw line
-      if (index > 0) {
-        doc.line(prevX, prevY, x, y)
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      doc.text(`Total Completions: ${totalCompletions} students`, margin, currentY)
+      currentY += 5
+      doc.text(`Average per Module: ${avgCompletions} students`, margin, currentY)
+      currentY += 10
+
+      // Check page break before chart
+      if (currentY + (sortedModules.length * 10) > pageHeight - 25) {
+        newPage()
       }
-      
-      // Draw point
-      doc.setFillColor(34, 197, 94)
-      doc.circle(x, y, 1.5, 'F')
-      
-      prevX = x
-      prevY = y
-    })
 
-    currentY += chartHeight + 10
+      // Draw horizontal bar chart
+      const chartStartY = currentY
+      const barHeight = 6
+      const barSpacing = 12
+      const maxCompletions = Math.max(...sortedModules.map(m => m.count))
+      const chartWidth = contentWidth - 80
 
-    // Table header
-    doc.setFont(undefined, 'bold')
-    doc.setFontSize(9)
-    doc.text('Date', margin, currentY)
-    doc.text('Signups', margin + 50, currentY)
-    currentY += 5
+      sortedModules.forEach((module, index) => {
+        // Check if we need a new page
+        if (currentY + 15 > pageHeight - 15) {
+          newPage()
+        }
 
-    doc.setDrawColor(200, 200, 200)
-    doc.line(margin, currentY, pageWidth - margin, currentY)
-    currentY += 4
+        const barY = currentY
+        
+        // Module name
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        const moduleLabelWidth = doc.getStringUnitWidth(module.title) * 9 / pageWidth * contentWidth
+        const truncatedLabel = moduleLabelWidth > 25 ? module.title.substring(0, 10) + '...' : module.title
+        doc.text(truncatedLabel, margin, barY + 2)
+        
+        // Draw bar background
+        doc.setDrawColor(220, 220, 220)
+        doc.rect(margin + 30, barY - 2, chartWidth, barHeight)
+        
+        // Draw filled bar
+        const filledWidth = (chartWidth * module.count) / maxCompletions
+        doc.setFillColor(59, 130, 246)
+        doc.rect(margin + 30, barY - 2, filledWidth, barHeight, 'F')
+        
+        // Draw completion count
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'bold')
+        doc.text(`${module.count} students`, margin + 30 + chartWidth + 5, barY + 2)
+        
+        currentY = barY + barSpacing
+      })
 
-    // Table data
-    doc.setFont(undefined, 'normal')
-    doc.setFontSize(9)
-    enrollData.forEach(item => {
-      const date = new Date(item.date).toLocaleDateString('en-US')
-      doc.text(date, margin, currentY)
-      doc.text(`${item.enrollments || 0}`, margin + 50, currentY)
-      currentY += 5
-    })
+      currentY += 8
 
-    return currentY + 5
-  })
-}
+      // Check page break before table
+      if (currentY + 20 > pageHeight - 15) {
+        newPage()
+      }
 
-const downloadCourseCompletion = () => {
-  generatePDF('Course Completion Rate Report', `course-completion-${new Date().toISOString().split('T')[0]}.pdf`, (doc, startY) => {
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const margin = 15
-    const contentWidth = pageWidth - 2 * margin
-    let currentY = startY
-
-    // Title
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.text('Course Completion Rates (Year by Year)', margin, currentY)
-    currentY += 12
-
-    const rates = props.courseCompletionRates as any[]
-
-    if (rates.length === 0) {
-      doc.setFontSize(10)
-      doc.text('No course completion data available', margin, currentY)
-      return currentY + 10
-    }
-
-    // Sort by year
-    const sortedRates = [...rates].sort((a, b) => parseInt(a.year) - parseInt(b.year))
-
-    // Overall summary
-    const avgRate = (sortedRates.reduce((sum, r) => sum + (r.completion_percentage || r.percentage || 0), 0) / sortedRates.length).toFixed(1)
-    const totalEnrolled = sortedRates.reduce((sum, r) => sum + (r.total_students || 0), 0)
-    const totalCompleted = sortedRates.reduce((sum, r) => sum + (r.completed_students || 0), 0)
-
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.text(`Total Enrolled: ${totalEnrolled} students`, margin, currentY)
-    currentY += 5
-    doc.text(`Total Completed: ${totalCompleted} students`, margin, currentY)
-    currentY += 5
-    doc.text(`Average Completion Rate: ${avgRate}%`, margin, currentY)
-    currentY += 10
-
-    // Draw chart
-    const chartStartY = currentY
-    const barSpacing = 18
-    const barPaddingLeft = 20
-    const barWidth = contentWidth - barPaddingLeft - 40
-    const maxRate = Math.max(...sortedRates.map(r => r.completion_percentage || r.percentage || 0), 20)
-
-    sortedRates.forEach((rate, index) => {
-      // Year label
+      // Detailed table
+      doc.setFontSize(11)
       doc.setFont(undefined, 'bold')
-      doc.setFontSize(10)
-      doc.text(`${rate.year}:`, margin, currentY)
+      doc.text('Module Details & Completion Timeline', margin, currentY)
+      currentY += 7
 
-      // Percentage value
-      const percentage = Number(rate.completion_percentage || rate.percentage || 0)
-      const filledWidth = (barWidth * percentage) / maxRate
+      // Table headers
+      doc.setFontSize(9)
+      doc.setFont(undefined, 'bold')
+      doc.text('Module', margin, currentY)
+      doc.text('Students', margin + 40, currentY)
+      doc.text('Latest Completion', margin + 70, currentY)
+      currentY += 5
 
-      // Bar background
-      doc.setDrawColor(220, 220, 220)
-      doc.rect(margin + barPaddingLeft, currentY - 3.5, barWidth, 5)
+      // Header line
+      doc.setDrawColor(100, 100, 100)
+      doc.line(margin, currentY - 1, pageWidth - margin, currentY - 1)
+      currentY += 3
 
-      // Color based on performance
-      let fillColor = percentage < 10 ? [239, 68, 68] : percentage < 15 ? [250, 147, 51] : [34, 197, 94]
-      doc.setFillColor(...fillColor)
-      doc.rect(margin + barPaddingLeft, currentY - 3.5, filledWidth, 5, 'F')
-
-      // Percentage text
+      // Table data
       doc.setFont(undefined, 'normal')
       doc.setFontSize(9)
-      doc.text(`${percentage.toFixed(1)}% (${rate.completed_students || 0}/${rate.total_students || 0})`, margin + barPaddingLeft + barWidth + 5, currentY + 1)
+      sortedModules.forEach((module, index) => {
+        // Check page break
+        if (currentY + 15 > pageHeight - 15) {
+          newPage()
+          // Redraw table header
+          doc.setFontSize(9)
+          doc.setFont(undefined, 'bold')
+          doc.text('Module', margin, currentY)
+          doc.text('Students', margin + 40, currentY)
+          doc.text('Latest Completion', margin + 70, currentY)
+          currentY += 5
+          doc.setDrawColor(100, 100, 100)
+          doc.line(margin, currentY - 1, pageWidth - margin, currentY - 1)
+          currentY += 3
+          doc.setFont(undefined, 'normal')
+          doc.setFontSize(9)
+        }
 
-      currentY += barSpacing
-    })
+        const percentage = ((module.count / totalCompletions) * 100).toFixed(1)
+        const latestCompletion = module.completions[0]
+        const latestDate = new Date(latestCompletion.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        
+        // Module name on its own line
+        doc.setFont(undefined, 'bold')
+        doc.text(module.title, margin, currentY)
+        currentY += 5
+        
+        // Stats on next line
+        doc.setFont(undefined, 'normal')
+        doc.text(`${module.count} students`, margin + 5, currentY)
+        doc.text(`${latestDate}`, margin + 70, currentY)
+        currentY += 4
+        
+        // Show timing info with lighter text
+        doc.setFont(undefined, 'italic')
+        doc.setFontSize(8)
+        doc.setTextColor(120, 120, 120)
+        doc.text(`(${latestCompletion.timeAgo})`, margin + 70, currentY)
+        doc.setTextColor(0, 0, 0)
+        currentY += 4
+        
+        // Percentage info
+        doc.setFont(undefined, 'italic')
+        doc.setFontSize(8)
+        doc.text(`${percentage}% of all completions`, margin + 5, currentY)
+        currentY += 4
+        
+        // Show last 3 completion dates
+        if (module.completions.length > 1) {
+          const recentCompletions = module.completions.slice(1, 4)
+          doc.setFont(undefined, 'italic')
+          doc.setFontSize(7)
+          doc.setTextColor(100, 100, 100)
+          
+          recentCompletions.forEach((comp, compIdx) => {
+            const compDate = new Date(comp.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            doc.text(`  • ${compDate} (${comp.timeAgo})`, margin + 8, currentY + (compIdx * 3.5))
+          })
+          
+          doc.setTextColor(0, 0, 0)
+          currentY += recentCompletions.length * 3.5
+        }
+        
+        doc.setFont(undefined, 'normal')
+        doc.setFontSize(9)
+        currentY += 4
+      })
 
-    return currentY + 5
+      // Timeline summary section
+      currentY += 8
+      
+      // Check if we need a new page for timeline
+      if (currentY + 30 > pageHeight - 15) {
+        newPage()
+      }
+
+      doc.setDrawColor(200, 200, 200)
+      doc.line(margin, currentY, pageWidth - margin, currentY)
+      currentY += 6
+      
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'bold')
+      doc.text('Completion Timeline Summary', margin, currentY)
+      currentY += 8
+
+      // Count completions by time period
+      const today = new Date()
+      const lastDay = completions.filter((c: any) => {
+        const d = new Date(c.completed_at)
+        return Math.ceil((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)) <= 1
+      }).length
+
+      const last7Days = completions.filter((c: any) => {
+        const d = new Date(c.completed_at)
+        return Math.ceil((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)) <= 7
+      }).length
+
+      const last14Days = completions.length
+
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(9)
+      doc.text(`Last 24 Hours: ${lastDay} completions`, margin, currentY)
+      currentY += 6
+      doc.text(`Last 7 Days: ${last7Days} completions`, margin, currentY)
+      currentY += 6
+      doc.text(`Last 14 Days: ${last14Days} completions`, margin, currentY)
+    }
+  } catch (err) {
+    console.error('Error generating module completion report:', err)
+    doc.setTextColor(200, 0, 0)
+    doc.setFontSize(10)
+    doc.text(`Error: ${(err as Error).message}`, margin, currentY)
+  }
+
+  // Add footer to all pages
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(9)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Page ${i}`, margin, pageHeight - 10)
+    doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+  }
+
+  doc.save(`module-completion-${new Date().toISOString().split('T')[0]}.pdf`)
+}
+
+const downloadEnrollment = async () => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
   })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  const contentWidth = pageWidth - 2 * margin
+  let currentY = margin
+
+  const nuxtApp = useNuxtApp()
+  const supabase = nuxtApp.$supabase
+
+  // Header
+  doc.setFillColor(37, 99, 235)
+  doc.rect(0, 0, pageWidth, 30, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(20)
+  doc.setFont(undefined, 'bold')
+  doc.text('Enrollment Analytics Report', margin, 20)
+  doc.setTextColor(200, 200, 200)
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 27)
+  currentY = 45
+
+  // Title
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(14)
+  doc.setFont(undefined, 'bold')
+  doc.text('Enrollment Analytics (Last 14 Days)', margin, currentY)
+  currentY += 12
+
+  try {
+    // Use props data if available, otherwise try to fetch
+    let enrollData = props.enrollmentData as any[]
+    
+    if (!enrollData || enrollData.length === 0) {
+      // Try to fetch from database if available
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('created_at')
+        .gte('created_at', fourteenDaysAgo.toISOString())
+        .order('created_at', { ascending: true })
+
+      if (!error && data && data.length > 0) {
+        // Group by date
+        const enrollByDate = new Map<string, number>()
+        
+        data.forEach((profile: any) => {
+          const date = new Date(profile.created_at).toISOString().split('T')[0]
+          enrollByDate.set(date, (enrollByDate.get(date) || 0) + 1)
+        })
+
+        // Convert to array
+        enrollData = Array.from(enrollByDate.entries()).map(([date, enrollments]) => ({
+          date,
+          enrollments
+        }))
+      }
+    }
+
+    if (!enrollData || enrollData.length === 0) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text('No enrollment data available for the last 14 days.', margin, currentY)
+    } else {
+      // Summary
+      const totalSignups = enrollData.reduce((sum, e) => sum + (e.enrollments || 0), 0)
+      const avgSignups = (totalSignups / enrollData.length).toFixed(1)
+
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      doc.text(`Total Signups: ${totalSignups}`, margin, currentY)
+      currentY += 6
+      doc.text(`Average per Day: ${avgSignups}`, margin, currentY)
+      currentY += 10
+
+      // Draw line chart
+      const chartStartY = currentY
+      const chartWidth = contentWidth
+      const chartHeight = 50
+      const maxValue = Math.max(...enrollData.map(e => e.enrollments || 0))
+
+      // Chart border
+      doc.setDrawColor(200, 200, 200)
+      doc.rect(margin, chartStartY, chartWidth, chartHeight)
+
+      // Grid lines
+      doc.setDrawColor(230, 230, 230)
+      for (let i = 0; i <= 4; i++) {
+        const y = chartStartY + (i * chartHeight) / 4
+        doc.line(margin, y, margin + chartWidth, y)
+      }
+
+      // Draw lines and points
+      doc.setDrawColor(34, 197, 94)
+      const pointSpacing = chartWidth / (enrollData.length - 1 || 1)
+      let prevX = margin
+      let prevY = chartStartY + chartHeight
+
+      enrollData.forEach((item, index) => {
+        const x = margin + index * pointSpacing
+        const y = chartStartY + chartHeight - (((item.enrollments || 0) / maxValue) * chartHeight)
+        
+        if (index > 0) {
+          doc.line(prevX, prevY, x, y)
+        }
+        
+        doc.setFillColor(34, 197, 94)
+        doc.circle(x, y, 1.5, 'F')
+        
+        prevX = x
+        prevY = y
+      })
+
+      currentY = chartStartY + chartHeight + 10
+
+      // Check page break
+      if (currentY + (enrollData.length * 5) > pageHeight - 20) {
+        doc.addPage()
+        currentY = 20
+      }
+
+      // Table header
+      doc.setFont(undefined, 'bold')
+      doc.setFontSize(9)
+      doc.text('Date', margin, currentY)
+      doc.text('Signups', margin + 50, currentY)
+      currentY += 5
+
+      doc.setDrawColor(200, 200, 200)
+      doc.line(margin, currentY, pageWidth - margin, currentY)
+      currentY += 4
+
+      // Table data
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(9)
+      enrollData.forEach(item => {
+        if (currentY + 5 > pageHeight - 15) {
+          doc.addPage()
+          currentY = 20
+          // Redraw header
+          doc.setFont(undefined, 'bold')
+          doc.text('Date', margin, currentY)
+          doc.text('Signups', margin + 50, currentY)
+          currentY += 5
+          doc.setDrawColor(200, 200, 200)
+          doc.line(margin, currentY, pageWidth - margin, currentY)
+          currentY += 4
+          doc.setFont(undefined, 'normal')
+        }
+
+        const date = new Date(item.date).toLocaleDateString('en-US')
+        doc.text(date, margin, currentY)
+        doc.text(`${item.enrollments || 0}`, margin + 50, currentY)
+        currentY += 5
+      })
+    }
+  } catch (err) {
+    console.error('Error generating enrollment report:', err)
+    doc.setTextColor(200, 0, 0)
+    doc.setFontSize(10)
+    doc.text(`Error: ${(err as Error).message}`, margin, currentY)
+  }
+
+  // Add footer to all pages
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(9)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Page ${i}`, margin, pageHeight - 10)
+    doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+  }
+
+  doc.save(`enrollment-analytics-${new Date().toISOString().split('T')[0]}.pdf`)
+}
+
+const downloadCourseCompletion = async () => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  const contentWidth = pageWidth - 2 * margin
+  let currentY = margin
+  let pageNum = 1
+
+  const nuxtApp = useNuxtApp()
+  const supabase = nuxtApp.$supabase
+
+  // Helper to add new page
+  const newPage = () => {
+    doc.addPage()
+    pageNum++
+    currentY = 20
+    
+    // Add page header
+    doc.setFillColor(37, 99, 235)
+    doc.rect(0, 0, pageWidth, 25, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Continuation - Page ${pageNum}`, margin, 16)
+    currentY = 35
+  }
+
+  // Header on first page
+  doc.setFillColor(37, 99, 235)
+  doc.rect(0, 0, pageWidth, 30, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(20)
+  doc.setFont(undefined, 'bold')
+  doc.text('Course Completion Rate Report', margin, 20)
+  doc.setTextColor(200, 200, 200)
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 27)
+  currentY = 45
+
+  // Title
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(14)
+  doc.setFont(undefined, 'bold')
+  doc.text('Course Completion Rates (Beginner & Advanced)', margin, currentY)
+  currentY += 12
+
+  try {
+    // Fetch completion data by course level
+    const { data: completions, error } = await supabase
+      .from('quiz_results')
+      .select('modules(level, title), completed_at, user_id')
+      .eq('passed', true)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching course completion data:', error)
+      doc.setFontSize(10)
+      doc.setTextColor(200, 0, 0)
+      doc.text(`Error loading data: ${error.message}`, margin, currentY)
+    } else if (!completions || completions.length === 0) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text('No course completion data available.', margin, currentY)
+    } else {
+      // Separate data by course level
+      const beginnerCompletions = completions.filter((c: any) => c.modules?.level === 'beginner')
+      const advancedCompletions = completions.filter((c: any) => c.modules?.level === 'advanced')
+
+      // Get unique students per level
+      const beginnerStudents = new Set(beginnerCompletions.map((c: any) => c.user_id))
+      const advancedStudents = new Set(advancedCompletions.map((c: any) => c.user_id))
+
+      // Calculate completion rates by year
+      const getCompletionsByYear = (completionList: any[]) => {
+        const byYear = new Map<number, { count: number; students: Set<string> }>()
+        
+        completionList.forEach((comp: any) => {
+          const year = new Date(comp.completed_at).getFullYear()
+          if (!byYear.has(year)) {
+            byYear.set(year, { count: 0, students: new Set() })
+          }
+          const yearData = byYear.get(year)!
+          yearData.count++
+          yearData.students.add(comp.user_id)
+        })
+        
+        return byYear
+      }
+
+      const beginnerByYear = getCompletionsByYear(beginnerCompletions)
+      const advancedByYear = getCompletionsByYear(advancedCompletions)
+
+      // Get all years
+      const allYears = new Set<number>()
+      beginnerByYear.forEach((_, year) => allYears.add(year))
+      advancedByYear.forEach((_, year) => allYears.add(year))
+      const sortedYears = Array.from(allYears).sort((a, b) => a - b)
+
+      // Display Beginner Course Data
+      doc.setFontSize(13)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(59, 130, 246) // Blue for beginner
+      doc.text('═ BEGINNER COURSE ═', margin, currentY)
+      currentY += 8
+
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      const totalBeginnerCompletions = beginnerCompletions.length
+      const totalBeginnerStudents = beginnerStudents.size
+      doc.text(`Total Students Completed: ${totalBeginnerStudents}`, margin, currentY)
+      currentY += 5
+      doc.text(`Total Module Completions: ${totalBeginnerCompletions}`, margin, currentY)
+      currentY += 10
+
+      // Check page break
+      if (currentY + (sortedYears.length * 20) > pageHeight - 20) {
+        newPage()
+      }
+
+      // Display beginner data by year
+      sortedYears.forEach((year, yearIdx) => {
+        // Check page break
+        if (currentY + 25 > pageHeight - 15) {
+          newPage()
+        }
+
+        const beginnerYear = beginnerByYear.get(year)
+        
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text(`Year ${year}`, margin + 5, currentY)
+        currentY += 6
+
+        if (beginnerYear) {
+          const percentage = (beginnerYear.count / totalBeginnerCompletions * 100).toFixed(1)
+          doc.setFontSize(9)
+          doc.setFont(undefined, 'normal')
+          doc.text(`Students Completed This Year: ${beginnerYear.students.size}`, margin + 10, currentY)
+          currentY += 4
+          doc.text(`Module Completions: ${beginnerYear.count}`, margin + 10, currentY)
+          currentY += 4
+          doc.text(`Percentage of Total: ${percentage}%`, margin + 10, currentY)
+
+          // Bar chart
+          currentY += 5
+          const barWidth = contentWidth - 40
+          const filledWidth = (barWidth * parseFloat(percentage)) / 100
+          
+          doc.setDrawColor(200, 200, 200)
+          doc.rect(margin + 10, currentY - 2, barWidth, 5)
+          
+          doc.setFillColor(59, 130, 246)
+          doc.rect(margin + 10, currentY - 2, filledWidth, 5, 'F')
+          
+          doc.setFontSize(9)
+          doc.setFont(undefined, 'bold')
+          doc.text(`${percentage}%`, margin + 10 + barWidth + 5, currentY)
+          
+          currentY += 8
+        } else {
+          doc.setFontSize(9)
+          doc.text('No completions in this year', margin + 10, currentY)
+          currentY += 6
+        }
+      })
+
+      currentY += 6
+
+      // Separator
+      doc.setDrawColor(100, 100, 100)
+      doc.line(margin, currentY, pageWidth - margin, currentY)
+      currentY += 8
+
+      // Display Advanced Course Data
+      doc.setFontSize(13)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(139, 92, 246) // Purple for advanced
+      doc.text('═ ADVANCED COURSE ═', margin, currentY)
+      currentY += 8
+
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'normal')
+      const totalAdvancedCompletions = advancedCompletions.length
+      const totalAdvancedStudents = advancedStudents.size
+      doc.text(`Total Students Completed: ${totalAdvancedStudents}`, margin, currentY)
+      currentY += 5
+      doc.text(`Total Module Completions: ${totalAdvancedCompletions}`, margin, currentY)
+      currentY += 10
+
+      // Check page break
+      if (currentY + (sortedYears.length * 20) > pageHeight - 20) {
+        newPage()
+      }
+
+      // Display advanced data by year
+      sortedYears.forEach((year, yearIdx) => {
+        // Check page break
+        if (currentY + 25 > pageHeight - 15) {
+          newPage()
+        }
+
+        const advancedYear = advancedByYear.get(year)
+        
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text(`Year ${year}`, margin + 5, currentY)
+        currentY += 6
+
+        if (advancedYear) {
+          const percentage = (advancedYear.count / totalAdvancedCompletions * 100).toFixed(1)
+          doc.setFontSize(9)
+          doc.setFont(undefined, 'normal')
+          doc.text(`Students Completed This Year: ${advancedYear.students.size}`, margin + 10, currentY)
+          currentY += 4
+          doc.text(`Module Completions: ${advancedYear.count}`, margin + 10, currentY)
+          currentY += 4
+          doc.text(`Percentage of Total: ${percentage}%`, margin + 10, currentY)
+
+          // Bar chart
+          currentY += 5
+          const barWidth = contentWidth - 40
+          const filledWidth = (barWidth * parseFloat(percentage)) / 100
+          
+          doc.setDrawColor(200, 200, 200)
+          doc.rect(margin + 10, currentY - 2, barWidth, 5)
+          
+          doc.setFillColor(139, 92, 246)
+          doc.rect(margin + 10, currentY - 2, filledWidth, 5, 'F')
+          
+          doc.setFontSize(9)
+          doc.setFont(undefined, 'bold')
+          doc.text(`${percentage}%`, margin + 10 + barWidth + 5, currentY)
+          
+          currentY += 8
+        } else {
+          doc.setFontSize(9)
+          doc.text('No completions in this year', margin + 10, currentY)
+          currentY += 6
+        }
+      })
+
+      // Overall comparison
+      if (currentY + 20 < pageHeight - 15) {
+        currentY += 8
+        doc.setDrawColor(100, 100, 100)
+        doc.line(margin, currentY, pageWidth - margin, currentY)
+        currentY += 6
+
+        doc.setFontSize(11)
+        doc.setFont(undefined, 'bold')
+        doc.text('Overall Comparison', margin, currentY)
+        currentY += 7
+
+        doc.setFontSize(9)
+        doc.setFont(undefined, 'normal')
+        doc.text(`Beginner: ${totalBeginnerStudents} students | ${totalBeginnerCompletions} completions`, margin, currentY)
+        currentY += 5
+        doc.text(`Advanced: ${totalAdvancedStudents} students | ${totalAdvancedCompletions} completions`, margin, currentY)
+        currentY += 5
+        
+        const totalStudents = totalBeginnerStudents + totalAdvancedStudents
+        doc.text(`Total Combined: ${totalStudents} students`, margin, currentY)
+      }
+    }
+  } catch (err) {
+    console.error('Error generating course completion report:', err)
+    doc.setTextColor(200, 0, 0)
+    doc.setFontSize(10)
+    doc.text(`Error: ${(err as Error).message}`, margin, currentY)
+  }
+
+  // Add footer to all pages
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(9)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Page ${i}`, margin, pageHeight - 10)
+    doc.text(`© 2025 MIL MOOC`, pageWidth - margin - 40, pageHeight - 10)
+  }
+
+  doc.save(`course-completion-${new Date().toISOString().split('T')[0]}.pdf`)
 }
 </script>

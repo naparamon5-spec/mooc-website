@@ -344,7 +344,8 @@ export const useQuizManagement = () => {
 
         const keyByQuestionId = q.id
         const keyByIndex = String(index)
-        let userAnswer = answers[keyByQuestionId] ?? answers[keyByIndex]
+        const answerKey = keyByQuestionId || keyByIndex
+        let userAnswer = answers[answerKey]
 
         if (userAnswer !== undefined && userAnswer !== null && userAnswer !== '') {
           let normalizedAnswer: string | number
@@ -361,7 +362,7 @@ export const useQuizManagement = () => {
             normalizedAnswer = String(userAnswer)
           }
 
-          normalizedAnswers[keyByQuestionId || keyByIndex] = normalizedAnswer
+          normalizedAnswers[answerKey] = normalizedAnswer
           submittedAnswersDebug.push({
             questionIndex: index,
             questionId: q.id,
@@ -380,14 +381,14 @@ export const useQuizManagement = () => {
         if (!q) return
 
         const key = q.id ?? String(index)
-        const userAnswer = normalizedAnswers[key]
+        const userAnswer = normalizedAnswers[key] as string | number | undefined
 
         if (userAnswer !== undefined && userAnswer !== null) {
           let isCorrect = false
 
           if (q.type === 'multiple_choice') {
-            const userAnswerNum = typeof userAnswer === 'number' ? userAnswer : parseInt(String(userAnswer), 10)
-            const correctAnswerNum = parseInt(String(q.correctAnswer), 10)
+            const userAnswerNum: number = typeof userAnswer === 'number' ? userAnswer : parseInt(String(userAnswer), 10)
+            const correctAnswerNum: number = parseInt(String(q.correctAnswer), 10)
             isCorrect = !isNaN(userAnswerNum) && !isNaN(correctAnswerNum) && userAnswerNum === correctAnswerNum
           } else if (q.type === 'true_false') {
             const userStr = String(userAnswer).toLowerCase().trim()

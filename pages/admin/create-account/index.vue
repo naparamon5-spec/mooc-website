@@ -3,7 +3,7 @@
     <!-- Header -->
     <AdminHeader :admin-name="adminName" />
 
-    <div class="max-w-6xl mx-auto px-4 md:px-8 lg:px-12 py-12">
+    <div class="w-full px-4 md:px-8 lg:px-12 py-12">
       <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 md:p-12">
         <!-- Title and Create Button -->
         <div class="flex justify-between items-center mb-8">
@@ -29,24 +29,24 @@
         <div v-else-if="users.length === 0" class="text-center py-8">
           <p class="text-gray-600">No instructors or admins found.</p>
         </div>
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
+        <div v-else class="w-full">
+          <table class="w-full table-fixed divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th style="width:15%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th style="width:22%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th style="width:9%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th style="width:9%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th style="width:13%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                <th style="width:10%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                <th style="width:22%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="user in users" :key="user.id">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ user.name }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.email }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-4 py-4 text-sm font-medium text-gray-900 truncate">{{ user.name }}</td>
+                <td class="px-4 py-4 text-sm text-gray-500 truncate">{{ user.email }}</td>
+                <td class="px-4 py-4">
                   <span :class="[
                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
                     user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
@@ -54,7 +54,7 @@
                     {{ user.role }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-4 py-4">
                   <span :class="[
                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
                     user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -62,31 +62,51 @@
                     {{ user.isActive ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.phone || '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ new Date(user.createdAt).toLocaleDateString() }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <button
-                    @click="toggleUserStatus(user)"
-                    :disabled="togglingUserId === user.id"
-                    :class="[
-                      'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed',
-                      user.isActive
-                        ? 'border-red-200 text-red-700 bg-red-50 hover:bg-red-100'
-                        : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
-                    ]"
-                  >
-                    <svg v-if="togglingUserId === user.id" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>
-                    <svg v-else-if="user.isActive" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                    </svg>
-                    <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    {{ togglingUserId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Activate' }}
-                  </button>
+                <td class="px-4 py-4 text-sm text-gray-500 truncate">{{ user.phone || '-' }}</td>
+                <td class="px-4 py-4 text-sm text-gray-500">{{ new Date(user.createdAt).toLocaleDateString() }}</td>
+                <td class="px-4 py-4">
+                  <div v-if="user.id !== currentUserId" class="flex gap-2">
+                    <!-- Toggle Status Button -->
+                    <button
+                      @click="toggleUserStatus(user)"
+                      :disabled="togglingUserId === user.id"
+                      :class="[
+                        'inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap',
+                        user.isActive
+                          ? 'border-red-200 text-red-700 bg-red-50 hover:bg-red-100'
+                          : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+                      ]"
+                    >
+                      <svg v-if="togglingUserId === user.id" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      <svg v-else-if="user.isActive" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                      </svg>
+                      <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      {{ togglingUserId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Activate' }}
+                    </button>
+
+                    <!-- Delete Button -->
+                    <button
+                      @click="deleteUserAccount(user)"
+                      :disabled="deletingUserId === user.id"
+                      class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      <svg v-if="deletingUserId === user.id" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
+                    </button>
+                  </div>
+                  <span v-else class="text-xs text-gray-400 italic">You</span>
                 </td>
               </tr>
             </tbody>
@@ -300,10 +320,12 @@ const showConfirmPassword = ref(false)
 const generalError = ref('')
 const successMessage = ref('')
 const showModal = ref(false)
+const currentUserId = ref<string | null>(null)
 
 // Toggle state
 const togglingUserId = ref<string | null>(null)
 const toggleError = ref('')
+const deletingUserId = ref<string | null>(null)
 
 const { users, loading: usersLoading, error: usersError, fetchUsers, updateUserStatus } = useAdminUserManagement()
 
@@ -328,6 +350,12 @@ const errors = ref({
 
 onMounted(() => {
   fetchUsers()
+  const { $supabase } = useNuxtApp()
+  $supabase.auth.getUser().then(({ data: { user } }) => {
+    if (user?.id) {
+      currentUserId.value = user.id
+    }
+  })
 })
 
 const validateForm = (): boolean => {
@@ -423,13 +451,47 @@ const toggleUserStatus = async (user: any) => {
       }
     })
 
-    // Update the ref array properly for Vue reactivity
     updateUserStatus(user.id, newStatus)
   } catch (err: any) {
     toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to update account status'
     console.error('Error toggling user status:', err)
   } finally {
     togglingUserId.value = null
+  }
+}
+
+// Delete user account
+const deleteUserAccount = async (user: any) => {
+  if (!confirm(`Are you sure you want to delete ${user.name}'s account? This action cannot be undone.`)) {
+    return
+  }
+
+  if (deletingUserId.value) return
+  toggleError.value = ''
+  deletingUserId.value = user.id
+
+  try {
+    const { $supabase } = useNuxtApp()
+    const { data: { session } } = await $supabase.auth.getSession()
+    if (!session?.access_token) {
+      toggleError.value = 'Session expired. Please sign in again.'
+      return
+    }
+
+    await $fetch('/api/admin/delete-user', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: {
+        userId: user.id
+      }
+    })
+
+    await fetchUsers()
+  } catch (err: any) {
+    toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to delete account'
+    console.error('Error deleting user:', err)
+  } finally {
+    deletingUserId.value = null
   }
 }
 
