@@ -130,14 +130,27 @@
               @continue="handleAdvancedWelcomeContinue"
             />
 
-            <!-- Beginner Course Completed Card (replaces video panel when beginner course completed) -->
-            <BeginnerCourseCompletedCard
-              v-if="currentCourseLevel === 'beginner' && isBeginnerCourseCompleted(beginnerModules.length) && !showWelcomeVideo && !showAdvancedWelcomeVideo && !cardDismissed"
-              @dismissed="cardDismissed = true"
-            />
+            <!-- Beginner Course Completed Card -->
+            <div
+              v-if="showBeginnerCompletionCard"
+              class="mb-2 cursor-pointer"
+              @click="showBeginnerModuleVideo"
+            >
+              <BeginnerCourseCompletedCard
+                @dismissed="showBeginnerModuleVideo"
+              />
+            </div>
 
-            <!-- Module Video (shows when beginner course not complete or card dismissed) -->
-            <div v-if="selectedModule && !showWelcomeVideo && !showAdvancedWelcomeVideo && !(currentCourseLevel === 'beginner' && isBeginnerCourseCompleted(beginnerModules.length) && !cardDismissed)" class="mb-2">
+            <!-- Advanced Course Completed Card -->
+            <div
+              v-if="showAdvancedCompletionCard"
+              class="mb-2"
+            >
+              <AdvancedCourseCompletedCard @dismissed="advancedCardDismissed = true" />
+            </div>
+
+            <!-- Module Video -->
+            <div v-if="showModuleVideoPanel" class="mb-2">
               <ModuleVideoPanel :module="selectedModule" />
             </div>
 
@@ -178,6 +191,7 @@ import WelcomeVideo from "~/components/studentdashboard/WelcomeVideo.vue";
 import AdvancedWelcomeVideo from "~/components/studentdashboard/AdvancedWelcomeVideo.vue";
 import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
 import BeginnerCourseCompletedCard from "~/components/studentdashboard/BeginnerCourseCompletedCard.vue";
+import AdvancedCourseCompletedCard from "~/components/studentdashboard/AdvancedCourseCompletedCard.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useUserProfile } from "~/composables/useUserProfile";
 import { useOnboarding } from "~/composables/useOnboarding";
@@ -203,6 +217,7 @@ const showAgreementStep = ref(false);
 const showAdvancedWelcomeVideo = ref(false);
 const noticeCardKey = ref(0);
 const cardDismissed = ref(false);
+const advancedCardDismissed = ref(false);
 
 const {
   getCompletedModules,
@@ -267,6 +282,16 @@ onMounted(async () => {
 
     const userData = await fetchUserProfile();
     if (userData?.full_name) studentName.value = userData.full_name;
+
+    if (user?.id) {
+      const { data: profile } = await $supabase
+        .from('profiles')
+        .select('advanced_completion_card_dismissed')
+        .eq('id', user.id)
+        .single();
+
+      advancedCardDismissed.value = !!profile?.advanced_completion_card_dismissed;
+    }
 
     if (user?.id) {
       const hasAgreed = await hasAcceptedCourseAgreement(user.id);
@@ -402,6 +427,32 @@ const currentModules = computed(() => {
     });
 });
 
+const showBeginnerCompletionCard = computed(() =>
+  currentCourseLevel.value === 'beginner' &&
+  isBeginnerCourseCompleted(beginnerModules.value.length) &&
+  !showWelcomeVideo.value &&
+  !showAdvancedWelcomeVideo.value &&
+  !cardDismissed.value
+);
+
+const showAdvancedCompletionCard = computed(() =>
+  currentCourseLevel.value === 'advanced' &&
+  currentModules.value.length > 0 &&
+  currentModules.value.every((module: any) => isModuleCompleted('advanced', module.id)) &&
+  !showWelcomeVideo.value &&
+  !showAdvancedWelcomeVideo.value &&
+  !showAgreementStep.value &&
+  !advancedCardDismissed.value
+);
+
+const showModuleVideoPanel = computed(() =>
+  !!selectedModule.value &&
+  !showWelcomeVideo.value &&
+  !showAdvancedWelcomeVideo.value &&
+  !showAgreementStep.value &&
+  !showAdvancedCompletionCard.value
+);
+
 const isModuleAccessible = (moduleId: string, index: number): boolean => {
   if (!hasAcceptedAgreement.value) return false;
   if (index === 0) return true;
@@ -417,11 +468,20 @@ const switchCourseLevel = async (levelId: string) => {
     cardDismissed.value = false;
   }
   
-  if (levelId === 'advanced') {
-    const { $supabase } = useNuxtApp();
-    const { data: { user } } = await $supabase.auth.getUser();
-    if (user?.id) await checkAndShowAdvancedWelcome(user.id);
+  // AFTER (fixed - re-reads DB value instead of blindly resetting)
+if (levelId === 'advanced') {
+  const { $supabase } = useNuxtApp();
+  const { data: { user } } = await $supabase.auth.getUser();
+  if (user?.id) {
+    const { data: profile } = await $supabase
+      .from('profiles')
+      .select('advanced_completion_card_dismissed')
+      .eq('id', user.id)
+      .single();
+    advancedCardDismissed.value = !!profile?.advanced_completion_card_dismissed;
+    await checkAndShowAdvancedWelcome(user.id);
   }
+}
   currentCourseLevel.value = levelId;
   sessionStorage.setItem('activeCourseTab', levelId);
 };
@@ -450,11 +510,23 @@ watchEffect(() => {
 const selectModule = (module: any) => {
   const index = currentModules.value.findIndex((m: any) => m.id === module.id);
   if (isModuleAccessible(module.id, index)) {
+    if (currentCourseLevel.value === 'beginner' && isBeginnerCourseCompleted(beginnerModules.value.length)) {
+      cardDismissed.value = true;
+    }
+
     if (selectedModule.value?.id === module.id) {
       navigateTo(`/modules/${module.id}`);
     } else {
       selectedModule.value = module;
     }
+  }
+};
+
+const showBeginnerModuleVideo = () => {
+  cardDismissed.value = true;
+
+  if (!selectedModule.value && currentModules.value.length > 0) {
+    selectedModule.value = currentModules.value[0];
   }
 };
 

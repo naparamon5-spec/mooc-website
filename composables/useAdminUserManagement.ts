@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import axios from 'axios'
 
 interface AdminUser {
   id: string
@@ -18,24 +19,26 @@ export const useAdminUserManagement = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Helper: returns axios headers with Bearer token
+  const getAuthHeaders = (token: string) => ({
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  })
+
   const fetchUsers = async () => {
     loading.value = true
     error.value = null
     try {
-      console.log('Starting to fetch instructors and admins from Supabase...')
-
       const { data: { session } } = await $supabase.auth.getSession()
       if (!session?.access_token) {
         error.value = 'Session expired. Please sign in again.'
         return
       }
 
-      const result = await $fetch<{ success: boolean; users: any[] }>('/api/admin/users', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      })
+      const { data: result } = await axios.get<{ success: boolean; users: any[] }>(
+        '/api/admin/users',
+        { headers: getAuthHeaders(session.access_token) }
+      )
 
       if (!result.success) {
         error.value = 'Failed to fetch users'
@@ -53,25 +56,30 @@ export const useAdminUserManagement = () => {
         createdAt: user.created_at,
         updatedAt: user.updated_at
       }))
-
-      console.log('Successfully loaded instructors and admins:', users.value)
     } catch (err: any) {
-      error.value = err.message
+      error.value =
+        err?.response?.data?.statusMessage ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to fetch users'
       console.error('Error fetching users:', err)
     } finally {
       loading.value = false
     }
   }
 
+  // Optimistic status update — no refetch needed
   const updateUserStatus = (userId: string, isActive: boolean) => {
-    const index = users.value.findIndex(u => u.id === userId)
-    if (index !== -1) {
-      users.value[index] = {
-        ...users.value[index],
-        isActive,
-        status: isActive ? 'Active' : 'Inactive'
-      }
+    const user = users.value.find(u => u.id === userId)
+    if (user) {
+      user.isActive = isActive
+      user.status = isActive ? 'Active' : 'Inactive'
     }
+  }
+
+  // Optimistic remove — no refetch needed after delete
+  const removeUser = (userId: string) => {
+    users.value = users.value.filter(u => u.id !== userId)
   }
 
   return {
@@ -79,6 +87,7 @@ export const useAdminUserManagement = () => {
     loading: computed(() => loading.value),
     error: computed(() => error.value),
     fetchUsers,
-    updateUserStatus
+    updateUserStatus,
+    removeUser
   }
 }

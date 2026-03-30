@@ -92,7 +92,7 @@
 
                     <!-- Delete Button -->
                     <button
-                      @click="deleteUserAccount(user)"
+                      @click="promptDeleteUser(user)"
                       :disabled="deletingUserId === user.id"
                       class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                     >
@@ -113,14 +113,14 @@
           </table>
         </div>
 
-        <!-- Toggle error -->
+        <!-- Toggle / Delete error -->
         <div v-if="toggleError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p class="text-sm text-red-700">{{ toggleError }}</p>
         </div>
       </div>
     </div>
 
-    <!-- Modal — fixed overlay, flex-centered -->
+    <!-- ── Create Account Modal ── -->
     <Teleport to="body">
       <div
         v-if="showModal"
@@ -191,11 +191,7 @@
                         errors.password ? 'border-red-500' : 'border-gray-300'
                       ]"
                     />
-                    <button
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                    >
+                    <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700">
                       <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -222,11 +218,7 @@
                         errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                       ]"
                     />
-                    <button
-                      type="button"
-                      @click="showConfirmPassword = !showConfirmPassword"
-                      class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                    >
+                    <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700">
                       <svg v-if="!showConfirmPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -298,11 +290,61 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- ── Delete Confirmation Dialog ── -->
+    <Teleport to="body">
+      <div
+        v-if="showDeleteDialog"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
+        @click.self="cancelDelete"
+      >
+        <div class="relative w-full max-w-sm bg-white rounded-xl shadow-2xl p-6">
+          <!-- Icon -->
+          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-gray-900 text-center mb-1">Delete Account</h3>
+          <p class="text-sm text-gray-500 text-center mb-6">
+            Are you sure you want to delete
+            <span class="font-semibold text-gray-700">{{ userToDelete?.name }}</span>'s account?
+            This action <span class="text-red-600 font-medium">cannot be undone</span>.
+          </p>
+
+          <div class="flex gap-3">
+            <button
+              @click="cancelDelete"
+              class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+            >
+              Cancel
+            </button>
+            <button
+              @click="confirmDelete"
+              :disabled="deletingUserId === userToDelete?.id"
+              class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span v-if="deletingUserId === userToDelete?.id" class="inline-flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                Deleting...
+              </span>
+              <span v-else>Yes, Delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import { validateEmail, validatePassword, validateConfirmPassword } from '~/utils/validation/auth'
 import { useAdminUserManagement } from '~/composables/useAdminUserManagement'
@@ -325,9 +367,13 @@ const currentUserId = ref<string | null>(null)
 // Toggle state
 const togglingUserId = ref<string | null>(null)
 const toggleError = ref('')
-const deletingUserId = ref<string | null>(null)
 
-const { users, loading: usersLoading, error: usersError, fetchUsers, updateUserStatus } = useAdminUserManagement()
+// Delete state
+const deletingUserId = ref<string | null>(null)
+const showDeleteDialog = ref(false)
+const userToDelete = ref<any>(null)
+
+const { users, loading: usersLoading, error: usersError, fetchUsers, updateUserStatus, removeUser } = useAdminUserManagement()
 
 const form = ref({
   fullName: '',
@@ -346,6 +392,12 @@ const errors = ref({
   email: '',
   password: '',
   confirmPassword: ''
+})
+
+// Helper: returns axios headers with Bearer token
+const getAuthHeaders = (token: string) => ({
+  Authorization: `Bearer ${token}`,
+  'Content-Type': 'application/json'
 })
 
 onMounted(() => {
@@ -394,10 +446,9 @@ const onSubmit = async () => {
       return
     }
 
-    const result = await $fetch<{ success: boolean; userId?: string }>('/api/admin/create-account', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      body: {
+    const { data: result } = await axios.post<{ success: boolean; userId?: string }>(
+      '/api/admin/create-account',
+      {
         fullName: form.value.fullName.trim(),
         email: form.value.email.trim(),
         password: form.value.password,
@@ -405,8 +456,9 @@ const onSubmit = async () => {
         phone: form.value.phone?.trim() || undefined,
         access_token: session.access_token,
         refresh_token: session.refresh_token ?? ''
-      }
-    })
+      },
+      { headers: getAuthHeaders(session.access_token) }
+    )
 
     if (result?.success) {
       successMessage.value = `Account created successfully. ${form.value.fullName} can sign in now.`
@@ -419,7 +471,11 @@ const onSubmit = async () => {
       fetchUsers()
     }
   } catch (err: any) {
-    generalError.value = err?.data?.statusMessage || err?.message || 'Failed to create account'
+    generalError.value =
+      err?.response?.data?.statusMessage ||
+      err?.response?.data?.message ||
+      err?.message ||
+      'Failed to create account'
     console.error('Error creating account:', err)
   } finally {
     loading.value = false
@@ -442,33 +498,44 @@ const toggleUserStatus = async (user: any) => {
       return
     }
 
-    await $fetch('/api/admin/toggle-user-status', {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      body: {
-        userId: user.id,
-        isActive: newStatus
-      }
-    })
+    await axios.patch(
+      '/api/admin/toggle-user-status',
+      { userId: user.id, isActive: newStatus },
+      { headers: getAuthHeaders(session.access_token) }
+    )
 
     updateUserStatus(user.id, newStatus)
   } catch (err: any) {
-    toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to update account status'
+    toggleError.value =
+      err?.response?.data?.statusMessage ||
+      err?.response?.data?.message ||
+      err?.message ||
+      'Failed to update account status'
     console.error('Error toggling user status:', err)
   } finally {
     togglingUserId.value = null
   }
 }
 
-// Delete user account
-const deleteUserAccount = async (user: any) => {
-  if (!confirm(`Are you sure you want to delete ${user.name}'s account? This action cannot be undone.`)) {
-    return
-  }
-
-  if (deletingUserId.value) return
+// Open delete confirmation dialog
+const promptDeleteUser = (user: any) => {
+  userToDelete.value = user
+  showDeleteDialog.value = true
   toggleError.value = ''
+}
+
+const cancelDelete = () => {
+  showDeleteDialog.value = false
+  userToDelete.value = null
+}
+
+// Confirmed — actually delete
+const confirmDelete = async () => {
+  if (!userToDelete.value || deletingUserId.value) return
+
+  const user = userToDelete.value
   deletingUserId.value = user.id
+  toggleError.value = ''
 
   try {
     const { $supabase } = useNuxtApp()
@@ -478,17 +545,21 @@ const deleteUserAccount = async (user: any) => {
       return
     }
 
-    await $fetch('/api/admin/delete-user', {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      body: {
-        userId: user.id
-      }
+    // axios DELETE — userId passed as query param (body-less, reliable across all servers)
+    await axios.delete('/api/admin/delete-user', {
+      headers: getAuthHeaders(session.access_token),
+      params: { userId: user.id }
     })
 
-    await fetchUsers()
+    removeUser(user.id)
+    showDeleteDialog.value = false
+    userToDelete.value = null
   } catch (err: any) {
-    toggleError.value = err?.data?.statusMessage || err?.message || 'Failed to delete account'
+    toggleError.value =
+      err?.response?.data?.statusMessage ||
+      err?.response?.data?.message ||
+      err?.message ||
+      'Failed to delete account'
     console.error('Error deleting user:', err)
   } finally {
     deletingUserId.value = null

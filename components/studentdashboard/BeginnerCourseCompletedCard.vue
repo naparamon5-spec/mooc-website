@@ -1,9 +1,13 @@
 <template>
-  <div v-if="isVisible && isBeginnerCourse" class="w-full rounded-xl overflow-hidden border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 md:p-8 mb-8">
+  <div
+    v-if="isVisible && isBeginnerCourse"
+    class="w-full rounded-xl overflow-hidden border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 md:p-8 mb-8 cursor-pointer"
+    @click="handleShowModuleVideo"
+  >
     <div class="flex flex-col md:flex-row items-center gap-8">
       <!-- Content on the left -->
       <div class="flex-1 min-w-0">
-        <h2 class="text-2xl md:text-3xl font-bold mb-4" style="color: #001a4d;">
+        <h2 class="text-2xl md:text-3xl font-bold mb-4" style="color: #000000">
           Congratulations on successfully completing the
           <span class="text-blue-600 font-bold">Beginner Course</span>
           in Media and Information Literacy.
@@ -18,9 +22,8 @@
           where you can deepen your skills, explore more complex topics, and grow into a more critical and empowered media user and creator.
         </p>
 
-        <!-- Button -->
         <button
-          @click="handleProceedAdvanced"
+          @click.stop="handleProceedAdvanced"
           class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-base flex items-center gap-2"
         >
           Proceed to Advanced Course →
@@ -51,6 +54,7 @@ const { $supabase } = useNuxtApp()
 
 const emit = defineEmits<{
   dismissed: []
+  "show-module-video": []
 }>()
 
 const shouldShow = ref(false)
@@ -99,9 +103,9 @@ const handleProceedAdvanced = () => {
   router.push('/dashboard?course=advanced')
 }
 
-const handleDismiss = () => {
+const handleShowModuleVideo = () => {
   dismissed.value = true
-  markCardAsDismissed()
+  emit('show-module-video')
 }
 
 const markCardAsDismissed = async () => {
