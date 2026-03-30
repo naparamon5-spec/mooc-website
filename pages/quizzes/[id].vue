@@ -318,11 +318,11 @@ const router = useRouter()
 const quizId = computed(() => route.params.id as string)
 
 const { fetchQuizById, submitQuizAnswers } = useQuizManagement()
-const { completeModule, badgeMapping, courseProgress, loadProgressFromSupabase } = useCourseProgress()
+const { completeModule, courseProgress, loadProgressFromSupabase } = useCourseProgress()
 const { fetchModules, modules } = useModuleManagement()
 const { fetchUserProfile } = useUserProfile()
 const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates()
-const { getBadgeImageUrlByName } = useBadgeManagement()
+const { getBadge } = useBadgeManagement()
 
 // useNuxtApp() called at top-level setup, not inside async functions
 const { $supabase } = useNuxtApp()
@@ -340,6 +340,7 @@ const showSuccessModal = ref(false)
 const showCertificateModal = ref(false)
 const studentName = ref('Student')
 const badgeImage = ref('/assets/default-badge.png')
+const resolvedBadgeName = ref('Unknown Badge')
 const certificateSaved = ref(false)
 
 // Use question.id if present, else fallback to string index — must match submitQuizAnswers
@@ -436,39 +437,62 @@ const progress = computed(() => {
 
 const isAnswered = (idx: number) => answers.value[answerKey(idx)] !== undefined
 
-const earnedBadgeName = computed(() => {
-  if (!quiz.value?.level || !quiz.value?.module_id) return 'Unknown Badge'
-  const courseLevel = quiz.value.level
-  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') return 'Unknown Badge'
-  const moduleId = quiz.value.module_id
+const getCurrentModulePosition = () => {
+  if (!quiz.value?.level || !quiz.value?.module_id) return 0
+
   const sortedModules = modules.value
-    .filter((m: any) => m.level === courseLevel && m.is_active)
+    .filter((m: any) => m.level === quiz.value.level && m.is_active)
     .slice()
     .sort((a: any, b: any) => {
       const aNum = parseInt(a.title?.match(/\d+/)?.[0] || '0', 10)
       const bNum = parseInt(b.title?.match(/\d+/)?.[0] || '0', 10)
       return aNum - bNum
     })
-  const modulePosition = sortedModules.findIndex((m: any) => String(m.id) === String(moduleId)) + 1
-  const courseBadges = badgeMapping[courseLevel as keyof typeof badgeMapping]
-  if (courseBadges && modulePosition > 0) {
-    return courseBadges[modulePosition] || 'Unknown Badge'
-  }
-  return 'Unknown Badge'
-})
 
-// Watch for badge name changes and fetch the image URL from database
-watch(earnedBadgeName, async (newBadgeName) => {
-  if (newBadgeName && newBadgeName !== 'Unknown Badge') {
-    try {
-      const imageUrl = await getBadgeImageUrlByName(newBadgeName)
-      badgeImage.value = imageUrl
-    } catch (err) {
-      console.error('Error fetching badge image:', err)
-      badgeImage.value = '/assets/default-badge.png'
-    }
+  return sortedModules.findIndex((m: any) => String(m.id) === String(quiz.value.module_id)) + 1
+}
+
+const earnedBadgeName = computed(() => resolvedBadgeName.value)
+
+const resolveEarnedBadge = async () => {
+  if (!quiz.value?.level || !quiz.value?.module_id) {
+    resolvedBadgeName.value = 'Unknown Badge'
+    badgeImage.value = '/assets/default-badge.png'
+    return
   }
-}, { immediate: true })
+
+  const courseLevel = quiz.value.level
+  if (courseLevel !== 'beginner' && courseLevel !== 'advanced') {
+    resolvedBadgeName.value = 'Unknown Badge'
+    badgeImage.value = '/assets/default-badge.png'
+    return
+  }
+
+  const modulePosition = getCurrentModulePosition()
+  if (modulePosition <= 0) {
+    resolvedBadgeName.value = 'Unknown Badge'
+    badgeImage.value = '/assets/default-badge.png'
+    return
+  }
+
+  try {
+    const badge = await getBadge(courseLevel, modulePosition)
+    resolvedBadgeName.value = badge?.badge_name || 'Unknown Badge'
+    badgeImage.value = badge?.image_url || '/assets/default-badge.png'
+  } catch (err) {
+    console.error('Error resolving earned badge:', err)
+    resolvedBadgeName.value = 'Unknown Badge'
+    badgeImage.value = '/assets/default-badge.png'
+  }
+}
+
+watch(
+  [quiz, modules],
+  async () => {
+    await resolveEarnedBadge()
+  },
+  { immediate: true, deep: true }
+)
 
 onMounted(async () => {
   loading.value = true
@@ -486,6 +510,7 @@ onMounted(async () => {
     await fetchCertificateTemplates()
     await fetchExistingResult()
     await loadStudentName()
+    await resolveEarnedBadge()
   } catch (err) {
     error.value = 'Failed to load quiz.'
     console.error('Error:', err)

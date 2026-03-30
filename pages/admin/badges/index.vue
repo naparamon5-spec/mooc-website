@@ -104,7 +104,7 @@
                   {{ badge.badge_name }}
                 </h3>
                 <p class="text-sm text-gray-600 mt-1">
-                  Module {{ badge.module_position }}
+                  Module {{ getDisplayModuleNumber(badge) }}
                 </p>
                 <!-- <p
                   class="text-xs inline-flex px-2 py-1 rounded-full mt-3"
@@ -165,11 +165,11 @@ const fallbackImages: Record<'beginner' | 'advanced', Record<number, string>> = 
     5: '/assets/MODULE5.png',
   },
   advanced: {
-    1: '/assets/MODULE6.png',
-    2: '/assets/MODULE7.png',
-    3: '/assets/MODULE8.png',
-    4: '/assets/MODULE9.png',
-    5: '/assets/MODULE10.png',
+    6: '/assets/MODULE6.png',
+    7: '/assets/MODULE7.png',
+    8: '/assets/MODULE8.png',
+    9: '/assets/MODULE9.png',
+    10: '/assets/MODULE10.png',
   },
 }
 
@@ -200,13 +200,20 @@ const formatCourseLevel = (level: string) => {
   return level === 'beginner' ? 'Beginner Course' : level === 'advanced' ? 'Advanced Course' : level
 }
 
+const getDisplayModuleNumber = (badge: Badge) => {
+  return badge.course_level === 'advanced'
+    ? badge.module_position + 5
+    : badge.module_position
+}
+
 const getBadgeDisplayImage = (badge: Badge) => {
   if (badge.image_url) {
     return badge.image_url
   }
 
   const courseLevel = badge.course_level === 'advanced' ? 'advanced' : 'beginner'
-  return fallbackImages[courseLevel]?.[badge.module_position] || '/assets/default-badge.png'
+  const displayModuleNumber = getDisplayModuleNumber(badge)
+  return fallbackImages[courseLevel]?.[displayModuleNumber] || '/assets/default-badge.png'
 }
 
 const handleImageError = (event: Event) => {

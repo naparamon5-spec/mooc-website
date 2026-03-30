@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, onMounted } from "vue";
+import { ref, computed, watchEffect, onMounted, watch } from "vue";
 definePageMeta({ middleware: 'auth' })
 import DashboardHeader from "~/components/studentdashboard/DashboardHeader.vue";
 import DashboardSidebar from "~/components/studentdashboard/DashboardSidebar.vue";
@@ -489,7 +489,7 @@ if (levelId === 'advanced') {
 const checkAndShowAdvancedWelcome = async (userId: string) => {
   try {
     const hasSeenWelcome = await hasClickedAdvancedWelcome(userId);
-    if (!hasSeenWelcome) showAdvancedWelcomeVideo.value = true;
+    showAdvancedWelcomeVideo.value = !hasSeenWelcome;
   } catch (err) {
     console.warn('Could not check advanced welcome status:', err);
   }
@@ -559,4 +559,17 @@ const getBadgeForModule = (moduleId: string): string => {
 const goToLesson = (moduleId: string, lessonIndex: number) => {
   navigateTo(`/modules/${moduleId}?lesson=${lessonIndex}`);
 };
+
+watch(
+  () => route.query.course,
+  async (courseParam) => {
+    const totalBeginner = beginnerModules.value.length;
+
+    if (courseParam === 'advanced' && isBeginnerCourseCompleted(totalBeginner)) {
+      await switchCourseLevel('advanced');
+    } else if (courseParam === 'beginner') {
+      await switchCourseLevel('beginner');
+    }
+  }
+);
 </script>
