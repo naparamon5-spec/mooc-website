@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import axios from 'axios'
 
 interface AdminUser {
   id: string
@@ -35,9 +34,12 @@ export const useAdminUserManagement = () => {
         return
       }
 
-      const { data: result } = await axios.get<{ success: boolean; users: any[] }>(
+      const result = await $fetch<{ success: boolean; users: any[] }>(
         '/api/admin/users',
-        { headers: getAuthHeaders(session.access_token) }
+        {
+          method: 'GET',
+          headers: getAuthHeaders(session.access_token)
+        }
       )
 
       if (!result.success) {
@@ -58,8 +60,8 @@ export const useAdminUserManagement = () => {
       }))
     } catch (err: any) {
       error.value =
-        err?.response?.data?.statusMessage ||
-        err?.response?.data?.message ||
+        err?.data?.statusMessage ||
+        err?.data?.message ||
         err?.message ||
         'Failed to fetch users'
       console.error('Error fetching users:', err)

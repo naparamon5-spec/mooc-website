@@ -344,7 +344,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
 import AdminHeader from '~/components/admindashboard/AdminHeader.vue'
 import { validateEmail, validatePassword, validateConfirmPassword } from '~/utils/validation/auth'
 import { useAdminUserManagement } from '~/composables/useAdminUserManagement'
@@ -446,18 +445,21 @@ const onSubmit = async () => {
       return
     }
 
-    const { data: result } = await axios.post<{ success: boolean; userId?: string }>(
+    const result = await $fetch<{ success: boolean; userId?: string }>(
       '/api/admin/create-account',
       {
-        fullName: form.value.fullName.trim(),
-        email: form.value.email.trim(),
-        password: form.value.password,
-        role: form.value.role,
-        phone: form.value.phone?.trim() || undefined,
-        access_token: session.access_token,
-        refresh_token: session.refresh_token ?? ''
-      },
-      { headers: getAuthHeaders(session.access_token) }
+        method: 'POST',
+        headers: getAuthHeaders(session.access_token),
+        body: {
+          fullName: form.value.fullName.trim(),
+          email: form.value.email.trim(),
+          password: form.value.password,
+          role: form.value.role,
+          phone: form.value.phone?.trim() || undefined,
+          access_token: session.access_token,
+          refresh_token: session.refresh_token ?? ''
+        }
+      }
     )
 
     if (result?.success) {
@@ -472,8 +474,11 @@ const onSubmit = async () => {
     }
   } catch (err: any) {
     generalError.value =
-      err?.response?.data?.statusMessage ||
-      err?.response?.data?.message ||
+      err?.data?.statusMessage ||
+      err?.data?.message ||
+      err?.message ||
+      err?.data?.statusMessage ||
+      err?.data?.message ||
       err?.message ||
       'Failed to create account'
     console.error('Error creating account:', err)
@@ -498,11 +503,11 @@ const toggleUserStatus = async (user: any) => {
       return
     }
 
-    await axios.patch(
-      '/api/admin/toggle-user-status',
-      { userId: user.id, isActive: newStatus },
-      { headers: getAuthHeaders(session.access_token) }
-    )
+    await $fetch('/api/admin/toggle-user-status', {
+      method: 'PATCH',
+      headers: getAuthHeaders(session.access_token),
+      body: { userId: user.id, isActive: newStatus }
+    })
 
     updateUserStatus(user.id, newStatus)
   } catch (err: any) {
@@ -545,10 +550,10 @@ const confirmDelete = async () => {
       return
     }
 
-    // axios DELETE — userId passed as query param (body-less, reliable across all servers)
-    await axios.delete('/api/admin/delete-user', {
+    await $fetch('/api/admin/delete-user', {
+      method: 'DELETE',
       headers: getAuthHeaders(session.access_token),
-      params: { userId: user.id }
+      query: { userId: user.id }
     })
 
     removeUser(user.id)
@@ -556,8 +561,8 @@ const confirmDelete = async () => {
     userToDelete.value = null
   } catch (err: any) {
     toggleError.value =
-      err?.response?.data?.statusMessage ||
-      err?.response?.data?.message ||
+      err?.data?.statusMessage ||
+      err?.data?.message ||
       err?.message ||
       'Failed to delete account'
     console.error('Error deleting user:', err)
