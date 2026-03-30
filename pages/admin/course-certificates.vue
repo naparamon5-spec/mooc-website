@@ -14,10 +14,11 @@
           <h1 class="text-3xl font-bold text-gray-900">Certificate Template Management</h1>
         </div>
         <button
-          @click="showUploadModal = true"
-          class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openUploadModal"
+          :disabled="availableCourseLevels.length === 0"
+          class="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Upload Template
+          {{ availableCourseLevels.length === 0 ? 'All Templates Uploaded' : 'Upload Template' }}
         </button>
       </div>
 
@@ -36,7 +37,7 @@
 
           <div v-else-if="templates.length === 0" class="text-center py-8">
             <p class="text-gray-600">No certificate templates found.</p>
-            <button @click="showUploadModal = true" class="mt-2 text-primary-600 hover:underline">
+            <button @click="openUploadModal" class="mt-2 text-primary-600 hover:underline">
               Upload your first template
             </button>
           </div>
@@ -111,71 +112,65 @@
             <p class="mt-2 text-gray-500 text-sm">Loading certificates...</p>
           </div>
 
-          <div v-else-if="pendingCertificates.length === 0 && numberedCertificates.length === 0" class="text-center py-8">
-            <p class="text-gray-500 text-sm">No issued certificates found.</p>
+          <div v-else-if="filteredCertificates.length === 0" class="text-center py-8">
+            <p class="text-gray-500 text-sm">No certificates match your search/filter.</p>
           </div>
 
           <div v-else>
-            <!-- Pending (no number assigned) -->
-            <div v-if="pendingCertificates.length > 0" class="mb-6">
-              <h3 class="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span class="inline-block w-2 h-2 rounded-full bg-orange-400"></span>
-                Pending — No Certificate Number Assigned ({{ pendingCertificates.length }})
-              </h3>
-              <div class="space-y-2">
-                <div
-                  v-for="cert in pendingCertificates"
-                  :key="cert.id"
-                  class="flex items-center justify-between border border-orange-100 bg-orange-50 rounded-lg px-4 py-3"
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input
+                  v-model="certificateSearch"
+                  type="text"
+                  placeholder="Search student name or certificate number"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Course Level</label>
+                <select
+                  v-model="certificateFilter"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <div>
-                    <p class="font-semibold text-gray-800 text-sm">{{ cert.student_name || 'Unknown Student' }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                      {{ cert.course_level === 'beginner' ? 'Beginner Course' : 'Advanced Course' }}
-                      · Issued on {{ formatLongDate(cert.issued_at) }}
-                    </p>
-                  </div>
-                  <button
-                    @click="assignCertificateNumber(cert)"
-                    :disabled="assigningId === cert.id"
-                    class="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <svg v-if="assigningId === cert.id" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    {{ assigningId === cert.id ? 'Assigning...' : 'Assign Number' }}
-                  </button>
-                </div>
+                  <option value="all">All Levels</option>
+                  <option value="beginner">Beginner</option>
+                  <option value="advanced">Advanced</option>
+                </select>
               </div>
             </div>
 
-            <!-- Already numbered -->
-            <div v-if="numberedCertificates.length > 0">
-              <h3 class="text-sm font-semibold text-green-600 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span class="inline-block w-2 h-2 rounded-full bg-green-400"></span>
-                Assigned ({{ numberedCertificates.length }})
-              </h3>
-              <div class="space-y-2">
-                <div
-                  v-for="cert in numberedCertificates"
-                  :key="cert.id"
-                  class="flex items-center justify-between border border-green-100 bg-green-50 rounded-lg px-4 py-3"
-                >
-                  <div>
-                    <p class="font-semibold text-gray-800 text-sm">{{ cert.student_name || 'Unknown Student' }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                      {{ cert.course_level === 'beginner' ? 'Beginner Course' : 'Advanced Course' }}
-                      · Issued on {{ formatLongDate(cert.issued_at) }}
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <input
-                      :value="cert.certificate_number"
-                      @change="updateExistingCertificateNumber(cert, ($event.target as HTMLInputElement).value)"
-                      class="w-44 px-3 py-2 rounded-lg border border-green-200 bg-white text-sm font-mono text-green-700 font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
+            <div class="mb-4 flex flex-wrap gap-3 text-sm">
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-gray-700">
+                Total: {{ filteredCertificates.length }}
+              </span>
+              <span class="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-orange-700">
+                Auto-assigned pending records: {{ pendingCertificates.length }}
+              </span>
+              <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-green-700">
+                With certificate number: {{ numberedCertificates.length }}
+              </span>
+            </div>
+
+            <div class="space-y-2">
+              <div
+                v-for="cert in filteredCertificates"
+                :key="cert.id"
+                class="flex items-center justify-between rounded-lg px-4 py-3 border"
+                :class="cert.certificate_number ? 'border-green-100 bg-green-50' : 'border-orange-100 bg-orange-50'"
+              >
+                <div>
+                  <p class="font-semibold text-gray-800 text-sm">{{ cert.student_name || 'Unknown Student' }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    {{ cert.course_level === 'beginner' ? 'Beginner Course' : 'Advanced Course' }}
+                    · Issued on {{ formatLongDate(cert.issued_at) }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Certificate Number</p>
+                  <p class="font-mono text-sm font-bold" :class="cert.course_level === 'beginner' ? 'text-blue-700' : 'text-purple-700'">
+                    {{ cert.certificate_number || 'Generating...' }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -197,10 +192,21 @@
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Course Level</label>
-              <select v-model="selectedCourseLevel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                <option value="beginner">Beginner</option>
-                <option value="advanced">Advanced</option>
+              <select
+                v-model="selectedCourseLevel"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option
+                  v-for="level in availableCourseLevels"
+                  :key="level"
+                  :value="level"
+                >
+                  {{ level === 'beginner' ? 'Beginner' : 'Advanced' }}
+                </option>
               </select>
+              <p v-if="availableCourseLevels.length === 0" class="text-sm text-amber-600 mt-2">
+                All course levels already have uploaded certificate templates.
+              </p>
             </div>
 
             <div>
@@ -326,7 +332,7 @@ useHead({
 })
 
 const { fetchUserProfile } = useUserProfile()
-const { templates, loading: loadingTemplates, error, fetchTemplates, fetchTemplateByLevel, createTemplate, deleteTemplate, uploadTemplateImage } = useCertificateTemplates()
+const { templates, loading: loadingTemplates, error, fetchTemplates, createTemplate, deleteTemplate, uploadTemplateImage } = useCertificateTemplates()
 const nuxtApp = useNuxtApp()
 const supabase = nuxtApp.$supabase
 
@@ -347,7 +353,8 @@ const fileValidationError = ref('')
 // ✅ Certificate number management state
 const allIssuedCerts = ref<any[]>([])
 const loadingIssuedCerts = ref(false)
-const assigningId = ref<string | null>(null)
+const certificateSearch = ref('')
+const certificateFilter = ref<'all' | 'beginner' | 'advanced'>('all')
 const currentYear = new Date().getFullYear()
 const nextBeginnerNumber = ref(`MIL-B${currentYear}-00001`)
 const nextAdvancedNumber = ref(`MIL-A${currentYear}-00001`)
@@ -360,26 +367,34 @@ const ALLOWED_MIME_TYPE = 'application/pdf'
 const pendingCertificates = computed(() =>
   allIssuedCerts.value.filter(c => !c.certificate_number)
 )
+
 const numberedCertificates = computed(() =>
-  allIssuedCerts.value.filter(c => !!c.certificate_number)
+  allIssuedCerts.value
+    .filter(c => !!c.certificate_number)
     .sort((a, b) => a.certificate_number.localeCompare(b.certificate_number))
 )
+
+const filteredCertificates = computed(() => {
+  const query = certificateSearch.value.trim().toLowerCase()
+
+  return allIssuedCerts.value.filter((cert) => {
+    const matchesFilter = certificateFilter.value === 'all' || cert.course_level === certificateFilter.value
+    const matchesSearch =
+      !query ||
+      cert.student_name?.toLowerCase().includes(query) ||
+      cert.certificate_number?.toLowerCase().includes(query)
+
+    return matchesFilter && matchesSearch
+  })
+})
 
 // ✅ Load all issued certificates with student names
 const loadIssuedCertificates = async () => {
   loadingIssuedCerts.value = true
   try {
-    // Join certificates with profiles to get student names
     const { data, error: fetchError } = await supabase
       .from('certificates')
-      .select(`
-        id,
-        student_id,
-        course_level,
-        issued_at,
-        certificate_number,
-        profiles:student_id (full_name)
-      `)
+      .select('id, student_id, course_level, issued_at, certificate_number')
       .order('issued_at', { ascending: false })
 
     if (fetchError) {
@@ -387,12 +402,48 @@ const loadIssuedCertificates = async () => {
       return
     }
 
-    allIssuedCerts.value = (data || []).map((c: any) => ({
-      ...c,
-      student_name: c.profiles?.full_name || 'Unknown Student'
+    let certificates = data || []
+
+    if (certificates.some((cert: any) => !cert.certificate_number)) {
+      await autoAssignMissingCertificateNumbers(certificates)
+      const { data: refreshedCertificates, error: refreshedError } = await supabase
+        .from('certificates')
+        .select('id, student_id, course_level, issued_at, certificate_number')
+        .order('issued_at', { ascending: false })
+
+      if (refreshedError) {
+        console.error('Error refreshing certificates after auto-assign:', refreshedError)
+        return
+      }
+
+      certificates = refreshedCertificates || []
+    }
+
+    const studentIds = [...new Set(certificates.map((cert: any) => cert.student_id).filter(Boolean))]
+
+    let profilesById: Record<string, string> = {}
+
+    if (studentIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', studentIds)
+
+      if (profilesError) {
+        console.error('Error loading certificate profiles:', profilesError)
+      } else {
+        profilesById = (profiles || []).reduce((acc: Record<string, string>, profile: any) => {
+          acc[profile.id] = profile.full_name || 'Unknown Student'
+          return acc
+        }, {})
+      }
+    }
+
+    allIssuedCerts.value = certificates.map((cert: any) => ({
+      ...cert,
+      student_name: profilesById[cert.student_id] || 'Unknown Student'
     }))
 
-    // Update next number previews
     await refreshNextNumbers()
   } catch (err) {
     console.error('Error loading issued certificates:', err)
@@ -446,65 +497,35 @@ const refreshNextNumbers = async () => {
   nextAdvancedNumber.value = await generateCertificateNumber('advanced')
 }
 
-// ✅ Assign a certificate number to a specific cert row
-const assignCertificateNumber = async (cert: any) => {
-  assigningId.value = cert.id
-  try {
-    const courseLevel = cert.course_level as 'beginner' | 'advanced'
-    const newNumber = await generateCertificateNumber(courseLevel)
+// ✅ Automatically assign missing certificate numbers
+const autoAssignMissingCertificateNumbers = async (certificates: any[]) => {
+  const pendingByLevel = {
+    beginner: certificates
+      .filter((cert: any) => cert.course_level === 'beginner' && !cert.certificate_number)
+      .sort((a: any, b: any) => new Date(a.issued_at).getTime() - new Date(b.issued_at).getTime()),
+    advanced: certificates
+      .filter((cert: any) => cert.course_level === 'advanced' && !cert.certificate_number)
+      .sort((a: any, b: any) => new Date(a.issued_at).getTime() - new Date(b.issued_at).getTime())
+  }
 
-    const { error: updateError } = await supabase
-      .from('certificates')
-      .update({ certificate_number: newNumber })
-      .eq('id', cert.id)
+  for (const courseLevel of ['beginner', 'advanced'] as const) {
+    let nextSequence = await getNextSequenceNumber(courseLevel)
 
-    if (updateError) {
-      console.error('Error assigning certificate number:', updateError)
-      alert(`Failed to assign certificate number: ${updateError.message}`)
-      return
+    for (const cert of pendingByLevel[courseLevel]) {
+      const certificateNumber = buildCertificateNumber(courseLevel, nextSequence)
+
+      const { error: updateError } = await supabase
+        .from('certificates')
+        .update({ certificate_number: certificateNumber })
+        .eq('id', cert.id)
+
+      if (updateError) {
+        console.error(`Error auto-assigning certificate number for ${cert.id}:`, updateError)
+      } else {
+        nextSequence += 1
+      }
     }
-
-    await loadIssuedCertificates()
-  } catch (err) {
-    console.error('Error assigning certificate number:', err)
-    alert('Failed to assign certificate number. Please try again.')
-  } finally {
-    assigningId.value = null
   }
-}
-
-const updateExistingCertificateNumber = async (cert: any, value: string) => {
-  const normalizedValue = value.trim().toUpperCase()
-
-  if (!normalizedValue) {
-    alert('Certificate number cannot be empty.')
-    await loadIssuedCertificates()
-    return
-  }
-
-  const expectedPrefix = cert.course_level === 'beginner'
-    ? `MIL-B${currentYear}-`
-    : `MIL-A${currentYear}-`
-
-  if (!normalizedValue.startsWith(expectedPrefix) || !/\d{5}$/.test(normalizedValue)) {
-    alert(`Certificate number must follow this format: ${expectedPrefix}00001`)
-    await loadIssuedCertificates()
-    return
-  }
-
-  const { error: updateError } = await supabase
-    .from('certificates')
-    .update({ certificate_number: normalizedValue })
-    .eq('id', cert.id)
-
-  if (updateError) {
-    console.error('Error updating certificate number:', updateError)
-    alert(`Failed to update certificate number: ${updateError.message}`)
-    await loadIssuedCertificates()
-    return
-  }
-
-  await loadIssuedCertificates()
 }
 
 // Validate PDF signature (magic bytes)
@@ -521,9 +542,11 @@ const validatePdfSignature = async (file: File): Promise<boolean> => {
   })
 }
 
-const selectedTemplate = computed(() => {
-  return templates.value.find(t => t.course_level === selectedCourseLevel.value) || null
-})
+const availableCourseLevels = computed(() =>
+  (['beginner', 'advanced'] as const).filter(
+    level => !templates.value.some(t => t.course_level === level)
+  )
+)
 
 // ✅ formatDate for table display (short)
 const formatDate = (value: string | undefined) => {
@@ -592,6 +615,11 @@ const onTemplateFileSelected = async (e: Event) => {
 }
 
 const uploadTemplate = async () => {
+  if (availableCourseLevels.value.length === 0) {
+    uploadError.value = 'All course levels already have uploaded certificate templates.'
+    return
+  }
+
   if (fileValidationError.value && fileValidationError.value.includes('❌')) {
     uploadError.value = fileValidationError.value
     return
@@ -613,11 +641,6 @@ const uploadTemplate = async () => {
 
   try {
     const publicUrl = await uploadTemplateImage(selectedFile.value)
-    const existing = selectedTemplate.value
-
-    if (existing && existing.id) {
-      await deleteTemplate(existing.id)
-    }
 
     const created = await createTemplate({
       course_level: selectedCourseLevel.value,
@@ -645,6 +668,23 @@ const uploadTemplate = async () => {
   } finally {
     uploading.value = false
   }
+}
+
+const openUploadModal = () => {
+  if (availableCourseLevels.value.length === 0) {
+    return
+  }
+
+  const [firstAvailableLevel] = availableCourseLevels.value
+  if (!firstAvailableLevel) {
+    return
+  }
+
+  selectedCourseLevel.value = firstAvailableLevel
+  showUploadModal.value = true
+  uploadError.value = ''
+  successMessage.value = ''
+  fileValidationError.value = ''
 }
 
 const closeUploadModal = () => {

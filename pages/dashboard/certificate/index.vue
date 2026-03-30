@@ -302,8 +302,11 @@ const fetchCertificatesFromDatabase = async () => {
   }
 };
 
-// ✅ FIX: earnedCertificates now maps certificate_number from DB
+// ✅ Merge DB certificates with earned progress so both beginner and advanced can display
 const earnedCertificates = computed(() => {
+  const certificates: any[] = [];
+  const existingLevels = new Set<string>();
+
   if (dbCertificates.value.length > 0) {
     const sequenceMap = new Map<string, number>();
     const sortedCertificates = [...dbCertificates.value].sort((a, b) => {
@@ -321,11 +324,13 @@ const earnedCertificates = computed(() => {
       cert.generated_certificate_number = cert.certificate_number || buildCertificateNumber(cert.course_level, certYear, nextSequence);
     });
 
-    return dbCertificates.value.map((cert) => {
+    dbCertificates.value.forEach((cert) => {
+      existingLevels.add(cert.course_level);
+
       const template = certificateTemplates.value.find(t => t.course_level === cert.course_level);
       const earnedAt = cert.completed_at || cert.issued_at || cert.created_at || new Date().toISOString();
 
-      return {
+      certificates.push({
         id: cert.id,
         badgeName: cert.course_level === 'beginner'
           ? 'Media and Information Literacy (MIL) Beginner Course'
@@ -341,15 +346,12 @@ const earnedCertificates = computed(() => {
         certificate_number: cert.certificate_number || cert.generated_certificate_number || null,
         template_url: template?.template_url || null,
         description: `Successfully completed all 5 modules of the ${cert.course_level === 'beginner' ? 'Beginner' : 'Advanced'} Course`
-      };
+      });
     });
   }
 
-  // Fallback: progress-based (no cert number yet)
-  const certificates: any[] = [];
-
   const beginnerBadges = getAllBadges('beginner');
-  if (beginnerBadges.filter(b => b.earned).length === 5) {
+  if (beginnerBadges.filter(b => b.earned).length === 5 && !existingLevels.has('beginner')) {
     const template = certificateTemplates.value.find(t => t.course_level === 'beginner');
     certificates.push({
       id: 'beginner-course',
@@ -360,13 +362,14 @@ const earnedCertificates = computed(() => {
       issued_at: new Date().toISOString(),
       studentName: studentName.value,
       certificateNumber: null,
+      certificate_number: null,
       template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Beginner Course'
     });
   }
 
   const advancedBadges = getAllBadges('advanced');
-  if (advancedBadges.filter(b => b.earned).length === 5) {
+  if (advancedBadges.filter(b => b.earned).length === 5 && !existingLevels.has('advanced')) {
     const template = certificateTemplates.value.find(t => t.course_level === 'advanced');
     certificates.push({
       id: 'advanced-course',
@@ -377,6 +380,7 @@ const earnedCertificates = computed(() => {
       issued_at: new Date().toISOString(),
       studentName: studentName.value,
       certificateNumber: null,
+      certificate_number: null,
       template_url: template?.template_url || null,
       description: 'Successfully completed all 5 modules of the Advanced Course'
     });

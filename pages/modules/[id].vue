@@ -21,6 +21,7 @@
       v-if="isLastModule && module"
       :isOpen="showCompletionModal"
       :studentName="studentName"
+      :courseLevel="currentCourseLevel as 'beginner' | 'advanced'"
       @nextCourse="handleAdvancedCourse"
       @backToDashboard="handleBackToDashboard"
     />
@@ -74,15 +75,15 @@
       </aside>
 
       <!-- Main Content -->
-      <section class="md:col-span-3">
+      <section class="lg:col-span-3 min-w-0">
         <div v-if="loading" class="text-center py-12">
           <p class="text-gray-600">Loading module...</p>
         </div>
 
         <div v-else-if="module">
           <!-- Module Banner (only on intro) -->
-          <div v-if="currentLessonIndex === -1 && module?.image_url" class="mb-6 rounded-lg overflow-hidden">
-            <img :src="module.image_url" :alt="module.title" class="w-full h-64 object-cover" />
+          <div v-if="currentLessonIndex === -1 && module?.image_url" class="mb-6 rounded-lg overflow-hidden bg-white">
+            <img :src="module.image_url" :alt="module.title" class="w-full h-auto max-h-[420px] object-contain" />
           </div>
 
           <!-- Module Intro Section -->
@@ -114,7 +115,7 @@
 
           <!-- Lessons Section -->
           <template v-if="currentLessonIndex >= 0">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <div>
                 <h2 class="text-3xl font-bold text-gray-900">
                   Lesson {{ currentLessonIndex + 1 }}: {{ currentLesson?.title }}
@@ -126,7 +127,7 @@
             </div>
 
             <!-- Lesson content rendered from block rows -->
-            <div v-if="currentLesson" class="prose max-w-none mb-8 text-gray-700 bg-white p-6 rounded-lg">
+            <div v-if="currentLesson" class="prose max-w-none mb-8 text-gray-700 bg-white p-4 sm:p-6 rounded-lg overflow-hidden">
               <div class="space-y-6">
                 <template v-for="(row, rowIndex) in renderRows(getLessonBlocks(currentLesson))" :key="`row-${rowIndex}`">
 
@@ -137,10 +138,10 @@
                     class="text-wrap-container"
                   >
                     <div class="wrap-image-float-left">
-                      <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
+                      <BlockRenderer :block="row.blocks[0] as LessonBlock" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                     <div class="wrap-text-content">
-                      <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
+                      <BlockRenderer :block="row.blocks[1] as LessonBlock" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                   </div>
 
@@ -150,10 +151,10 @@
                     class="text-wrap-container"
                   >
                     <div class="wrap-image-float-right">
-                      <BlockRenderer :block="row.blocks[1]" :lessonTitle="currentLesson?.title || ''" />
+                      <BlockRenderer :block="row.blocks[1] as LessonBlock" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                     <div class="wrap-text-content">
-                      <BlockRenderer :block="row.blocks[0]" :lessonTitle="currentLesson?.title || ''" />
+                      <BlockRenderer :block="row.blocks[0] as LessonBlock" :lessonTitle="currentLesson?.title || ''" />
                     </div>
                   </div>
 
@@ -182,7 +183,7 @@
             </div>
 
             <!-- Navigation Buttons -->
-            <div class="flex justify-between items-center mt-12">
+            <div class="mt-12 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
               <button
                 v-if="currentLessonIndex >= 0"
                 @click="goToPreviousLesson"
@@ -649,6 +650,7 @@ watch(lessonParam, (val) => {
   float: right;
   margin-left: 1.5rem;
   margin-bottom: 1rem;
+  width: min(100%, 320px);
   max-width: 42%;
   clear: none;
 }
@@ -657,6 +659,7 @@ watch(lessonParam, (val) => {
   float: left;
   margin-right: 1.5rem;
   margin-bottom: 1rem;
+  width: min(100%, 320px);
   max-width: 42%;
   clear: none;
 }
@@ -691,6 +694,7 @@ watch(lessonParam, (val) => {
   .wrap-image-float-right,
   .wrap-image-float-left {
     float: none;
+    width: 100%;
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
@@ -699,6 +703,10 @@ watch(lessonParam, (val) => {
 
   .text-wrap-container {
     display: block;
+  }
+
+  .ppt-viewer-wrapper {
+    aspect-ratio: 4 / 3;
   }
 }
 
@@ -712,7 +720,7 @@ watch(lessonParam, (val) => {
   max-width: 100%;
   border-radius: 0.5rem;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .flex.flex-col.sm\:flex-row img {
