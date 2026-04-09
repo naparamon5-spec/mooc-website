@@ -179,6 +179,14 @@ const addFooters = (doc: jsPDF): void => {
   }
 }
 
+const getSafeDateStamp = (): string => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // ---------------------------------------------------------------------------
 // Module Completion Report
 // ---------------------------------------------------------------------------
@@ -419,7 +427,7 @@ const downloadModuleCompletion = async () => {
   }
 
   addFooters(doc)
-  doc.save(`module-completion-${new Date().toISOString().split('T')[0] ?? ''}.pdf`)
+  doc.save(`module-completion-${getSafeDateStamp()}.pdf`)
 }
 
 // ---------------------------------------------------------------------------
@@ -573,7 +581,7 @@ const downloadEnrollment = async () => {
   }
 
   addFooters(doc)
-  doc.save(`enrollment-analytics-${new Date().toISOString().split('T')[0] ?? ''}.pdf`)
+  doc.save(`enrollment-analytics-${getSafeDateStamp()}.pdf`)
 }
 
 // ---------------------------------------------------------------------------
@@ -624,7 +632,7 @@ const downloadCourseCompletion = async () => {
       doc.setTextColor(200, 0, 0)
       doc.text(`Error loading students: ${profilesError.message}`, margin, currentY)
       addFooters(doc)
-      doc.save(`course-completion-${new Date().toISOString().split('T')[0] ?? ''}.pdf`)
+      doc.save(`course-completion-${getSafeDateStamp()}.pdf`)
       return
     }
 
@@ -638,7 +646,7 @@ const downloadCourseCompletion = async () => {
       doc.setTextColor(200, 0, 0)
       doc.text(`Error loading modules: ${modulesError.message}`, margin, currentY)
       addFooters(doc)
-      doc.save(`course-completion-${new Date().toISOString().split('T')[0] ?? ''}.pdf`)
+      doc.save(`course-completion-${getSafeDateStamp()}.pdf`)
       return
     }
 
@@ -718,7 +726,7 @@ const downloadCourseCompletion = async () => {
         doc.setFontSize(13)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(...colorRgb)
-        doc.text(`\u2550 ${label} \u2550`, margin, currentY)
+        doc.text(label, margin, currentY)
         currentY += 8
 
         doc.setTextColor(0, 0, 0)
@@ -823,6 +831,6 @@ const downloadCourseCompletion = async () => {
   }
 
   addFooters(doc)
-  doc.save(`course-completion-${new Date().toISOString().split('T')[0] ?? ''}.pdf`)
+  doc.save(`course-completion-${getSafeDateStamp()}.pdf`)
 }
 </script>
