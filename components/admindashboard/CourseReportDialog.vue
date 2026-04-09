@@ -114,13 +114,8 @@ const props = defineProps({
 
 defineEmits(['close'])
 
-// FIX: Access Nuxt app and Supabase once at setup level, not inside each function.
 const nuxtApp = useNuxtApp()
 const supabase = nuxtApp.$supabase
-
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
 
 const getTimeAgo = (date: string): string => {
   const completionDate = new Date(date)
@@ -134,7 +129,6 @@ const getTimeAgo = (date: string): string => {
   return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`
 }
 
-/** Add a new page with a continuation header and return the starting Y. */
 const addNewPage = (doc: jsPDF, pageNum: number): number => {
   const pageWidth  = doc.internal.pageSize.getWidth()
   const margin     = 15
@@ -151,7 +145,6 @@ const addNewPage = (doc: jsPDF, pageNum: number): number => {
   return 35
 }
 
-/** Return the current Y, or add a new page and return the new starting Y. */
 const checkPageBreak = (doc: jsPDF, currentY: number, requiredSpace: number, pageNum: { value: number }): number => {
   const pageHeight  = doc.internal.pageSize.getHeight()
   const footerHeight = 15
@@ -163,7 +156,6 @@ const checkPageBreak = (doc: jsPDF, currentY: number, requiredSpace: number, pag
   return currentY
 }
 
-/** Stamp footer on every page. */
 const addFooters = (doc: jsPDF): void => {
   const pageWidth  = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -187,6 +179,23 @@ const getSafeDateStamp = (): string => {
   return `${year}-${month}-${day}`
 }
 
+const formatStudentLabel = (count: number): string => `${count} ${count === 1 ? 'student' : 'students'}`
+
+const getModuleSortValue = (module: { id?: string | number; title?: string }): number => {
+  const title = module.title || ''
+  const match = title.match(/module\s*(\d+)/i) || title.match(/\b(\d+)\b/)
+  if (match?.[1]) return Number(match[1])
+  return Number(module.id) || Number.MAX_SAFE_INTEGER
+}
+
+const getModuleNumber = (module: { id?: string | number; title?: string }): number => {
+  const title = module.title || ''
+  const match = title.match(/module\s*(\d+)/i) || title.match(/\b(\d+)\b/)
+  if (match?.[1]) return Number(match[1])
+  const numericId = Number(module.id)
+  return Number.isFinite(numericId) ? numericId : 0
+}
+
 // ---------------------------------------------------------------------------
 // Module Completion Report
 // ---------------------------------------------------------------------------
@@ -206,7 +215,6 @@ const downloadModuleCompletion = async () => {
     currentY = addNewPage(doc, pageNum.value)
   }
 
-  // Header
   doc.setFillColor(37, 99, 235)
   doc.rect(0, 0, pageWidth, 30, 'F')
   doc.setTextColor(255, 255, 255)
@@ -222,202 +230,354 @@ const downloadModuleCompletion = async () => {
   doc.setTextColor(0, 0, 0)
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
-  doc.text('Module Completion Report (Last 14 Days)', margin, currentY)
+  doc.text('Module Completion Report (All Students)', margin, currentY)
   currentY += 12
 
   try {
-    const fourteenDaysAgo = new Date()
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+    const { data: modules, error: modulesError } = await supabase
+      .from('modules')
+      .select('id, title, level')
+      .eq('is_active', true)
+
+    if (modulesError) {
+      doc.setFontSize(10)
+      doc.setTextColor(200, 0, 0)
+      doc.text(`Error loading modules: ${modulesError.message}`, margin, currentY)
+      addFooters(doc)
+      doc.save(`module-completion-${getSafeDateStamp()}.pdf`)
+      return
+    }
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, created_at, role')
+      .eq('role', 'student')
+
+    if (profilesError) {
+      doc.setFontSize(10)
+      doc.setTextColor(200, 0, 0)
+      doc.text(`Error loading students: ${profilesError.message}`, margin, currentY)
+      addFooters(doc)
+      doc.save(`module-completion-${getSafeDateStamp()}.pdf`)
+      return
+    }
 
     const { data: completions, error } = await supabase
       .from('module_completion')
-      .select('module_id, modules(id, title, level), completed_at, user_id')
-      .gte('completed_at', fourteenDaysAgo.toISOString())
+      .select('module_id, completed_at, user_id')
+      .not('completed_at', 'is', null)
       .order('completed_at', { ascending: false })
 
     if (error) {
       doc.setFontSize(10)
       doc.setTextColor(200, 0, 0)
       doc.text(`Error loading data: ${error.message}`, margin, currentY)
-    } else if (!completions || completions.length === 0) {
+    } else if (!modules || modules.length === 0) {
       doc.setFontSize(10)
       doc.setTextColor(100, 100, 100)
-      doc.text('No module completions in the last 14 days.', margin, currentY)
+      doc.text('No active modules available.', margin, currentY)
+    } else if (!profiles || profiles.length === 0) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      doc.text('No student data available.', margin, currentY)
     } else {
-      // Group completions by module
-      const moduleStats = new Map<string, { title: string; count: number; completions: { date: string; timeAgo: string }[] }>()
+      const filteredModules = modules
+        .filter((module: any) => {
+          const moduleNumber = getModuleNumber(module)
+          return moduleNumber >= 1 && moduleNumber <= 10
+        })
 
-      completions.forEach((completion: any) => {
-        const moduleId   = completion.module_id
-        const moduleName = completion.modules?.title || `Module ${moduleId}`
+      const orderedModules = [...filteredModules]
+        .sort((a: any, b: any) => getModuleSortValue(a) - getModuleSortValue(b))
+        .map((module: any, index: number) => ({
+          id: String(module.id),
+          title: module.title || `Module ${module.id}`,
+          level: module.level || '',
+          moduleNumber: getModuleNumber(module),
+          order: index + 1
+        }))
 
-        if (!moduleStats.has(moduleId)) {
-          moduleStats.set(moduleId, { title: moduleName, count: 0, completions: [] })
-        }
+      if (orderedModules.length === 0) {
+        doc.setFontSize(10)
+        doc.setTextColor(100, 100, 100)
+        doc.text('No Modules 1 to 10 available.', margin, currentY)
+        addFooters(doc)
+        doc.save(`module-completion-${getSafeDateStamp()}.pdf`)
+        return
+      }
 
-        const stats = moduleStats.get(moduleId)!
-        stats.count++
-        stats.completions.push({ date: completion.completed_at, timeAgo: getTimeAgo(completion.completed_at) })
+      const moduleOrderById = new Map<string, number>()
+      orderedModules.forEach((module) => {
+        moduleOrderById.set(module.id, module.order)
       })
 
-      const sortedModules = Array.from(moduleStats.values()).sort((a, b) => b.count - a.count)
-      const totalCompletions = completions.length
-      const avgCompletions   = (totalCompletions / sortedModules.length).toFixed(1)
+      const profileCreatedAtByUser = new Map<string, string>()
+      profiles.forEach((profile: any) => {
+        profileCreatedAtByUser.set(String(profile.id), profile.created_at)
+      })
+
+      const directCompletionsByModule = new Map<string, any[]>()
+      const completionsByUser = new Map<string, { moduleId: string; completedAt: string; order: number }[]>()
+
+      ;(completions || []).forEach((completion: any) => {
+        const userId = String(completion.user_id)
+        const moduleId = String(completion.module_id)
+        const order = moduleOrderById.get(moduleId)
+
+        if (!order) return
+
+        if (!directCompletionsByModule.has(moduleId)) {
+          directCompletionsByModule.set(moduleId, [])
+        }
+        directCompletionsByModule.get(moduleId)!.push(completion)
+
+        if (!completionsByUser.has(userId)) {
+          completionsByUser.set(userId, [])
+        }
+
+        completionsByUser.get(userId)!.push({
+          moduleId,
+          completedAt: completion.completed_at,
+          order
+        })
+      })
+
+      completionsByUser.forEach((userCompletions, userId) => {
+        const dedupedByOrder = new Map<number, { moduleId: string; completedAt: string; order: number }>()
+
+        userCompletions.forEach((completion) => {
+          const existing = dedupedByOrder.get(completion.order)
+          if (!existing || new Date(completion.completedAt).getTime() < new Date(existing.completedAt).getTime()) {
+            dedupedByOrder.set(completion.order, completion)
+          }
+        })
+
+        const orderedUserCompletions = Array.from(dedupedByOrder.values()).sort((a, b) => a.order - b.order)
+
+        let highestSequentialOrder = 0
+        for (const completion of orderedUserCompletions) {
+          if (completion.order === highestSequentialOrder + 1) {
+            highestSequentialOrder = completion.order
+          } else if (completion.order > highestSequentialOrder + 1) {
+            break
+          }
+        }
+
+        completionsByUser.set(userId, orderedUserCompletions.filter((completion) => completion.order <= highestSequentialOrder))
+      })
+
+      const moduleStats = orderedModules.map((module) => {
+        const directCompletions = (directCompletionsByModule.get(module.id) || [])
+          .sort((a: any, b: any) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+
+        const reachedUsers = new Set<string>()
+        const sequentiallyCompletedUsers = new Set<string>()
+        const completionDays: number[] = []
+
+        profiles.forEach((profile: any) => {
+          const userId = String(profile.id)
+          const userCompletions = completionsByUser.get(userId) || []
+
+          if (userCompletions.some((completion) => completion.order >= module.order)) {
+            reachedUsers.add(userId)
+          }
+
+          const moduleCompletion = userCompletions.find((completion) => completion.moduleId === module.id)
+          if (moduleCompletion) {
+            sequentiallyCompletedUsers.add(userId)
+
+            const createdAtSource = profileCreatedAtByUser.get(userId)
+            if (createdAtSource) {
+              const createdAt = new Date(createdAtSource).getTime()
+              const completedAt = new Date(moduleCompletion.completedAt).getTime()
+              const days = Math.max(0, Math.ceil((completedAt - createdAt) / (1000 * 60 * 60 * 24)))
+              completionDays.push(days)
+            }
+          }
+        })
+
+        const averageDaysToComplete = completionDays.length > 0
+          ? (completionDays.reduce((sum, days) => sum + days, 0) / completionDays.length).toFixed(1)
+          : 'N/A'
+
+        return {
+          id: module.id,
+          title: module.title,
+          level: module.level,
+          moduleNumber: module.moduleNumber,
+          order: module.order,
+          reachedCount: reachedUsers.size,
+          sequentialCompletionCount: sequentiallyCompletedUsers.size,
+          directCompletionCount: directCompletions.length,
+          averageDaysToComplete,
+          completions: directCompletions.map((completion: any) => ({
+            date: completion.completed_at,
+            timeAgo: getTimeAgo(completion.completed_at)
+          }))
+        }
+      })
+
+      const totalStudentsTracked = profiles.length
+      const totalDirectCompletions = (completions || []).filter((completion: any) => moduleOrderById.has(String(completion.module_id))).length
+      const avgReachedPerModule = moduleStats.length > 0
+        ? (moduleStats.reduce((sum, module) => sum + module.reachedCount, 0) / moduleStats.length).toFixed(1)
+        : '0.0'
+      const maxCompletions = Math.max(...moduleStats.map((m) => m.sequentialCompletionCount), 1)
 
       doc.setFontSize(10)
       doc.setFont('helvetica', 'normal')
-      doc.text(`Total Completions: ${totalCompletions} students`, margin, currentY)
+      doc.text(`All students tracked: ${formatStudentLabel(totalStudentsTracked)}`, margin, currentY)
       currentY += 5
-      doc.text(`Average per Module: ${avgCompletions} students`, margin, currentY)
-      currentY += 10
+      doc.text(`Total direct completion records (Modules 1-10): ${totalDirectCompletions}`, margin, currentY)
+      currentY += 5
+      doc.text(`Average reached per module: ${avgReachedPerModule}`, margin, currentY)
+      currentY += 8
 
-      // Bar chart
-      const barHeight  = 6
-      const barSpacing = 12
-      const maxCompletions = Math.max(...sortedModules.map(m => m.count))
-      const chartWidth = contentWidth - 80
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      doc.text('How to read this report:', margin, currentY)
+      currentY += 4
+      doc.text('Reached = students who got to this module or any later module in a sequential path.', margin, currentY)
+      currentY += 4
+      doc.text('Completed = students with this exact module completed in the correct sequence.', margin, currentY)
+      currentY += 4
+      doc.text('Average Days = estimated speed from account creation up to finishing that module.', margin, currentY)
+      currentY += 4
+      doc.text('This report shows Beginner and Advanced Modules 1 to 10 when available.', margin, currentY)
+      currentY += 8
+      doc.setTextColor(0, 0, 0)
 
-      currentY = checkPageBreak(doc, currentY, sortedModules.length * 12 + 10, pageNum)
+      const barHeight = 6
+      const barSpacing = 16
+      const labelWidth = 52
+      const chartWidth = contentWidth - labelWidth - 28
 
-      sortedModules.forEach((module) => {
+      currentY = checkPageBreak(doc, currentY, moduleStats.length * 12 + 10, pageNum)
+
+      moduleStats.forEach((module) => {
         currentY = checkPageBreak(doc, currentY, 15, pageNum)
 
         const barY = currentY
-        doc.setFontSize(9)
+        doc.setFontSize(8)
         doc.setFont('helvetica', 'normal')
-        const truncatedLabel = module.title.length > 10 ? module.title.substring(0, 10) + '...' : module.title
-        doc.text(truncatedLabel, margin, barY + 2)
+        const levelLabel = module.level ? ` (${module.level})` : ''
+        const baseLabel = `${module.moduleNumber}. ${module.title}${levelLabel}`
+        const truncatedLabel = baseLabel.length > 34 ? `${baseLabel.substring(0, 34)}...` : baseLabel
+
+        doc.text(truncatedLabel, margin, barY + 1.5, { maxWidth: labelWidth - 2 })
+
+        const barStartX = margin + labelWidth
+        const barCenterY = barY + 0.5
 
         doc.setDrawColor(220, 220, 220)
-        doc.rect(margin + 30, barY - 2, chartWidth, barHeight)
+        doc.rect(barStartX, barCenterY - 2.5, chartWidth, barHeight)
 
-        const filledWidth = (chartWidth * module.count) / maxCompletions
+        const filledWidth = maxCompletions > 0 ? (chartWidth * module.sequentialCompletionCount) / maxCompletions : 0
         doc.setFillColor(59, 130, 246)
-        doc.rect(margin + 30, barY - 2, filledWidth, barHeight, 'F')
+        doc.rect(barStartX, barCenterY - 2.5, filledWidth, barHeight, 'F')
 
-        doc.setFontSize(9)
+        doc.setFontSize(8)
         doc.setFont('helvetica', 'bold')
-        doc.text(`${module.count} students`, margin + 30 + chartWidth + 5, barY + 2)
+        doc.text(formatStudentLabel(module.sequentialCompletionCount), barStartX + chartWidth + 4, barY + 1.5)
 
         currentY = barY + barSpacing
       })
 
       currentY += 8
-
-      // Detailed table
       currentY = checkPageBreak(doc, currentY, 20, pageNum)
 
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Module Details & Completion Timeline', margin, currentY)
-      currentY += 7
-
       const drawTableHeader = () => {
-        doc.setFontSize(9)
+        doc.setFontSize(8)
         doc.setFont('helvetica', 'bold')
         doc.text('Module', margin, currentY)
-        doc.text('Students', margin + 40, currentY)
-        doc.text('Latest Completion', margin + 70, currentY)
+        doc.text('Reached', margin + 78, currentY)
+        doc.text('Completed', margin + 104, currentY)
+        doc.text('Avg Days', margin + 135, currentY)
         currentY += 5
         doc.setDrawColor(100, 100, 100)
         doc.line(margin, currentY - 1, pageWidth - margin, currentY - 1)
         currentY += 3
       }
 
-      drawTableHeader()
+      const drawModuleDetailsSection = () => {
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(0, 0, 0)
+        doc.text('Module Details and Completion Speed', margin, currentY)
+        currentY += 7
+        drawTableHeader()
+      }
 
-      sortedModules.forEach((module) => {
-        const rowEstimate = 17 + (module.completions.length > 1 ? Math.min(module.completions.length - 1, 3) * 3.5 : 0)
+      drawModuleDetailsSection()
+
+      moduleStats.forEach((module) => {
+        const rowEstimate = 22 + (module.completions.length > 0 ? 4 : 0)
         if (currentY + rowEstimate > pageHeight - 15) {
           newPage()
-          drawTableHeader()
+          drawModuleDetailsSection()
         }
-
-        const percentage       = ((module.count / totalCompletions) * 100).toFixed(1)
-        const latestCompletion = module.completions[0] ?? null
-        const latestDate       = latestCompletion
-          ? new Date(latestCompletion.date).toLocaleString('en-US', {
-              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            })
-          : 'N/A'
 
         doc.setFontSize(9)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(0, 0, 0)
-        doc.text(module.title, margin, currentY)
+        doc.text(`${module.moduleNumber}. ${module.title}`, margin, currentY)
         currentY += 5
 
         doc.setFont('helvetica', 'normal')
-        doc.text(`${module.count} students`, margin + 5, currentY)
-        doc.text(latestDate, margin + 70, currentY)
+        doc.text(String(module.reachedCount), margin + 80, currentY)
+        doc.text(String(module.sequentialCompletionCount), margin + 108, currentY)
+        doc.text(String(module.averageDaysToComplete), margin + 137, currentY)
         currentY += 4
 
         doc.setFont('helvetica', 'italic')
         doc.setFontSize(8)
         doc.setTextColor(120, 120, 120)
-        doc.text(`(${latestCompletion?.timeAgo ?? '-'})`, margin + 70, currentY)
-        doc.setTextColor(0, 0, 0)
+        doc.text(`Raw direct records: ${module.directCompletionCount}`, margin + 5, currentY)
         currentY += 4
 
-        doc.setFont('helvetica', 'italic')
-        doc.setFontSize(8)
-        doc.text(`${percentage}% of all completions`, margin + 5, currentY)
-        currentY += 4
-
-        if (module.completions.length > 1) {
-          const recentCompletions = module.completions.slice(1, 4)
-          doc.setFont('helvetica', 'italic')
-          doc.setFontSize(7)
-          doc.setTextColor(100, 100, 100)
-
-          recentCompletions.forEach((comp, compIdx) => {
-            const compDate = new Date(comp.date).toLocaleString('en-US', {
-              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            })
-            doc.text(`  • ${compDate} (${comp.timeAgo})`, margin + 8, currentY + compIdx * 3.5)
-          })
-
-          doc.setTextColor(0, 0, 0)
-          currentY += recentCompletions.length * 3.5
+        const latestCompletion = module.completions[0] ?? null
+        if (latestCompletion) {
+          doc.text(`Latest completion: ${latestCompletion.timeAgo}`, margin + 5, currentY)
+          currentY += 4
         }
 
+        doc.setTextColor(0, 0, 0)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
-        currentY += 4
+        currentY += 3
       })
 
-      // Timeline summary
       currentY += 8
-      currentY = checkPageBreak(doc, currentY, 30, pageNum)
+      currentY = checkPageBreak(doc, currentY, 40, pageNum)
 
       doc.setDrawColor(200, 200, 200)
       doc.line(margin, currentY, pageWidth - margin, currentY)
       currentY += 6
 
+      const advancedModules = moduleStats.filter((module) => module.moduleNumber >= 6 && module.moduleNumber <= 10)
+      const beginnerModules = moduleStats.filter((module) => module.moduleNumber >= 1 && module.moduleNumber <= 5)
+
+      const highestAdvancedCompleted = advancedModules.reduce((max, module) => Math.max(max, module.sequentialCompletionCount), 0)
+      const lowestBeginnerCompleted = beginnerModules.reduce((min, module) => Math.min(min, module.sequentialCompletionCount), Number.POSITIVE_INFINITY)
+      const highestAdvancedReached = advancedModules.reduce((max, module) => Math.max(max, module.reachedCount), 0)
+      const lowestBeginnerReached = beginnerModules.reduce((min, module) => Math.min(min, module.reachedCount), Number.POSITIVE_INFINITY)
+
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
-      doc.text('Completion Timeline Summary', margin, currentY)
+      doc.text('Progress Consistency Check', margin, currentY)
       currentY += 8
-
-      const today = new Date()
-
-      const lastDay = completions.filter((c: any) => {
-        const diffDays = Math.ceil(Math.abs(today.getTime() - new Date(c.completed_at).getTime()) / (1000 * 60 * 60 * 24))
-        return diffDays <= 1
-      }).length
-
-      const last7Days = completions.filter((c: any) => {
-        const diffDays = Math.ceil(Math.abs(today.getTime() - new Date(c.completed_at).getTime()) / (1000 * 60 * 60 * 24))
-        return diffDays <= 7
-      }).length
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      doc.text(`Last 24 Hours: ${lastDay} completions`, margin, currentY)
+      doc.text(`Advanced completed peak (Modules 6-10): ${formatStudentLabel(highestAdvancedCompleted)}`, margin, currentY)
       currentY += 6
-      doc.text(`Last 7 Days: ${last7Days} completions`, margin, currentY)
+      doc.text(`Beginner completed floor (Modules 1-5): ${formatStudentLabel(Number.isFinite(lowestBeginnerCompleted) ? lowestBeginnerCompleted : 0)}`, margin, currentY)
       currentY += 6
-      doc.text(`Last 14 Days: ${completions.length} completions`, margin, currentY)
+      doc.text(`Advanced reached peak (Modules 6-10): ${formatStudentLabel(highestAdvancedReached)}`, margin, currentY)
+      currentY += 6
+      doc.text(`Beginner reached floor (Modules 1-5): ${formatStudentLabel(Number.isFinite(lowestBeginnerReached) ? lowestBeginnerReached : 0)}`, margin, currentY)
+      currentY += 6
+      doc.text('Expected rule: earlier modules should stay equal to or higher than later modules.', margin, currentY)
     }
   } catch (err) {
     console.error('Error generating module completion report:', err)
@@ -443,7 +603,6 @@ const downloadEnrollment = async () => {
   const contentWidth = pageWidth - 2 * margin
   let currentY      = margin
 
-  // Header
   doc.setFillColor(37, 99, 235)
   doc.rect(0, 0, pageWidth, 30, 'F')
   doc.setTextColor(255, 255, 255)
@@ -503,7 +662,6 @@ const downloadEnrollment = async () => {
       doc.text(`Average per Day: ${avgSignups}`, margin, currentY)
       currentY += 10
 
-      // Line chart
       const chartStartY  = currentY
       const chartHeight  = 50
       const maxValue     = Math.max(...enrollData.map((e: any) => e.enrollments || 0))
@@ -542,7 +700,6 @@ const downloadEnrollment = async () => {
         currentY = 20
       }
 
-      // Table
       const drawEnrollHeader = () => {
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9)
@@ -603,7 +760,6 @@ const downloadCourseCompletion = async () => {
     currentY = addNewPage(doc, pageNum.value)
   }
 
-  // Header
   doc.setFillColor(37, 99, 235)
   doc.rect(0, 0, pageWidth, 30, 'F')
   doc.setTextColor(255, 255, 255)
