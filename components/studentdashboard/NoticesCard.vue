@@ -1,9 +1,29 @@
 <template>
   <div class="w-full">
 
+    <!-- ───── Overdue Banner ───── -->
+    <div
+      v-if="activeOverdueAssignments.length > 0 && !dismissedOverdue"
+      class="notice-banner notice-overdue"
+    >
+      <span class="banner-dot overdue-dot">!</span>
+      <div class="banner-body">
+        <strong>Overdue reminder: please finish your assigned module</strong>
+        <span>{{ getOverdueSummary() }} — {{ getDaysOverdueStatus() }}</span>
+      </div>
+      <button class="banner-action overdue-action" @click="goToFirstModule">
+        View now
+      </button>
+      <button class="banner-close" aria-label="Dismiss" @click="dismissedOverdue = true">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- ───── Phase notice (after I agree): Week 1–4, dismissible permanently ───── -->
     <div
-      v-if="notices.length === 0 && phaseNotice"
+      v-else-if="notices.length === 0 && phaseNotice"
       class="notice-banner notice-clear"
     >
       <span class="banner-dot clear-dot">
@@ -16,26 +36,6 @@
         <span>{{ phaseNotice.message }}</span>
       </div>
       <button class="banner-close" aria-label="Remove" @click="dismissPhaseNotice">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- ───── Overdue Banner ───── -->
-    <div
-      v-else-if="notices.length > 0 && !dismissedOverdue"
-      class="notice-banner notice-overdue"
-    >
-      <span class="banner-dot overdue-dot">!</span>
-      <div class="banner-body">
-        <strong>Pending: you must finish the module</strong>
-        <span>{{ notices.length }} module(s) overdue — {{ getDaysOverdueStatus() }}</span>
-      </div>
-      <button class="banner-action overdue-action" @click="goToFirstModule">
-        View now
-      </button>
-      <button class="banner-close" aria-label="Dismiss" @click="dismissedOverdue = true">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
         </svg>
@@ -115,12 +115,65 @@ function dismissPhaseNotice() {
   setDismissedPhases(currentUserId.value, next)
 }
 
+const normalizeCourseLevel = (courseLevel: string | null | undefined) => {
+  const normalized = String(courseLevel || 'general').toLowerCase()
+  if (normalized === 'advance') return 'advanced'
+  return normalized
+}
+
+const activeOverdueAssignments = computed(() => {
+  const beginnerAssignments = overdueAssignments.value.filter(
+    assignment => normalizeCourseLevel(assignment.course_level) === 'beginner'
+  )
+
+  if (beginnerAssignments.length > 0) return beginnerAssignments
+
+  return overdueAssignments.value.filter(
+    assignment => normalizeCourseLevel(assignment.course_level) === 'advanced'
+  )
+})
+
+const overdueAssignmentsByCourseLevel = computed(() => {
+  const groups: Record<string, any[]> = {}
+
+  for (const assignment of activeOverdueAssignments.value) {
+    const level = normalizeCourseLevel(assignment.course_level)
+    if (!groups[level]) groups[level] = []
+    groups[level].push(assignment)
+  }
+
+  return groups
+})
+
+const formatCourseLevelLabel = (courseLevel: string) => {
+  if (courseLevel === 'beginner') return 'Beginner'
+  if (courseLevel === 'advanced' || courseLevel === 'advance') return 'Advanced'
+  return courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1)
+}
+
+const getOverdueSummary = () => {
+  if (activeOverdueAssignments.value.length === 0) return 'No overdue modules'
+
+  const summaries = Object.entries(overdueAssignmentsByCourseLevel.value).map(([courseLevel, assignments]) => {
+    return `${formatCourseLevelLabel(courseLevel)}: ${assignments.length} module(s)`
+  })
+
+  return summaries.join(' • ')
+}
+
 const getDaysOverdueStatus = () => {
-  if (notices.value.length === 0) return 'No pending'
-  const daysOverdue = getDaysOverdue(notices.value[0].module_assignment_id)
-  if (daysOverdue >= 14) return 'Critical — account may be deactivated'
-  if (daysOverdue >= 7) return '7+ days overdue'
-  return `${daysOverdue} days overdue`
+  if (activeOverdueAssignments.value.length === 0) return 'No pending'
+  const mostOverdueAssignment = [...activeOverdueAssignments.value].sort((a, b) => {
+    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  })[0]
+  const daysOverdue = mostOverdueAssignment ? getDaysOverdue(mostOverdueAssignment.id) : 0
+
+  if (daysOverdue >= 28) return 'Fourth notice level — please contact the administrator immediately'
+  if (daysOverdue >= 21) return 'Third notice level — urgent action required'
+  if (daysOverdue >= 14) return 'Second notice level — account is at risk'
+  if (daysOverdue >= 7) return 'First notice level — 7+ days overdue'
+  if (daysOverdue > 0) return `${daysOverdue} day(s) overdue`
+  return 'Due date already passed — please complete it as soon as possible'
 }
 
 const getDaysOverdue = (assignmentId: number) => {
@@ -130,10 +183,13 @@ const getDaysOverdue = (assignmentId: number) => {
 }
 
 const goToFirstModule = async () => {
-  if (notices.value.length > 0) {
-    const assignment = overdueAssignments.value.find(a => a.id === notices.value[0].module_assignment_id)
-    if (assignment) await navigateTo(`/modules/${assignment.module_id}`)
-  }
+  if (activeOverdueAssignments.value.length === 0) return
+
+  const assignment = [...activeOverdueAssignments.value].sort((a, b) => {
+    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+  })[0]
+
+  if (assignment) await navigateTo(`/modules/${assignment.module_id}`)
 }
 
 const loadNotices = async () => {
@@ -152,7 +208,8 @@ const loadNotices = async () => {
       .select('*')
       .eq('user_id', user.id)
       .lt('deadline', new Date().toISOString())
-      .in('status', ['pending', 'in_progress'])
+      .in('status', ['pending', 'in_progress', 'overdue'])
+      .order('deadline', { ascending: true })
 
     overdueAssignments.value = overdueData || []
   } catch (error) {

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 
 interface User {
   id: string
+  studentId: string
   name: string
   email: string
   role: string
@@ -26,9 +27,8 @@ export const useUserManagement = () => {
 
       const { data, error: fetchError } = await $supabase
         .from('profiles')
-        .select('id, email, full_name, role, is_active, created_at, updated_at')
+        .select('id, student_id, email, full_name, role, is_active, created_at, updated_at')
         .eq('role', 'student')
-        .not('student_id', 'is', null)
         .order('created_at', { ascending: false })
 
       console.log('Fetched student data:', data)
@@ -57,6 +57,7 @@ export const useUserManagement = () => {
 
       users.value = data.map((user: any) => ({
         id: user.id,
+        studentId: user.student_id || user.id?.substring?.(0, 8) || '—',
         name: user.full_name || 'Unknown',
         email: user.email,
         role: user.role || 'student',
@@ -96,6 +97,7 @@ export const useUserManagement = () => {
           email: userData.email,
           full_name: userData.fullName,
           role: 'student',
+          student_id: authData.user?.id?.substring?.(0, 8) || null,
           is_active: true
         })
 
@@ -161,10 +163,19 @@ export const useUserManagement = () => {
       // Update local state properly (immutable update for Vue reactivity)
       const index = users.value.findIndex(u => u.id === userId)
       if (index !== -1) {
-        users.value[index] = {
-          ...users.value[index],
-          isActive: newStatus,
-          status: newStatus ? 'Active' : 'Inactive'
+        const existingUser = users.value[index]
+        if (existingUser) {
+          users.value[index] = {
+            id: existingUser.id,
+            studentId: existingUser.studentId,
+            name: existingUser.name,
+            email: existingUser.email,
+            role: existingUser.role,
+            status: newStatus ? 'Active' : 'Inactive',
+            isActive: newStatus,
+            createdAt: existingUser.createdAt,
+            updatedAt: existingUser.updatedAt
+          }
         }
       }
 

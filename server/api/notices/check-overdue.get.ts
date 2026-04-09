@@ -1,8 +1,8 @@
-// server/api/notices/check-overdue.post.ts
-// This endpoint checks for overdue modules and sends notices
+// server/api/notices/check-overdue.get.ts
+// GET wrapper for Vercel Cron support — same logic as POST endpoint
 import { createClient } from '@supabase/supabase-js'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   try {
     const supabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,8 +15,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const sbAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Get all overdue assignments (deadline passed, not completed)
     const now = new Date().toISOString()
 
     const { data: overdueAssignments, error: fetchError } = await sbAdmin
@@ -37,7 +35,6 @@ export default defineEventHandler(async (event) => {
       const userId = assignment.user_id
       const assignmentId = assignment.id
 
-      // Skip overdue handling if this assignment is already completed in module_completion
       const { data: completion } = await sbAdmin
         .from('module_completion')
         .select('id, completed_at')
@@ -59,7 +56,6 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      // Mark as overdue immediately once deadline has passed so admin UI stays in sync
       await sbAdmin
         .from('module_assignments')
         .update({
@@ -68,13 +64,11 @@ export default defineEventHandler(async (event) => {
         })
         .eq('id', assignmentId)
 
-      // Calculate days overdue
       const deadlineDate = new Date(assignment.deadline)
       const daysOverdue = Math.floor(
         (Date.now() - deadlineDate.getTime()) / (1000 * 60 * 60 * 24)
       )
 
-      // Get existing notices for this assignment
       const { data: notices } = await sbAdmin
         .from('student_notices')
         .select('notice_type')
@@ -85,17 +79,14 @@ export default defineEventHandler(async (event) => {
       const thirdNoticeSent = notices?.some((n: any) => n.notice_type === 'third_notice')
       const fourthNoticeSent = notices?.some((n: any) => n.notice_type === 'fourth_notice')
 
-      // Send first notice at 7 days overdue
       if (daysOverdue >= 7 && !firstNoticeSent) {
-        const noticeMessage = `This is your first reminder: your assigned module is now 7 days overdue. Please complete it as soon as possible.`
-
         const { error: noticeError } = await sbAdmin
           .from('student_notices')
           .insert({
             user_id: userId,
             module_assignment_id: assignmentId,
             notice_type: 'first_notice',
-            notice_message: noticeMessage,
+            notice_message: 'This is your first reminder: your assigned module is now 7 days overdue. Please complete it as soon as possible.',
             sent_at: new Date().toISOString(),
             is_read: false
           })
@@ -114,17 +105,14 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Send second notice at 14 days overdue
       if (daysOverdue >= 14 && !secondNoticeSent) {
-        const noticeMessage = `This is your second reminder: your assigned module is now 14 days overdue. Please complete it immediately to avoid further escalation.`
-
         const { error: noticeError } = await sbAdmin
           .from('student_notices')
           .insert({
             user_id: userId,
             module_assignment_id: assignmentId,
             notice_type: 'second_notice',
-            notice_message: noticeMessage,
+            notice_message: 'This is your second reminder: your assigned module is now 14 days overdue. Please complete it immediately to avoid further escalation.',
             sent_at: new Date().toISOString(),
             is_read: false
           })
@@ -143,17 +131,14 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Send third notice at 21 days overdue
       if (daysOverdue >= 21 && !thirdNoticeSent) {
-        const noticeMessage = `This is your third reminder: your assigned module is now 21 days overdue. Immediate completion is required.`
-
         const { error: noticeError } = await sbAdmin
           .from('student_notices')
           .insert({
             user_id: userId,
             module_assignment_id: assignmentId,
             notice_type: 'third_notice',
-            notice_message: noticeMessage,
+            notice_message: 'This is your third reminder: your assigned module is now 21 days overdue. Immediate completion is required.',
             sent_at: new Date().toISOString(),
             is_read: false
           })
@@ -171,17 +156,14 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Send fourth notice at 28 days overdue
       if (daysOverdue >= 28 && !fourthNoticeSent) {
-        const noticeMessage = `This is your fourth reminder: your assigned module is now 28 days overdue. Please coordinate with the administrator immediately.`
-
         const { error: noticeError } = await sbAdmin
           .from('student_notices')
           .insert({
             user_id: userId,
             module_assignment_id: assignmentId,
             notice_type: 'fourth_notice',
-            notice_message: noticeMessage,
+            notice_message: 'This is your fourth reminder: your assigned module is now 28 days overdue. Please coordinate with the administrator immediately.',
             sent_at: new Date().toISOString(),
             is_read: false
           })

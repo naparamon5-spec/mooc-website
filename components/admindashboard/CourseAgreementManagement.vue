@@ -1,14 +1,17 @@
 <template>
   <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold text-gray-900">Course Agreement Management</h2>
-      <button
-        @click="checkOverdueModules"
-        :disabled="checkingOverdue"
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+    <div class="flex items-start justify-between mb-6 gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-gray-900">Course Agreement Management</h2>
+        <p class="text-sm text-gray-600 mt-1">
+          Overdue checks now run automatically every day and also when the app is opened.
+        </p>
+      </div>
+      <span
+        class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
       >
-        {{ checkingOverdue ? 'Checking...' : 'Check Overdue Modules' }}
-      </button>
+        Auto notice monitoring enabled
+      </span>
     </div>
 
     <!-- Summary Cards -->
@@ -80,13 +83,14 @@
           <option value="advanced">advanced</option>
         </select>
       </div>
-<div class="w-full lg:w-72 min-w-0">
-  <select
-    v-model="moduleFilter"
-    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-hidden text-ellipsis"
-  >
-          <option value="">All Modules</option>
-          <option v-for="module in uniqueModules" :key="module" :value="module">{{ module }}</option>
+      <div class="w-full lg:w-36">
+        <select
+          v-model.number="rowsPerPage"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option :value="5">5 rows</option>
+          <option :value="10">10 rows</option>
+          <option :value="20">20 rows</option>
         </select>
       </div>
     </div>
@@ -202,18 +206,6 @@
         Showing {{ pageStart + 1 }}–{{ pageEnd }} of {{ filteredRows.length }}
       </div>
       <div class="flex items-center gap-2">
-        <div class="flex items-center gap-2 mr-4">
-          <label for="rows-per-page" class="text-sm text-gray-600">Rows:</label>
-        <select
-  id="rows-per-page"
-  v-model.number="rowsPerPage"
-  class="px-3 py-1 pr-7 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[4.5rem]"
->
-            <option :value="5">5</option>
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-          </select>
-        </div>
         <button
           class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
           :disabled="currentPage === 1"
@@ -251,13 +243,13 @@ type AssignmentRow = {
   course_level: string
   student_id_display: string
   module_title: string
+  completed_at?: string | null
 }
 
 const { $supabase } = useNuxtApp()
 const supabase = $supabase
 const activeTab = ref('assignments')
 const loading = ref(false)
-const checkingOverdue = ref(false)
 
 const allAssignments = ref<AssignmentRow[]>([])
 const overdueAssignments = ref<AssignmentRow[]>([])
@@ -269,7 +261,6 @@ const messageType = ref<'success' | 'error'>('success')
 const searchQuery = ref('')
 const statusFilter = ref('')
 const levelFilter = ref('')
-const moduleFilter = ref('')
 const rowsPerPage = ref(10)
 const currentPage = ref(1)
 
@@ -281,13 +272,7 @@ const secondNoticeCount = computed(() =>
   allNotices.value.filter((n) => n.notice_type === 'second_notice').length
 )
 
-const uniqueModules = computed(() => {
-  const modules = new Set<string>()
-  allAssignments.value.forEach(a => modules.add(a.module_title))
-  return Array.from(modules).sort()
-})
-
-watch([activeTab, rowsPerPage, searchQuery, statusFilter, levelFilter, moduleFilter], () => {
+watch([activeTab, rowsPerPage, searchQuery, statusFilter, levelFilter], () => {
   currentPage.value = 1
 })
 
@@ -324,9 +309,8 @@ const filteredRows = computed(() => {
 
     const matchesStatus = !statusFilter.value || r.status === statusFilter.value
     const matchesLevel = !levelFilter.value || r.course_level === levelFilter.value
-    const matchesModule = !moduleFilter.value || r.module_title === moduleFilter.value
 
-    return matchesQuery && matchesStatus && matchesLevel && matchesModule
+    return matchesQuery && matchesStatus && matchesLevel
   })
 })
 
@@ -335,23 +319,36 @@ const pageStart = computed(() => (currentPage.value - 1) * rowsPerPage.value)
 const pageEnd = computed(() => Math.min(filteredRows.value.length, pageStart.value + rowsPerPage.value))
 const paginatedRows = computed(() => filteredRows.value.slice(pageStart.value, pageEnd.value))
 
-const checkOverdueModules = async () => {
-  try {
-    checkingOverdue.value = true
-    const response = await fetch('/api/notices/check-overdue', { method: 'POST' })
-    const result = await response.json()
-    message.value = result.message
-    messageType.value = 'success'
-    await loadAllData()
-  } catch (error: any) {
-    message.value = error.message || 'Error checking overdue modules'
-    messageType.value = 'error'
-  } finally {
-    checkingOverdue.value = false
+const deriveAssignmentStatus = (
+  assignment: any,
+  completionMap: Map<string, { completed_at?: string | null }>
+) => {
+  const completionKey = `${assignment.user_id}:${assignment.course_level}:${assignment.module_id}`
+  const completion = completionMap.get(completionKey)
+  const now = Date.now()
+  const deadlineTime = assignment.deadline ? new Date(assignment.deadline).getTime() : Number.POSITIVE_INFINITY
+
+  if (completion) {
+    return {
+      status: 'completed',
+      completed_at: completion.completed_at || assignment.completed_at || null
+    }
+  }
+
+  if (deadlineTime < now) {
+    return {
+      status: 'overdue',
+      completed_at: assignment.completed_at || null
+    }
+  }
+
+  return {
+    status: assignment.status || 'pending',
+    completed_at: assignment.completed_at || null
   }
 }
 
-const resolveDisplayData = async (assignments: any[]) => {
+const resolveDisplayData = async (assignments: any[], completions: any[] = []) => {
   const moduleIds = Array.from(new Set(assignments.map((a) => a.module_id).filter(Boolean)))
   const userIds = Array.from(new Set(assignments.map((a) => a.user_id).filter(Boolean)))
 
@@ -372,19 +369,29 @@ const resolveDisplayData = async (assignments: any[]) => {
     studentIdByUserId.set(p.id, p.student_id || p.id?.substring?.(0, 8) || '—')
   }
 
+  const completionMap = new Map<string, { completed_at?: string | null }>()
+  for (const completion of completions || []) {
+    const completionKey = `${completion.user_id}:${completion.course_level}:${completion.module_id}`
+    completionMap.set(completionKey, {
+      completed_at: completion.completed_at || completion.created_at || null
+    })
+  }
+
   return (assignments || []).map((a: any) => {
     const moduleTitle = moduleTitleById.get(a.module_id) || a.module_id
     const studentId = studentIdByUserId.get(a.user_id) || a.user_id?.substring?.(0, 8) || '—'
+    const derived = deriveAssignmentStatus(a, completionMap)
 
     const row: AssignmentRow = {
       id: a.id,
       user_id: a.user_id,
       module_id: a.module_id,
       deadline: a.deadline,
-      status: a.status,
+      status: derived.status,
       course_level: a.course_level,
       student_id_display: studentId,
-      module_title: moduleTitle
+      module_title: moduleTitle,
+      completed_at: derived.completed_at
     }
     return row
   })
@@ -394,23 +401,20 @@ const loadAllData = async () => {
   try {
     loading.value = true
 
-    // Fetch all assignments
-    const { data: assignments } = await supabase
-      .from('module_assignments')
-      .select('*')
-      .order('deadline', { ascending: true })
+    // Fetch assignments and real completion records together so UI status matches actual progress
+    const [{ data: assignments }, { data: completions }] = await Promise.all([
+      supabase
+        .from('module_assignments')
+        .select('*')
+        .order('deadline', { ascending: true }),
+      supabase
+        .from('module_completion')
+        .select('user_id, module_id, course_level, completed_at, created_at')
+    ])
 
-    allAssignments.value = await resolveDisplayData(assignments || [])
-
-    // Fetch overdue assignments
-    const now = new Date().toISOString()
-    const { data: overdue } = await supabase
-      .from('module_assignments')
-      .select('*')
-      .lt('deadline', now)
-      .in('status', ['pending', 'in_progress'])
-
-    overdueAssignments.value = await resolveDisplayData(overdue || [])
+    const resolvedAssignments = await resolveDisplayData(assignments || [], completions || [])
+    allAssignments.value = resolvedAssignments
+    overdueAssignments.value = resolvedAssignments.filter((assignment) => assignment.status === 'overdue')
 
     // Fetch all notices
     const { data: notices } = await supabase

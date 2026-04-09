@@ -20,7 +20,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search by name or email..."
+          placeholder="Search by student ID, name, or email..."
           class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
@@ -77,6 +77,7 @@
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Student ID</th>
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Name</th>
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Role</th>
@@ -90,6 +91,7 @@
             :key="index"
             class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
           >
+            <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ user.studentId }}</td>
             <td class="py-3 px-4 text-sm text-gray-900">{{ user.name }}</td>
             <td class="py-3 px-4 text-sm text-gray-600">{{ user.email }}</td>
             <td class="py-3 px-4 text-sm text-gray-600">
@@ -224,6 +226,7 @@ import { ref, computed } from 'vue'
 
 interface UserItem {
   id: string
+  studentId: string
   name: string
   email: string
   role: string
@@ -253,6 +256,7 @@ const filteredUsers = computed(() => {
   return props.users.filter(user => {
     const searchLower = searchQuery.value.toLowerCase()
     const matchesSearch = searchLower === '' ||
+      user.studentId.toLowerCase().includes(searchLower) ||
       user.name.toLowerCase().includes(searchLower) ||
       user.email.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter.value === '' || user.status === statusFilter.value
