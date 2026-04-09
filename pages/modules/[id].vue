@@ -306,22 +306,31 @@ export const BlockRenderer = defineComponent({
         const imgStyle: Record<string, string> = {}
         if (b.width) imgStyle.width = b.width
         if (b.height) imgStyle.height = b.height
-        return h('div', { class: `flex ${alignClass} my-2` },
+        if (!b.width) imgStyle.maxWidth = '100%'
+        if (!b.height) imgStyle.height = 'auto'
+        return h('div', { class: `flex ${alignClass}` },
           h('img', {
             src: b.src,
             alt: props.lessonTitle || 'Lesson image',
-            class: 'rounded-lg border border-gray-100',
-            style: Object.keys(imgStyle).length > 0 ? imgStyle : { width: '100%', height: 'auto' }
+            class: 'rounded-lg border border-gray-100 block',
+            style: Object.keys(imgStyle).length > 0 ? imgStyle : { width: '100%', height: 'auto', maxWidth: '100%' }
           })
         )
       }
 
       if (b.type === 'video' && b.src) {
-        return h('div', { class: 'flex justify-center my-2' },
+        const videoStyle: Record<string, string> = {}
+        if (b.width) videoStyle.width = b.width
+        if (b.height) videoStyle.height = b.height
+        if (!b.width) videoStyle.width = '100%'
+        if (!b.height) videoStyle.height = 'auto'
+
+        return h('div', { class: 'flex justify-center' },
           h('video', {
             src: b.src,
             controls: true,
-            class: 'w-full h-auto rounded-lg border border-gray-100'
+            class: 'rounded-lg border border-gray-100 block max-w-full',
+            style: videoStyle
           })
         )
       }
@@ -457,9 +466,22 @@ const getLessonBlocks = (lesson: any): LessonBlock[] => {
       .filter((b: any) => b && (b.type === 'text' || b.type === 'image' || b.type === 'video'))
       .map((b: any) => {
         const layout = (b.layout || 'full-width') as BlockLayout
-        if (b.type === 'image') return { type: 'image' as const, src: b.src || '', layout, align: (b.align || 'center') as BlockAlign }
-        if (b.type === 'video') return { type: 'video' as const, src: b.src || '', layout }
-        return { type: 'text' as const, text: b.text || '', layout }
+      if (b.type === 'image') return {
+        type: 'image' as const,
+        src: b.src || '',
+        layout,
+        align: (b.align || 'center') as BlockAlign,
+        width: b.width || undefined,
+        height: b.height || undefined
+      }
+      if (b.type === 'video') return {
+        type: 'video' as const,
+        src: b.src || '',
+        layout,
+        width: b.width || undefined,
+        height: b.height || undefined
+      }
+      return { type: 'text' as const, text: b.text || '', layout }
       })
   }
   const blocks: LessonBlock[] = []
@@ -493,31 +515,33 @@ interface RowGroup {
 const renderRows = (blocks: LessonBlock[]): RowGroup[] => {
   const rows: RowGroup[] = []
   let i = 0
+
   while (i < blocks.length) {
     const current = blocks[i]!
     const next = blocks[i + 1]
 
-    // IMAGE → TEXT  ⟹  float image LEFT, text wraps right
-    if (current.type === 'image' && next?.type === 'text') {
-      rows.push({ blocks: [current, next], wrapLayout: true, wrapSide: 'left' })
-      i += 2
+    const isPairedColumnRow = current.layout === 'left' && next?.layout === 'right'
+    const isWrapPair =
+      isPairedColumnRow &&
+      ((current.type === 'image' && next?.type === 'text') ||
+        (current.type === 'text' && next?.type === 'image'))
 
-    // TEXT → IMAGE  ⟹  float image RIGHT, text wraps left
-    } else if (current.type === 'text' && next?.type === 'image') {
-      rows.push({ blocks: [current, next], wrapLayout: true, wrapSide: 'right' })
+    if (isWrapPair) {
+      rows.push({
+        blocks: [current, next!],
+        wrapLayout: true,
+        wrapSide: current.type === 'image' ? 'left' : 'right'
+      })
       i += 2
-
-    // Explicit left + right column pair
-    } else if (current.layout === 'left' && next?.layout === 'right') {
-      rows.push({ blocks: [current, next], wrapLayout: false })
+    } else if (isPairedColumnRow) {
+      rows.push({ blocks: [current, next!], wrapLayout: false })
       i += 2
-
-    // Single block fallback
     } else {
       rows.push({ blocks: [current], wrapLayout: false })
-      i++
+      i += 1
     }
   }
+
   return rows
 }
 
@@ -632,6 +656,15 @@ watch(lessonParam, (val) => {
 </script>
 
 <style>
+.prose p:last-child,
+.prose ul:last-child,
+.prose ol:last-child,
+.prose li:last-child,
+.prose video:last-child,
+.prose img:last-child {
+  margin-bottom: 0;
+}
+
 .prose p  { margin-bottom: 1em; line-height: 1.6; }
 .prose ul { margin-bottom: 1em; }
 .prose li { margin-bottom: 0.5em; }
@@ -643,7 +676,6 @@ watch(lessonParam, (val) => {
 .text-wrap-container {
   display: flow-root;
   overflow: hidden;
-  margin-bottom: 1.5rem;
 }
 
 .wrap-image-float-right {
@@ -715,8 +747,6 @@ watch(lessonParam, (val) => {
    ═══════════════════════════════════════════════════════════════════ */
 
 .prose img {
-  width: 100% !important;
-  height: auto !important;
   max-width: 100%;
   border-radius: 0.5rem;
   display: block;
@@ -728,7 +758,7 @@ watch(lessonParam, (val) => {
 }
 
 div:not(.flex) .prose img {
-  margin: 2rem 0;
+  margin: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

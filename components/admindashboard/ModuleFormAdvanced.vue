@@ -531,7 +531,13 @@ const normalizeLesson = (lesson: any) => {
           height: b.height || undefined,
           ...base
         }
-        if (b.type === 'video') return { type: 'video', src: b.src || '', ...base }
+        if (b.type === 'video') return {
+          type: 'video',
+          src: b.src || '',
+          width: b.width || undefined,
+          height: b.height || undefined,
+          ...base
+        }
         return { type: 'text', text: b.text || '', ...base }
       })
   }
