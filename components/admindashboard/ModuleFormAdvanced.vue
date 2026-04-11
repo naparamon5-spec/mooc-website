@@ -70,7 +70,6 @@
                 <button @click="fileInput?.click()" type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{{ imagePreview ? 'Change Image' : 'Upload Image' }}</button>
                 <span v-if="!imagePreview && !form.image_url" class="text-sm text-gray-500">JPG, PNG, WebP (Max 5MB)</span>
               </div>
-              <!-- Image Dimensions -->
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs font-medium text-gray-700 mb-1">Image Width (px)</label>
@@ -258,7 +257,7 @@
                         'border-l-4 border-l-purple-400': block.layout === 'center',
                       }"
                     >
-                      <!-- Block Header: type label + layout selector + remove -->
+                      <!-- Block Header -->
                       <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
                         <div class="flex items-center gap-2">
                           <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
@@ -309,18 +308,122 @@
 
                       <!-- TEXT Block -->
                       <div v-if="block.type === 'text'">
-                        <textarea
-                          v-model="block.text"
-                          rows="6"
-                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          placeholder="Write your lesson content here..."
+                        <!-- Toolbar -->
+                        <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                          <!-- Bold -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="applyFormat(index, blockIndex, 'bold')"
+                            class="px-3 py-1 text-xs font-bold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                            title="Bold (Ctrl+B)"
+                          >B</button>
+
+                          <!-- Italic -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="applyFormat(index, blockIndex, 'italic')"
+                            class="px-3 py-1 text-xs italic text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                            title="Italic (Ctrl+I)"
+                          >I</button>
+
+                          <!-- Underline -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="applyFormat(index, blockIndex, 'underline')"
+                            class="px-3 py-1 text-xs underline text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                            title="Underline (Ctrl+U)"
+                          >U</button>
+
+                          <!-- Bullet List -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="applyFormat(index, blockIndex, 'insertUnorderedList')"
+                            class="px-3 py-1 text-xs text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                            title="Bullet List"
+                          >• List</button>
+
+                          <!-- Font Size control — all mousedown.prevent to keep editor selection alive -->
+                          <div class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-1.5 py-0.5">
+                            <!-- Decrease -->
+                            <button
+                              type="button"
+                              @mousedown.prevent="changeFontSizeBy(index, blockIndex, -1)"
+                              class="w-5 h-5 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded text-sm font-bold leading-none select-none"
+                              title="Decrease font size"
+                            >−</button>
+
+                            <!-- Size input: mousedown.prevent keeps editor selection; focus still works via click -->
+                            <input
+                              :id="`lesson-fs-${index}-${blockIndex}`"
+                              type="text"
+                              :value="getFontSizeDisplay(index, blockIndex)"
+                              inputmode="numeric"
+                              autocomplete="off"
+                              maxlength="3"
+                              placeholder="16"
+                              class="w-9 px-1 py-0.5 text-xs border border-gray-200 rounded text-gray-900 text-center font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              @mousedown.prevent="onFontSizeInputMousedown(index, blockIndex, $event)"
+                              @focus="onFontSizeInputFocus(index, blockIndex, $event)"
+                              @blur="onFontSizeInputBlur(index, blockIndex, $event)"
+                              @input="onFontSizeInputChange(index, blockIndex, $event)"
+                              @keydown.enter.prevent="onFontSizeInputEnter(index, blockIndex, $event)"
+                              @keydown.up.prevent="changeFontSizeBy(index, blockIndex, 1)"
+                              @keydown.down.prevent="changeFontSizeBy(index, blockIndex, -1)"
+                            />
+
+                            <!-- Increase -->
+                            <button
+                              type="button"
+                              @mousedown.prevent="changeFontSizeBy(index, blockIndex, 1)"
+                              class="w-5 h-5 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded text-sm font-bold leading-none select-none"
+                              title="Increase font size"
+                            >+</button>
+                          </div>
+
+                          <!-- Highlight -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="applyHighlight(index, blockIndex)"
+                            class="px-3 py-1 text-xs text-amber-900 border border-amber-300 rounded-lg bg-amber-50 hover:bg-amber-100 active:bg-amber-200 transition-colors"
+                            title="Highlight"
+                          >Mark</button>
+
+                          <!-- Link -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="openLinkModal(index, blockIndex)"
+                            class="px-3 py-1 text-xs text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 active:bg-blue-100 transition-colors"
+                            title="Insert link"
+                          >Link</button>
+
+                          <!-- Clear -->
+                          <button
+                            type="button"
+                            @mousedown.prevent="clearFormatting(index, blockIndex)"
+                            class="px-3 py-1 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                            title="Clear Formatting"
+                          >Clear</button>
+                        </div>
+
+                        <!-- Editor -->
+                        <div
+                          :ref="(el) => setTextBlockRef(el, index, blockIndex)"
+                          class="min-h-[180px] w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-800 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1"
+                          contenteditable="true"
+                          spellcheck="true"
+                          @input="handleTextBlockInput(index, blockIndex, $event)"
+                          @blur="syncTextBlockHtml(index, blockIndex)"
+                          @focus="onEditorFocus(index, blockIndex)"
+                          @mouseup="onEditorSelectionChange(index, blockIndex)"
+                          @keyup="onEditorSelectionChange(index, blockIndex)"
+                          @keydown="handleEditorKeydown(index, blockIndex, $event)"
+                          data-placeholder="Write your lesson content here..."
                         />
-                        <p class="text-xs text-gray-500 mt-1">Use blank lines to separate paragraphs. Start lines with "- " for bullet lists.</p>
+                        <p class="text-xs text-gray-500 mt-1">Select text then choose a size, or set the size first and start typing — just like Word.</p>
                       </div>
 
                       <!-- IMAGE Block -->
                       <div v-else-if="block.type === 'image'" class="space-y-3">
-                        <!-- Alignment for image -->
                         <div v-if="block.layout === 'full-width' || block.layout === 'center'" class="flex items-center gap-2">
                           <span class="text-xs text-gray-500 font-medium">Image align:</span>
                           <div class="flex gap-1">
@@ -333,8 +436,6 @@
                             </button>
                           </div>
                         </div>
-
-                        <!-- Image Size Controls -->
                         <div class="grid grid-cols-2 gap-3">
                           <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Width (Optional)</label>
@@ -347,7 +448,6 @@
                             <p class="text-xs text-gray-400 mt-1">Leave empty for auto height</p>
                           </div>
                         </div>
-
                         <input type="file" accept="image/*" @change="(e) => handleBlockImageUpload(e, index, blockIndex)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                         <div v-if="block.src" class="p-3 bg-gray-50 rounded border border-gray-200">
                           <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
@@ -384,11 +484,74 @@
         </button>
       </div>
     </div>
+
+    <!-- Insert link dialog -->
+    <Teleport to="body">
+      <div
+        v-if="showLinkModal"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="link-modal-title"
+      >
+        <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" @click="closeLinkModal" />
+        <div
+          class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden"
+          @click.stop
+        >
+          <div class="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </span>
+              <div>
+                <h3 id="link-modal-title" class="text-lg font-semibold text-white">Add link</h3>
+                <p class="text-xs text-primary-100">Paste a URL; optional label overrides selected text.</p>
+              </div>
+            </div>
+            <button type="button" class="rounded-lg p-2 text-white/90 hover:bg-white/10 transition-colors" aria-label="Close" @click="closeLinkModal">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">URL <span class="text-red-500">*</span></label>
+              <input
+                ref="linkModalUrlInputRef"
+                v-model="linkModalUrl"
+                type="text"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 placeholder:text-gray-400"
+                placeholder="https://example.org or /internal-path"
+                autocomplete="url"
+                @keydown.enter.prevent="confirmLinkModal"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Link text <span class="text-gray-400 font-normal">(optional)</span></label>
+              <input
+                v-model="linkModalText"
+                type="text"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 placeholder:text-gray-400"
+                placeholder="Shown to students; leave blank to keep selection"
+                @keydown.enter.prevent="confirmLinkModal"
+              />
+            </div>
+            <p v-if="linkModalError" class="text-sm text-red-600">{{ linkModalError }}</p>
+            <div class="flex justify-end gap-2 pt-2">
+              <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors" @click="closeLinkModal">Cancel</button>
+              <button type="button" class="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors shadow-sm" @click="confirmLinkModal">Insert link</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -397,6 +560,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'submit'])
+
+// ── State ────────────────────────────────────────────────────────────────────
 
 const activeTab = ref('basic')
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -414,6 +579,61 @@ const videoFile = ref<File | null>(null)
 const pptFileInput = ref<HTMLInputElement | null>(null)
 const pptFileName = ref<string>('')
 const pptFile = ref<File | null>(null)
+
+// ── Text editor refs & selection ─────────────────────────────────────────────
+
+const textBlockRefs = ref<Record<string, HTMLDivElement | null>>({})
+
+/**
+ * Per-editor state for the font-size feature.
+ *
+ * `displaySize`   – the value shown in the Px input (reflects cursor position or selection)
+ * `pendingSize`   – size chosen when caret is collapsed; applied to the NEXT characters typed
+ * `savedRange`    – snapshot of the selection taken just before a toolbar button fires
+ *                   (needed because @mousedown.prevent keeps focus in the editor but some
+ *                    browsers still drop the selection)
+ */
+interface EditorFontState {
+  displaySize: number   // what the Px input shows
+  pendingSize: number | null  // size queued for next keypress (collapsed caret mode)
+  savedRange: Range | null
+}
+
+const editorFontState = ref<Record<string, EditorFontState>>({})
+
+const FONT_SIZE_DEFAULT = 16
+const FONT_SIZE_MIN = 8
+const FONT_SIZE_MAX = 96
+
+function clampPx(n: number) {
+  return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(n)))
+}
+
+function getEditorKey(li: number, bi: number) { return `${li}-${bi}` }
+
+function ensureEditorState(li: number, bi: number): EditorFontState {
+  const key = getEditorKey(li, bi)
+  if (!editorFontState.value[key]) {
+    editorFontState.value[key] = { displaySize: FONT_SIZE_DEFAULT, pendingSize: null, savedRange: null }
+  }
+  return editorFontState.value[key]!
+}
+
+function getEditorEl(li: number, bi: number): HTMLDivElement | null {
+  return textBlockRefs.value[getEditorKey(li, bi)] ?? null
+}
+
+// ── Link modal ───────────────────────────────────────────────────────────────
+
+const showLinkModal = ref(false)
+const linkModalUrl = ref('')
+const linkModalText = ref('')
+const linkModalError = ref('')
+const linkModalLessonIndex = ref(-1)
+const linkModalBlockIndex = ref(-1)
+const linkModalUrlInputRef = ref<HTMLInputElement | null>(null)
+
+// ── Layout options ───────────────────────────────────────────────────────────
 
 const layoutOptions = [
   { value: 'full-width', label: 'Full',   icon: '⬛' },
@@ -434,49 +654,452 @@ interface LessonBlock {
   width?: string
   height?: string
 }
-
-interface Lesson {
-  title: string
-  blocks: LessonBlock[]
-}
-
+interface Lesson { title: string; blocks: LessonBlock[] }
 interface ModuleForm {
-  title: string
-  subtitle: string
-  introduction: string
-  level: string
-  description: string
-  learning_outcomes_label: string
-  image_url: string
-  image_width?: string
-  image_height?: string
-  card_image_url: string
-  description_panel_image_url: string
-  video_url: string
-  ppt_url: string
-  learning_outcomes: string[]
-  is_active: boolean
-  lessons: Lesson[]
+  title: string; subtitle: string; introduction: string; level: string
+  description: string; learning_outcomes_label: string
+  image_url: string; image_width?: string; image_height?: string
+  card_image_url: string; description_panel_image_url: string
+  video_url: string; ppt_url: string
+  learning_outcomes: string[]; is_active: boolean; lessons: Lesson[]
 }
 
 const form = ref<ModuleForm>({
-  title: '',
-  subtitle: '',
-  introduction: '',
-  level: '',
-  description: '',
+  title: '', subtitle: '', introduction: '', level: '', description: '',
   learning_outcomes_label: "DepEd's Most Essential Learning Competencies",
-  image_url: '',
-  card_image_url: '',
-  description_panel_image_url: '',
-  video_url: '',
-  ppt_url: '',
-  learning_outcomes: [],
-  is_active: true,
-  lessons: []
+  image_url: '', card_image_url: '', description_panel_image_url: '',
+  video_url: '', ppt_url: '',
+  learning_outcomes: [], is_active: true, lessons: []
 })
 
 const isEditMode = computed(() => !!props.module?.id)
+
+// ── Font-size display helper ─────────────────────────────────────────────────
+
+/**
+ * Returns what should be shown in the Px input.
+ * Reads from editorFontState so the value is always reactive.
+ */
+function getFontSizeDisplay(li: number, bi: number): string {
+  const key = getEditorKey(li, bi)
+  return String(editorFontState.value[key]?.displaySize ?? FONT_SIZE_DEFAULT)
+}
+
+/**
+ * Reads the computed font-size of the node at the current cursor/selection.
+ */
+function readFontSizeAtCaret(editor: HTMLElement, range: Range): number {
+  let node: Node = range.startContainer
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentNode as Node
+  if (!editor.contains(node as Node)) return FONT_SIZE_DEFAULT
+  return Math.round(parseFloat(getComputedStyle(node as Element).fontSize) || FONT_SIZE_DEFAULT)
+}
+
+/**
+ * After any caret move (mouseup / keyup) update the displayed font size.
+ * Never called when the Px input itself is focused.
+ */
+function onEditorSelectionChange(li: number, bi: number) {
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  const sel    = window.getSelection()
+  if (!editor || !sel || !sel.rangeCount) return
+  const range  = sel.getRangeAt(0)
+  if (!editor.contains(range.commonAncestorContainer)) return
+
+  // Save range for toolbar use
+  try { state.savedRange = range.cloneRange() } catch { /* ignore */ }
+
+  // Update display — if there's a pending size from the user, keep showing that
+  if (state.pendingSize !== null) {
+    state.displaySize = state.pendingSize
+  } else {
+    state.displaySize = readFontSizeAtCaret(editor, range)
+  }
+}
+
+function onEditorFocus(li: number, bi: number) {
+  // Small delay so the selection is committed before we read it
+  nextTick(() => onEditorSelectionChange(li, bi))
+}
+
+// ── Apply font size (the core Word-like mechanic) ────────────────────────────
+
+/**
+ * Word-like font size:
+ *  • If text is selected → wrap it in a <span style="font-size:Xpx">
+ *  • If caret is collapsed → store as pendingSize; on the next keydown
+ *    we wrap the typed character in a span with that size.
+ */
+function applyFontSize(li: number, bi: number, px: number) {
+  const size   = clampPx(px)
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  if (!editor) return
+
+  // Restore / get current selection
+  editor.focus()
+  let range: Range | null = null
+  const sel = window.getSelection()
+
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    if (editor.contains(r.commonAncestorContainer)) range = r
+  }
+
+  if (!range) {
+    range = document.createRange()
+    range.selectNodeContents(editor)
+    range.collapse(false)
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  state.displaySize = size
+
+  if (range.collapsed) {
+    // ── Collapsed caret: set pending size so next typed chars use it ──
+    state.pendingSize = size
+
+    /**
+     * Insert an invisible marker span. The `beforeinput` / `keydown` handler
+     * will pick this up and apply the size to the next real character.
+     * We DON'T insert a zero-width space here — that corrupts the text.
+     * Instead we rely purely on the pendingSize flag + the keydown wrapper below.
+     */
+  } else {
+    // ── There IS a selection: wrap it ──
+    state.pendingSize = null
+    const reselectedRange = wrapSelectionWithFontSize(editor, range, size, sel)
+    syncTextBlockHtml(li, bi)
+    // Save the re-selection so repeated +/− clicks keep the text selected & keep applying
+    try { state.savedRange = reselectedRange.cloneRange() } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Wraps the current selection in <span style="font-size:Xpx">.
+ * Handles the surroundContents failure gracefully by extracting + re-inserting.
+ */
+function wrapSelectionWithFontSize(
+  editor: HTMLElement, range: Range, px: number, sel: Selection | null
+): Range {
+  const span = document.createElement('span')
+  span.style.fontSize = `${px}px`
+
+  try {
+    range.surroundContents(span)
+  } catch {
+    // Partial selections across tags — extract and rewrap
+    const frag = range.extractContents()
+    span.appendChild(frag)
+    range.insertNode(span)
+  }
+
+  // Re-SELECT the entire span so repeated +/− clicks keep working on the same text
+  const reselect = document.createRange()
+  reselect.selectNodeContents(span)
+  sel?.removeAllRanges()
+  sel?.addRange(reselect)
+  return reselect
+}
+
+/**
+ * Intercept keydown on the editor while pendingSize is set.
+ * We wrap printable characters in a size span, then clear pendingSize.
+ */
+function handleEditorKeydown(li: number, bi: number, event: KeyboardEvent) {
+  const state = ensureEditorState(li, bi)
+  if (state.pendingSize === null) return
+
+  // Ignore control keys, shortcuts, etc.
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  if (event.key.length !== 1) return  // Not a printable character
+
+  event.preventDefault()
+
+  const editor = getEditorEl(li, bi)
+  if (!editor) return
+
+  const px   = state.pendingSize
+  const char = event.key
+
+  const sel = window.getSelection()
+  let range: Range | null = null
+
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    if (editor.contains(r.commonAncestorContainer)) range = r
+  }
+
+  if (!range) {
+    range = document.createRange()
+    range.selectNodeContents(editor)
+    range.collapse(false)
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  // Delete selected content first (if any)
+  if (!range.collapsed) range.deleteContents()
+
+  // Insert the character inside a sized span
+  const span = document.createElement('span')
+  span.style.fontSize = `${px}px`
+  span.textContent = char
+  range.insertNode(span)
+
+  // Move caret to end of the span — stays "inside" the size context
+  const after = document.createRange()
+  after.setStartAfter(span)
+  after.collapse(true)
+  sel?.removeAllRanges()
+  sel?.addRange(after)
+
+  // Save for next keystroke — keep pendingSize active so continuous typing uses the same size
+  try { state.savedRange = after.cloneRange() } catch { /* ignore */ }
+
+  syncTextBlockHtml(li, bi)
+  state.displaySize = px  // keep the Px field stable while typing
+}
+
+// ── +/− buttons ─────────────────────────────────────────────────────────────
+
+function changeFontSizeBy(li: number, bi: number, delta: number) {
+  const state = ensureEditorState(li, bi)
+  const current = state.displaySize
+  applyFontSize(li, bi, current + delta)
+}
+
+// ── Px input handlers ────────────────────────────────────────────────────────
+
+function onFontSizeInputMousedown(li: number, bi: number, event: MouseEvent) {
+  // Snapshot the editor selection BEFORE focus moves to the input
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  const sel    = window.getSelection()
+  if (editor && sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    if (editor.contains(r.commonAncestorContainer)) {
+      try { state.savedRange = r.cloneRange() } catch { /* ignore */ }
+    }
+  }
+  // Manually focus the input (since we prevented default which blocks auto-focus)
+  const input = event.target as HTMLInputElement
+  nextTick(() => { input.focus(); input.select() })
+}
+
+function onFontSizeInputFocus(li: number, bi: number, event: FocusEvent) {
+  // Snapshot selection (may already be done by mousedown handler above)
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  const sel    = window.getSelection()
+  if (editor && sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    if (editor.contains(r.commonAncestorContainer)) {
+      try { state.savedRange = r.cloneRange() } catch { /* ignore */ }
+    }
+  }
+  const input = event.target as HTMLInputElement
+  nextTick(() => input.select())
+}
+
+function onFontSizeInputChange(li: number, bi: number, event: Event) {
+  // Live update while typing — strip non-digits, apply when in valid range
+  const input = event.target as HTMLInputElement
+  const raw   = input.value.replace(/\D/g, '')
+  input.value = raw
+  if (!raw) return
+  const val = parseInt(raw, 10)
+  if (isNaN(val) || val < FONT_SIZE_MIN || val > FONT_SIZE_MAX) return
+  const state = ensureEditorState(li, bi)
+  state.displaySize = val
+  applyFontSize(li, bi, val)
+}
+
+function onFontSizeInputBlur(li: number, bi: number, event: FocusEvent) {
+  const input = event.target as HTMLInputElement
+  const val   = parseInt(input.value, 10)
+  if (!isNaN(val)) applyFontSize(li, bi, val)
+  // Restore focus + selection back to editor
+  nextTick(() => {
+    const editor = getEditorEl(li, bi)
+    const state  = ensureEditorState(li, bi)
+    if (!editor) return
+    editor.focus()
+    if (state.savedRange) {
+      try {
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      } catch { /* stale */ }
+    }
+  })
+}
+
+function onFontSizeInputEnter(li: number, bi: number, event: KeyboardEvent) {
+  const input = event.target as HTMLInputElement
+  const val   = parseInt(input.value, 10)
+  if (!isNaN(val)) applyFontSize(li, bi, val)
+  // Return focus + restore selection
+  nextTick(() => {
+    const editor = getEditorEl(li, bi)
+    const state  = ensureEditorState(li, bi)
+    if (!editor) return
+    editor.focus()
+    if (state.savedRange) {
+      try {
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      } catch { /* stale */ }
+    }
+  })
+}
+
+// ── Regular format commands (bold, italic, etc.) ─────────────────────────────
+
+function applyFormat(li: number, bi: number, command: string) {
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  if (!editor) return
+
+  editor.focus()
+
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  try { document.execCommand('styleWithCSS', false, 'false') } catch { /* ignore */ }
+  document.execCommand(command, false)
+  syncTextBlockHtml(li, bi)
+}
+
+const HIGHLIGHT_COLOR = '#fef08a'
+
+function applyHighlight(li: number, bi: number) {
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  if (!editor) return
+
+  editor.focus()
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  try { document.execCommand('styleWithCSS', false, 'true') } catch { /* ignore */ }
+  const applied = document.execCommand('hiliteColor', false, HIGHLIGHT_COLOR)
+  if (!applied) document.execCommand('backColor', false, HIGHLIGHT_COLOR)
+  syncTextBlockHtml(li, bi)
+}
+
+function clearFormatting(li: number, bi: number) {
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  if (!editor) return
+
+  editor.focus()
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  document.execCommand('removeFormat', false)
+  syncTextBlockHtml(li, bi)
+
+  // Reset pending size and re-read display
+  const key = getEditorKey(li, bi)
+  if (editorFontState.value[key]) {
+    editorFontState.value[key]!.pendingSize = null
+  }
+  nextTick(() => onEditorSelectionChange(li, bi))
+}
+
+// ── Editor ref + HTML sync ────────────────────────────────────────────────────
+
+const normalizeEditorHtml = (html: string) => {
+  const cleaned = (html || '').trim()
+  if (!cleaned || cleaned === '<br>') return '<p><br></p>'
+  return cleaned
+}
+
+const setTextBlockRef = (el: Element | { $el?: Element } | null, li: number, bi: number) => {
+  const key = getEditorKey(li, bi)
+  const resolved = el && '$el' in el ? el.$el : el
+  textBlockRefs.value[key] = resolved as HTMLDivElement | null
+  if (!resolved) return
+  const div   = resolved as HTMLDivElement
+  const block = form.value.lessons[li]?.blocks?.[bi]
+  if (!block || block.type !== 'text') return
+  if (document.activeElement === div) return
+  const normalized = normalizeEditorHtml(block.text || '')
+  if (div.innerHTML !== normalized) div.innerHTML = normalized
+}
+
+const handleTextBlockInput = (li: number, bi: number, event: Event) => {
+  const lesson = form.value.lessons[li]
+  const block  = lesson?.blocks?.[bi]
+  const target = event.target as HTMLDivElement | null
+  if (!lesson || !block || block.type !== 'text' || !target) return
+  block.text = normalizeEditorHtml(target.innerHTML)
+
+  // After normal typing, update selection display
+  const state = ensureEditorState(li, bi)
+  const sel   = window.getSelection()
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    const editor = getEditorEl(li, bi)
+    if (editor && editor.contains(r.commonAncestorContainer)) {
+      try { state.savedRange = r.cloneRange() } catch { /* ignore */ }
+    }
+  }
+}
+
+const syncTextBlockHtml = (li: number, bi: number) => {
+  const lesson = form.value.lessons[li]
+  const block  = lesson?.blocks?.[bi]
+  const editor = getEditorEl(li, bi)
+  if (!lesson || !block || block.type !== 'text' || !editor) return
+  block.text = normalizeEditorHtml(editor.innerHTML)
+  if (editor.innerHTML !== block.text) editor.innerHTML = block.text
+}
+
+// ── Form helpers ─────────────────────────────────────────────────────────────
 
 const resetForm = () => {
   form.value = {
@@ -491,11 +1114,11 @@ const resetForm = () => {
   descPanelImagePreview.value = ''; descPanelImageFile.value = null
   videoPreview.value = ''; videoFile.value = null
   pptFileName.value = ''; pptFile.value = null
+  editorFontState.value = {}
 }
 
 const normalizeLesson = (lesson: any) => {
   const safeLesson = { ...(lesson || {}) }
-
   const stripHtmlToText = (input: string) =>
     (input || '')
       .replace(/<\s*br\s*\/?\s*>/gi, '\n').replace(/<\/\s*p\s*>/gi, '\n\n')
@@ -509,36 +1132,16 @@ const normalizeLesson = (lesson: any) => {
     const htmlContent = typeof safeLesson.htmlContent === 'string' ? safeLesson.htmlContent.trim() : ''
     if (htmlContent) blocks.push({ type: 'text', text: stripHtmlToText(htmlContent), layout: 'full-width' })
     const imageUrl = typeof safeLesson.image_url === 'string' ? safeLesson.image_url.trim() : ''
-    if (imageUrl) blocks.push({
-      type: 'image',
-      src: imageUrl,
-      layout: 'full-width',
-      align: 'center',
-      width: safeLesson.image_width || undefined,
-      height: safeLesson.image_height || undefined
-    })
+    if (imageUrl) blocks.push({ type: 'image', src: imageUrl, layout: 'full-width', align: 'center', width: safeLesson.image_width || undefined, height: safeLesson.image_height || undefined })
     safeLesson.blocks = blocks
   } else {
     safeLesson.blocks = safeLesson.blocks
       .filter((b: any) => b && (b.type === 'text' || b.type === 'image' || b.type === 'video'))
       .map((b: any) => {
         const base = { layout: (b.layout || 'full-width') as BlockLayout }
-        if (b.type === 'image') return {
-          type: 'image',
-          src: b.src || '',
-          align: b.align || 'center',
-          width: b.width || undefined,
-          height: b.height || undefined,
-          ...base
-        }
-        if (b.type === 'video') return {
-          type: 'video',
-          src: b.src || '',
-          width: b.width || undefined,
-          height: b.height || undefined,
-          ...base
-        }
-        return { type: 'text', text: b.text || '', ...base }
+        if (b.type === 'image') return { type: 'image', src: b.src || '', align: b.align || 'center', width: b.width || undefined, height: b.height || undefined, ...base }
+        if (b.type === 'video') return { type: 'video', src: b.src || '', width: b.width || undefined, height: b.height || undefined, ...base }
+        return { type: 'text', text: typeof b.text === 'string' ? normalizeEditorHtml(b.text) : '<p></p>', ...base }
       })
   }
   return safeLesson
@@ -563,6 +1166,7 @@ watch(
       form.value.is_active = newModule.is_active !== false
       form.value.lessons = Array.isArray(newModule.lessons) && newModule.lessons.length > 0
         ? JSON.parse(JSON.stringify(newModule.lessons)).map((l: any) => normalizeLesson(l)) : []
+      editorFontState.value = {}
       imagePreview.value = newModule.image_url || ''; imageFile.value = null
       cardImagePreview.value = newModule.card_image_url || ''; cardImageFile.value = null
       descPanelImagePreview.value = newModule.description_panel_image_url || ''; descPanelImageFile.value = null
@@ -575,33 +1179,111 @@ watch(
   { immediate: true }
 )
 
-const addOutcome = () => form.value.learning_outcomes.push('')
-const removeOutcome = (index: number) => form.value.learning_outcomes.splice(index, 1)
-const addLesson = () => form.value.lessons.push({ title: '', blocks: [{ type: 'text', text: '', layout: 'full-width' }] })
-const removeLesson = (index: number) => form.value.lessons.splice(index, 1)
+// ── Lesson/block CRUD ─────────────────────────────────────────────────────────
 
-const addTextBlock = (lessonIndex: number) => {
-  const lesson = form.value.lessons[lessonIndex]
-  if (lesson && !Array.isArray(lesson.blocks)) lesson.blocks = []
-  if (lesson) lesson.blocks.push({ type: 'text', text: '', layout: 'full-width' })
-}
-const addImageBlock = (lessonIndex: number) => {
-  const lesson = form.value.lessons[lessonIndex]
-  if (lesson && !Array.isArray(lesson.blocks)) lesson.blocks = []
-  if (lesson) lesson.blocks.push({ type: 'image', src: '', layout: 'full-width', align: 'center' })
-}
-const addVideoBlock = (lessonIndex: number) => {
-  const lesson = form.value.lessons[lessonIndex]
-  if (lesson && !Array.isArray(lesson.blocks)) lesson.blocks = []
-  if (lesson) lesson.blocks.push({ type: 'video', src: '', layout: 'full-width' })
-}
-const removeBlock = (lessonIndex: number, blockIndex: number) => {
-  const lesson = form.value.lessons[lessonIndex]
+const addOutcome  = () => form.value.learning_outcomes.push('')
+const removeOutcome = (i: number) => form.value.learning_outcomes.splice(i, 1)
+const addLesson   = () => form.value.lessons.push({ title: '', blocks: [{ type: 'text', text: '', layout: 'full-width' }] })
+const removeLesson = (i: number) => form.value.lessons.splice(i, 1)
+
+const addTextBlock  = (li: number) => { const l = form.value.lessons[li]; if (l) { if (!Array.isArray(l.blocks)) l.blocks = []; l.blocks.push({ type: 'text', text: '', layout: 'full-width' }) } }
+const addImageBlock = (li: number) => { const l = form.value.lessons[li]; if (l) { if (!Array.isArray(l.blocks)) l.blocks = []; l.blocks.push({ type: 'image', src: '', layout: 'full-width', align: 'center' }) } }
+const addVideoBlock = (li: number) => { const l = form.value.lessons[li]; if (l) { if (!Array.isArray(l.blocks)) l.blocks = []; l.blocks.push({ type: 'video', src: '', layout: 'full-width' }) } }
+
+const removeBlock = (li: number, bi: number) => {
+  const lesson = form.value.lessons[li]
   if (!lesson || !Array.isArray(lesson.blocks)) return
-  lesson.blocks.splice(blockIndex, 1)
+  const key = getEditorKey(li, bi)
+  delete textBlockRefs.value[key]
+  delete editorFontState.value[key]
+  lesson.blocks.splice(bi, 1)
 }
 
-// ── File handlers ──────────────────────────────────────────────────────────
+// ── Link modal ────────────────────────────────────────────────────────────────
+
+const openLinkModal = (li: number, bi: number) => {
+  linkModalError.value = ''
+  const state = ensureEditorState(li, bi)
+  let seed = ''
+  if (state.savedRange) {
+    try { if (!state.savedRange.collapsed) seed = state.savedRange.toString() } catch { /* stale */ }
+  }
+  linkModalLessonIndex.value = li
+  linkModalBlockIndex.value  = bi
+  linkModalUrl.value  = ''
+  linkModalText.value = seed
+  showLinkModal.value = true
+  nextTick(() => linkModalUrlInputRef.value?.focus())
+}
+
+const closeLinkModal = () => {
+  showLinkModal.value = false; linkModalUrl.value = ''; linkModalText.value = ''
+  linkModalError.value = ''; linkModalLessonIndex.value = -1; linkModalBlockIndex.value = -1
+}
+
+const confirmLinkModal = () => {
+  linkModalError.value = ''
+  const urlRaw = linkModalUrl.value.trim()
+  if (!urlRaw) { linkModalError.value = 'Please enter a URL.'; return }
+  let href = urlRaw.replace(/\s+/g, '')
+  if (/^\s*javascript:/i.test(href) || href.toLowerCase().startsWith('data:')) { linkModalError.value = 'That link type is not allowed.'; return }
+  if (!/^https?:\/\//i.test(href) && !href.startsWith('/') && !href.startsWith('#') && !href.startsWith('mailto:')) href = `https://${href}`
+
+  const li = linkModalLessonIndex.value
+  const bi = linkModalBlockIndex.value
+  const editor = getEditorEl(li, bi)
+  const state  = ensureEditorState(li, bi)
+  if (!editor || li < 0 || bi < 0) { closeLinkModal(); return }
+
+  editor.focus()
+  const sel = window.getSelection()
+
+  if (state.savedRange) {
+    try {
+      if (editor.contains(state.savedRange.commonAncestorContainer)) {
+        sel?.removeAllRanges()
+        sel?.addRange(state.savedRange.cloneRange())
+      }
+    } catch { /* stale */ }
+  }
+
+  let range: Range | null = null
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0)
+    if (editor.contains(r.commonAncestorContainer)) range = r
+  }
+  if (!range) {
+    range = document.createRange()
+    range.selectNodeContents(editor)
+    range.collapse(false)
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  const label = linkModalText.value.trim()
+  const a = document.createElement('a')
+  a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'
+
+  if (range.collapsed) {
+    a.textContent = label || href
+    range.insertNode(a)
+    const nr = document.createRange(); nr.setStartAfter(a); nr.collapse(true)
+    sel?.removeAllRanges(); sel?.addRange(nr)
+  } else {
+    const display = label || range.toString()
+    range.deleteContents(); a.textContent = display; range.insertNode(a)
+    const nr = document.createRange(); nr.setStartAfter(a); nr.collapse(true)
+    sel?.removeAllRanges(); sel?.addRange(nr)
+  }
+
+  syncTextBlockHtml(li, bi)
+  closeLinkModal()
+}
+
+watch(() => props.isOpen, (open) => { if (!open) closeLinkModal() })
+onUnmounted(() => { /* nothing extra needed now */ })
+
+// ── File handlers ─────────────────────────────────────────────────────────────
 
 const handleModuleImageUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -613,10 +1295,7 @@ const handleModuleImageUpload = (event: Event) => {
   reader.onload = (e) => { imagePreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearImage = () => {
-  imagePreview.value = ''; imageFile.value = null
-  if (fileInput.value) fileInput.value.value = ''
-}
+const clearImage = () => { imagePreview.value = ''; imageFile.value = null; if (fileInput.value) fileInput.value.value = '' }
 
 const handleCardImageUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -628,10 +1307,7 @@ const handleCardImageUpload = (event: Event) => {
   reader.onload = (e) => { cardImagePreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearCardImage = () => {
-  cardImagePreview.value = ''; cardImageFile.value = null
-  if (cardImageFileInput.value) cardImageFileInput.value.value = ''
-}
+const clearCardImage = () => { cardImagePreview.value = ''; cardImageFile.value = null; if (cardImageFileInput.value) cardImageFileInput.value.value = '' }
 
 const handleDescPanelImageUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -644,8 +1320,7 @@ const handleDescPanelImageUpload = (event: Event) => {
   reader.readAsDataURL(file)
 }
 const clearDescPanelImage = () => {
-  descPanelImagePreview.value = ''
-  descPanelImageFile.value = null
+  descPanelImagePreview.value = ''; descPanelImageFile.value = null
   form.value.description_panel_image_url = ''
   if (descPanelImageFileInput.value) descPanelImageFileInput.value.value = ''
 }
@@ -660,10 +1335,7 @@ const handleVideoUpload = (event: Event) => {
   reader.onload = (e) => { videoPreview.value = (e.target?.result as string) || '' }
   reader.readAsDataURL(file)
 }
-const clearVideo = () => {
-  videoPreview.value = ''; videoFile.value = null
-  if (videoFileInput.value) videoFileInput.value.value = ''
-}
+const clearVideo = () => { videoPreview.value = ''; videoFile.value = null; if (videoFileInput.value) videoFileInput.value.value = '' }
 
 const handlePptUpload = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -680,39 +1352,41 @@ const clearPpt = () => {
   if (pptFileInput.value) pptFileInput.value.value = ''
 }
 
-const handleBlockImageUpload = (event: Event, lessonIndex: number, blockIndex: number) => {
+const handleBlockImageUpload = (event: Event, li: number, bi: number) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
   if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
   const reader = new FileReader()
   reader.onload = (e) => {
-    const block = form.value.lessons[lessonIndex]?.blocks?.[blockIndex]
+    const block = form.value.lessons[li]?.blocks?.[bi]
     if (block?.type === 'image') block.src = (e.target?.result as string) || ''
   }
   reader.readAsDataURL(file)
 }
-const clearBlockImage = (lessonIndex: number, blockIndex: number) => {
-  const block = form.value.lessons[lessonIndex]?.blocks?.[blockIndex]
+const clearBlockImage = (li: number, bi: number) => {
+  const block = form.value.lessons[li]?.blocks?.[bi]
   if (block?.type === 'image') block.src = ''
 }
 
-const handleBlockVideoUpload = (event: Event, lessonIndex: number, blockIndex: number) => {
+const handleBlockVideoUpload = (event: Event, li: number, bi: number) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (file.size > 50 * 1024 * 1024) { alert('Video size must be less than 50MB'); return }
   if (!file.type.startsWith('video/')) { alert('Please select a valid video file'); return }
   const reader = new FileReader()
   reader.onload = (e) => {
-    const block = form.value.lessons[lessonIndex]?.blocks?.[blockIndex]
+    const block = form.value.lessons[li]?.blocks?.[bi]
     if (block?.type === 'video') block.src = (e.target?.result as string) || ''
   }
   reader.readAsDataURL(file)
 }
-const clearBlockVideo = (lessonIndex: number, blockIndex: number) => {
-  const block = form.value.lessons[lessonIndex]?.blocks?.[blockIndex]
+const clearBlockVideo = (li: number, bi: number) => {
+  const block = form.value.lessons[li]?.blocks?.[bi]
   if (block?.type === 'video') block.src = ''
 }
+
+// ── Submit ────────────────────────────────────────────────────────────────────
 
 const handleSubmit = () => {
   if (!form.value.title || !form.value.introduction || !form.value.level || !form.value.description) {
@@ -721,10 +1395,7 @@ const handleSubmit = () => {
   const outcomes = form.value.learning_outcomes.filter(o => o.trim() !== '')
   const lessons = form.value.lessons
     .map((l: any) => normalizeLesson(l))
-    .map((l: any) => ({
-      title: (l.title || '').trim(),
-      blocks: Array.isArray(l.blocks) ? l.blocks : []
-    }))
+    .map((l: any) => ({ title: (l.title || '').trim(), blocks: Array.isArray(l.blocks) ? l.blocks : [] }))
     .filter((l: any) => {
       if (!l.title) return false
       if (!Array.isArray(l.blocks) || l.blocks.length === 0) return false
@@ -734,16 +1405,11 @@ const handleSubmit = () => {
         (b.type === 'video' && typeof b.src  === 'string' && b.src.trim()  !== '')
       ))
     })
-
   emit('submit', {
-    ...form.value,
-    learning_outcomes: outcomes,
+    ...form.value, learning_outcomes: outcomes,
     lessons: lessons.length > 0 ? lessons : undefined,
-    imageFile: imageFile.value,
-    cardImageFile: cardImageFile.value,
-    descPanelImageFile: descPanelImageFile.value,
-    videoFile: videoFile.value,
-    pptFile: pptFile.value
+    imageFile: imageFile.value, cardImageFile: cardImageFile.value,
+    descPanelImageFile: descPanelImageFile.value, videoFile: videoFile.value, pptFile: pptFile.value
   })
 }
 </script>

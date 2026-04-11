@@ -279,6 +279,23 @@ interface LessonBlock {
   height?: string
 }
 
+/** Admin rich-text blocks store real HTML (strong, a, font, span, etc.). Legacy plain text may use **bold**. */
+function looksLikeRichHtml(text: string): boolean {
+  const t = (text || '').trim()
+  return /<(p|div|br|strong|b|em|i|u|ul|ol|li|a|span|font|h[1-6])\b/i.test(t)
+    || /<\/(p|div|strong|b|em|ul|ol|li|a|span|font|h[1-6])>/i.test(t)
+}
+
+function sanitizeLessonHtml(html: string): string {
+  let s = (html || '').trim()
+  if (!s) return ''
+  s = s.replace(/<\/(?:script|iframe|object|embed)[^>]*>|<(?:script|iframe|object|embed)\b[^>]*>[\s\S]*?<\/(?:script|iframe|object|embed)\s*>/gi, '')
+  s = s.replace(/<(?:script|iframe|object|embed|form|input|button|meta|link|style)\b[^>]*>/gi, '')
+  s = s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+  s = s.replace(/(href|src)\s*=\s*["']?\s*javascript:/gi, '$1="#"')
+  return s
+}
+
 export const BlockRenderer = defineComponent({
   name: 'BlockRenderer',
   props: {
@@ -290,14 +307,21 @@ export const BlockRenderer = defineComponent({
       const b = props.block as any
 
       if (b.type === 'text') {
+        const raw = (b.text || '').trim()
+        if (raw && looksLikeRichHtml(raw)) {
+          return h('div', {
+            class: 'lesson-rich-text space-y-4 text-gray-800 leading-relaxed text-base',
+            innerHTML: sanitizeLessonHtml(raw)
+          })
+        }
         const paragraphs = splitIntoSegments(b.text || '')
         return h('div', { class: 'space-y-4' }, paragraphs.map((seg: any, i: number) => {
           if (seg.type === 'ul') {
             return h('ul', { class: 'list-disc pl-6 text-gray-700', key: i },
-              seg.items.map((item: string, j: number) => h('li', { key: j, class: 'mb-1' }, item))
+              seg.items.map((item: string, j: number) => h('li', { key: j, class: 'mb-1' }, renderInlineText(item)))
             )
           }
-          return h('p', { class: 'text-gray-700 leading-relaxed text-base', key: i }, seg.text)
+          return h('p', { class: 'text-gray-700 leading-relaxed text-base', key: i }, renderInlineText(seg.text))
         }))
       }
 
@@ -341,6 +365,18 @@ export const BlockRenderer = defineComponent({
 })
 
 /** Split plain text into paragraph / bullet-list segments */
+function renderInlineText(text: string) {
+  const input = text || ''
+  const parts = input.split(/(\*\*.*?\*\*)/g).filter(Boolean)
+
+  return parts.map((part: string, index: number) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return h('strong', { key: index, class: 'font-semibold text-gray-900' }, part.slice(2, -2))
+    }
+    return part
+  })
+}
+
 function splitIntoSegments(text: string) {
   const t = (text || '').trim()
   if (!t) return []
@@ -720,6 +756,31 @@ watch(lessonParam, (val) => {
 
 .wrap-text-content li {
   margin-bottom: 0.5em;
+}
+
+.wrap-text-content .lesson-rich-text :where(p, ul, ol) {
+  margin-bottom: 1em;
+}
+
+.wrap-text-content .lesson-rich-text :where(ul, ol) {
+  list-style-position: inside;
+  padding-left: 0.5rem;
+}
+
+.lesson-rich-text :where(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.lesson-rich-text :where(strong, b) {
+  font-weight: 700;
+  color: #111827;
+}
+
+.lesson-rich-text :where(span[style*="background"]) {
+  padding: 0.05em 0.15em;
+  border-radius: 0.125rem;
 }
 
 @media (max-width: 640px) {
