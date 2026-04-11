@@ -256,6 +256,7 @@ const {
   loading,
   error,
   fetchModules,
+  fetchModuleById,
   createModule,
   updateModule,
   deleteModule: deleteModuleApi,
@@ -274,9 +275,18 @@ const openCreateModal = (level = null) => {
   showModuleForm.value = true
 }
 
-const editModule = (module) => {
-  selectedModuleForEdit.value = module
-  showModuleForm.value = true
+const editModule = async (module) => {
+  formLoading.value = true
+  try {
+    const fullModule = await fetchModuleById(module.id)
+    if (!fullModule) return
+    selectedModuleForEdit.value = fullModule
+    showModuleForm.value = true
+  } catch (err) {
+    console.error('Error loading module details:', err)
+  } finally {
+    formLoading.value = false
+  }
 }
 
 const closeModal = () => {

@@ -21,12 +21,71 @@ export const useModuleManagement = () => {
     }
   }
 
+  const isDataUrl = (value: unknown) =>
+    typeof value === 'string' && value.trim().startsWith('data:')
+
+  const sanitizeLessonsForStorage = (lessons: any[] | undefined) => {
+    if (!Array.isArray(lessons)) return []
+
+    const hasEmbeddedMedia = lessons.some((lesson) =>
+      Array.isArray(lesson?.blocks) &&
+      lesson.blocks.some((block: any) =>
+        (block?.type === 'image' || block?.type === 'video') && isDataUrl(block?.src)
+      )
+    )
+
+    if (hasEmbeddedMedia) {
+      throw new Error(
+        'Lesson block image/video uploads are still stored as local previews. Please remove newly added lesson media blocks or upload them through storage-backed URLs before saving.'
+      )
+    }
+
+    return lessons.map((lesson) => ({
+      ...lesson,
+      blocks: Array.isArray(lesson?.blocks)
+        ? lesson.blocks.map((block: any) => {
+            if (block?.type === 'text') {
+              return {
+                type: 'text',
+                text: typeof block.text === 'string' ? block.text : '',
+                layout: block.layout || 'full-width',
+              }
+            }
+
+            if (block?.type === 'image') {
+              return {
+                type: 'image',
+                src: typeof block.src === 'string' ? block.src : '',
+                layout: block.layout || 'full-width',
+                align: block.align || 'center',
+                width: block.width || undefined,
+                height: block.height || undefined,
+              }
+            }
+
+            if (block?.type === 'video') {
+              return {
+                type: 'video',
+                src: typeof block.src === 'string' ? block.src : '',
+                layout: block.layout || 'full-width',
+                width: block.width || undefined,
+                height: block.height || undefined,
+              }
+            }
+
+            return block
+          })
+        : [],
+    }))
+  }
+
   const deleteFileFromUrl = async (publicUrl: string | null, bucketName: string) => {
     if (!publicUrl) return
     try {
       const urlParts = publicUrl.split('/object/public/')
       if (urlParts.length !== 2) return
       const filePath = urlParts[1]
+      if (!filePath) return
       await supabase.storage.from(bucketName).remove([filePath])
     } catch (err: any) {
       console.warn(`Could not delete old file: ${err.message}`)
@@ -118,7 +177,19 @@ export const useModuleManagement = () => {
     loading.value = true
     error.value = null
     try {
-      let query = supabase.from('modules').select('*')
+      let query = supabase.from('modules').select(`
+        id,
+        title,
+        subtitle,
+        level,
+        emoji,
+        image_url,
+        card_image_url,
+        description_panel_image_url,
+        is_active,
+        created_at,
+        updated_at
+      `)
       if (level) query = query.eq('level', level)
       const { data, error: fetchError } = await query.order('created_at', { ascending: true })
       if (fetchError) throw fetchError
@@ -224,7 +295,7 @@ export const useModuleManagement = () => {
         description_panel_image_url: descPanelImageUrl || null, // ← ADDED
         video_url: videoUrl,
         ppt_url: pptUrl,
-        lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
+        lessons: JSON.stringify(sanitizeLessonsForStorage(moduleData.lessons)),
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
         is_active: moduleData.is_active !== false,
         created_by: userData?.user?.id
@@ -328,7 +399,7 @@ export const useModuleManagement = () => {
         description_panel_image_url: descPanelImageUrl ?? null, // ← ADDED (null clears it if removed)
         video_url: videoUrl || moduleData.video_url,
         ppt_url: pptUrl || moduleData.ppt_url,
-        lessons: moduleData.lessons ? JSON.stringify(moduleData.lessons) : '[]',
+        lessons: JSON.stringify(sanitizeLessonsForStorage(moduleData.lessons)),
         learning_outcomes: moduleData.learning_outcomes ? JSON.stringify(moduleData.learning_outcomes) : '[]',
         is_active: moduleData.is_active !== false,
         updated_at: new Date().toISOString()
