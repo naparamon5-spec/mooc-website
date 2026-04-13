@@ -298,14 +298,20 @@ const closeModal = () => {
 const handleFormSubmit = async (formData) => {
   formLoading.value = true
   try {
+    let result = null
     if (selectedModuleForEdit.value?.id) {
-      await updateModule(selectedModuleForEdit.value.id, formData)
+      result = await updateModule(selectedModuleForEdit.value.id, formData)
     } else {
-      await createModule({ ...formData, level: formData.level || preselectedLevel.value })
+      result = await createModule({ ...formData, level: formData.level || preselectedLevel.value })
+    }
+    if (!result) {
+      alert(error.value || 'Could not save the module. Please try again.')
+      return
     }
     closeModal()
   } catch (err) {
     console.error('Error saving module:', err)
+    alert(error.value || err?.message || 'Could not save the module. Please try again.')
   } finally {
     formLoading.value = false
   }

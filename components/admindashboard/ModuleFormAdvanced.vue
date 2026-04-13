@@ -448,7 +448,14 @@
                             <p class="text-xs text-gray-400 mt-1">Leave empty for auto height</p>
                           </div>
                         </div>
-                        <input type="file" accept="image/*" @change="(e) => handleBlockImageUpload(e, index, blockIndex)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          :disabled="isLessonBlockMediaUploading(index, blockIndex)"
+                          @change="(e) => handleBlockImageUpload(e, index, blockIndex)"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <p v-if="isLessonBlockMediaUploading(index, blockIndex)" class="text-sm text-primary-600 font-medium">Uploading to storage…</p>
                         <div v-if="block.src" class="p-3 bg-gray-50 rounded border border-gray-200">
                           <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
                           <img :src="block.src" :alt="lesson.title || 'Lesson image'" class="w-full max-h-72 object-contain rounded" />
@@ -459,7 +466,14 @@
 
                       <!-- VIDEO Block -->
                       <div v-else-if="block.type === 'video'" class="space-y-3">
-                        <input type="file" accept="video/*" @change="(e) => handleBlockVideoUpload(e, index, blockIndex)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        <input
+                          type="file"
+                          accept="video/*"
+                          :disabled="isLessonBlockMediaUploading(index, blockIndex)"
+                          @change="(e) => handleBlockVideoUpload(e, index, blockIndex)"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                        />
+                        <p v-if="isLessonBlockMediaUploading(index, blockIndex)" class="text-sm text-primary-600 font-medium">Uploading to storage…</p>
                         <div v-if="block.src" class="p-3 bg-gray-50 rounded border border-gray-200">
                           <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
                           <video :src="block.src" class="w-full max-h-72 object-contain rounded" controls />
@@ -479,8 +493,8 @@
       <!-- Footer -->
       <div class="sticky bottom-0 flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
         <button @click="$emit('close')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-        <button @click="handleSubmit" :disabled="loading" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-          {{ loading ? 'Saving...' : (isEditMode ? 'Update Module' : 'Create Module') }}
+        <button @click="handleSubmit" :disabled="loading || hasLessonBlockUpload" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ loading ? 'Saving...' : hasLessonBlockUpload ? 'Wait for uploads…' : (isEditMode ? 'Update Module' : 'Create Module') }}
         </button>
       </div>
     </div>
@@ -552,6 +566,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+
+const { $supabase } = useNuxtApp()
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -673,6 +689,56 @@ const form = ref<ModuleForm>({
 })
 
 const isEditMode = computed(() => !!props.module?.id)
+
+/** Keys `${lessonIndex}-${blockIndex}` while a lesson image/video is uploading to storage */
+const lessonBlockUploading = ref<Record<string, boolean>>({})
+
+const hasLessonBlockUpload = computed(() =>
+  Object.values(lessonBlockUploading.value).some(Boolean)
+)
+
+function lessonBlockUploadKey(li: number, bi: number) {
+  return `${li}-${bi}`
+}
+
+function setLessonBlockUploading(li: number, bi: number, on: boolean) {
+  const k = lessonBlockUploadKey(li, bi)
+  const next = { ...lessonBlockUploading.value }
+  if (on) next[k] = true
+  else delete next[k]
+  lessonBlockUploading.value = next
+}
+
+function isLessonBlockMediaUploading(li: number, bi: number) {
+  return !!lessonBlockUploading.value[lessonBlockUploadKey(li, bi)]
+}
+
+/**
+ * Upload lesson block media to the same public buckets as module-level assets
+ * so `block.src` is always a storage-backed URL (never a data: preview).
+ */
+async function uploadLessonBlockMedia(
+  bucket: 'module-images' | 'module-videos',
+  file: File,
+  kind: 'img' | 'vid'
+) {
+  const safeName = (file.name || 'file').replace(/[^\w.-]/g, '_').slice(0, 120)
+  const modId = props.module?.id ? String(props.module.id).replace(/[^\w-]/g, '').slice(0, 36) : 'new'
+  const fileName = `lesson-${kind}-${modId}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${safeName}`
+  const { data, error: uploadError } = await $supabase.storage
+    .from(bucket)
+    .upload(fileName, file, { cacheControl: '3600', upsert: false })
+  if (uploadError) throw new Error(uploadError.message)
+  if (!data?.path) throw new Error('Upload finished but no path was returned')
+  const { data: pub } = $supabase.storage.from(bucket).getPublicUrl(fileName)
+  if (!pub?.publicUrl) throw new Error('Could not get public URL for uploaded file')
+  return pub.publicUrl
+}
+
+function lessonStillContainsBlock(block: LessonBlock | undefined): boolean {
+  if (!block) return false
+  return form.value.lessons.some((l) => Array.isArray(l.blocks) && l.blocks.includes(block))
+}
 
 // ── Font-size display helper ─────────────────────────────────────────────────
 
@@ -1115,6 +1181,7 @@ const resetForm = () => {
   videoPreview.value = ''; videoFile.value = null
   pptFileName.value = ''; pptFile.value = null
   editorFontState.value = {}
+  lessonBlockUploading.value = {}
 }
 
 const normalizeLesson = (lesson: any) => {
@@ -1167,6 +1234,7 @@ watch(
       form.value.lessons = Array.isArray(newModule.lessons) && newModule.lessons.length > 0
         ? JSON.parse(JSON.stringify(newModule.lessons)).map((l: any) => normalizeLesson(l)) : []
       editorFontState.value = {}
+      lessonBlockUploading.value = {}
       imagePreview.value = newModule.image_url || ''; imageFile.value = null
       cardImagePreview.value = newModule.card_image_url || ''; cardImageFile.value = null
       descPanelImagePreview.value = newModule.description_panel_image_url || ''; descPanelImageFile.value = null
@@ -1196,6 +1264,7 @@ const removeBlock = (li: number, bi: number) => {
   const key = getEditorKey(li, bi)
   delete textBlockRefs.value[key]
   delete editorFontState.value[key]
+  setLessonBlockUploading(li, bi, false)
   lesson.blocks.splice(bi, 1)
 }
 
@@ -1352,34 +1421,50 @@ const clearPpt = () => {
   if (pptFileInput.value) pptFileInput.value.value = ''
 }
 
-const handleBlockImageUpload = (event: Event, li: number, bi: number) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
+const handleBlockImageUpload = async (event: Event, li: number, bi: number) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
-  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return }
-  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); return }
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const block = form.value.lessons[li]?.blocks?.[bi]
-    if (block?.type === 'image') block.src = (e.target?.result as string) || ''
+  if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); input.value = ''; return }
+  if (!file.type.startsWith('image/')) { alert('Please select a valid image file'); input.value = ''; return }
+  const block = form.value.lessons[li]?.blocks?.[bi]
+  if (!block || block.type !== 'image') { input.value = ''; return }
+  setLessonBlockUploading(li, bi, true)
+  try {
+    const publicUrl = await uploadLessonBlockMedia('module-images', file, 'img')
+    if (!lessonStillContainsBlock(block)) return
+    if (block.type === 'image') block.src = publicUrl
+  } catch (err: any) {
+    alert(err?.message || 'Failed to upload lesson image')
+  } finally {
+    setLessonBlockUploading(li, bi, false)
+    input.value = ''
   }
-  reader.readAsDataURL(file)
 }
 const clearBlockImage = (li: number, bi: number) => {
   const block = form.value.lessons[li]?.blocks?.[bi]
   if (block?.type === 'image') block.src = ''
 }
 
-const handleBlockVideoUpload = (event: Event, li: number, bi: number) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
+const handleBlockVideoUpload = async (event: Event, li: number, bi: number) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
-  if (file.size > 50 * 1024 * 1024) { alert('Video size must be less than 50MB'); return }
-  if (!file.type.startsWith('video/')) { alert('Please select a valid video file'); return }
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const block = form.value.lessons[li]?.blocks?.[bi]
-    if (block?.type === 'video') block.src = (e.target?.result as string) || ''
+  if (file.size > 50 * 1024 * 1024) { alert('Video size must be less than 50MB'); input.value = ''; return }
+  if (!file.type.startsWith('video/')) { alert('Please select a valid video file'); input.value = ''; return }
+  const block = form.value.lessons[li]?.blocks?.[bi]
+  if (!block || block.type !== 'video') { input.value = ''; return }
+  setLessonBlockUploading(li, bi, true)
+  try {
+    const publicUrl = await uploadLessonBlockMedia('module-videos', file, 'vid')
+    if (!lessonStillContainsBlock(block)) return
+    if (block.type === 'video') block.src = publicUrl
+  } catch (err: any) {
+    alert(err?.message || 'Failed to upload lesson video')
+  } finally {
+    setLessonBlockUploading(li, bi, false)
+    input.value = ''
   }
-  reader.readAsDataURL(file)
 }
 const clearBlockVideo = (li: number, bi: number) => {
   const block = form.value.lessons[li]?.blocks?.[bi]
