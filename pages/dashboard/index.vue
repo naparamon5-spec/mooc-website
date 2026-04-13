@@ -156,18 +156,45 @@
 
           </template>
 
-          <!-- Footer Buttons -->
+          <!-- Help links (modals) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3 mb-3">
-            <button class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-105 text-sm">
-              ❓ FAQs
+            <button
+              type="button"
+              class="px-4 py-3 rounded-xl font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-left md:text-center flex items-center md:justify-center gap-2"
+              aria-haspopup="dialog"
+              :aria-expanded="infoPanel === 'faqs'"
+              @click="infoPanel = 'faqs'"
+            >
+              <span class="text-lg" aria-hidden="true">❓</span>
+              <span>FAQs</span>
             </button>
-            <button class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-105 text-sm">
-              🚨 Report Fraud
+            <button
+              type="button"
+              class="px-4 py-3 rounded-xl font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-left md:text-center flex items-center md:justify-center gap-2"
+              aria-haspopup="dialog"
+              :aria-expanded="infoPanel === 'fraud'"
+              @click="infoPanel = 'fraud'"
+            >
+              <span class="text-lg" aria-hidden="true">🚨</span>
+              <span>Report fraud</span>
             </button>
-            <button class="px-4 py-2 rounded-lg font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-105 text-sm">
-              ℹ️ About Us
+            <button
+              type="button"
+              class="px-4 py-3 rounded-xl font-semibold transition-all duration-200 bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 text-left md:text-center flex items-center md:justify-center gap-2"
+              aria-haspopup="dialog"
+              :aria-expanded="infoPanel === 'about'"
+              @click="infoPanel = 'about'"
+            >
+              <span class="text-lg" aria-hidden="true">ℹ️</span>
+              <span>About us</span>
             </button>
           </div>
+
+          <DashboardHelpModal
+            v-if="infoPanel"
+            :panel="infoPanel"
+            @close="infoPanel = null"
+          />
         </div>
       </div>
     </div>
@@ -192,6 +219,7 @@ import AdvancedWelcomeVideo from "~/components/studentdashboard/AdvancedWelcomeV
 import CourseAgreementCard from "~/components/studentdashboard/CourseAgreementCard.vue";
 import BeginnerCourseCompletedCard from "~/components/studentdashboard/BeginnerCourseCompletedCard.vue";
 import AdvancedCourseCompletedCard from "~/components/studentdashboard/AdvancedCourseCompletedCard.vue";
+import DashboardHelpModal from "~/components/studentdashboard/DashboardHelpModal.vue";
 import { useCourseProgress } from "~/composables/useCourseProgress";
 import { useUserProfile } from "~/composables/useUserProfile";
 import { useOnboarding } from "~/composables/useOnboarding";
@@ -218,6 +246,7 @@ const showAdvancedWelcomeVideo = ref(false);
 const noticeCardKey = ref(0);
 const cardDismissed = ref(false);
 const advancedCardDismissed = ref(false);
+const infoPanel = ref<"faqs" | "fraud" | "about" | null>(null);
 
 const {
   getCompletedModules,
