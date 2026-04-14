@@ -1,8 +1,9 @@
 <template>
   <div class="module-video-container">
     <video
-      v-if="module && module.video_url"
-      :src="module.video_url"
+      v-if="videoUrl"
+      :key="videoUrl"
+      :src="videoUrl"
       controls
       class="module-video"
     ></video>
@@ -16,6 +17,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps({
   module: {
     type: Object,
@@ -26,6 +29,16 @@ const props = defineProps({
     default: true
   }
 });
+
+const videoUrl = computed(() => {
+  if (!props.module) return ''
+  return (
+    props.module.video_url ||
+    props.module.welcome_video_url ||
+    props.module.module_video_url ||
+    ''
+  )
+})
 </script>
 
 <style scoped>

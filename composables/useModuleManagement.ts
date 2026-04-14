@@ -186,6 +186,13 @@ export const useModuleManagement = () => {
         image_url,
         card_image_url,
         description_panel_image_url,
+        video_url,
+        ppt_url,
+        introduction,
+        description,
+        learning_outcomes,
+        learning_outcomes_label,
+        lessons,
         is_active,
         created_at,
         updated_at
