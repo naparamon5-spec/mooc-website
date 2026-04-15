@@ -16,6 +16,7 @@
         <p>Quiz is locked. You must complete lesson 4 of this module to access the quiz.</p>
         <button @click="router.back()" class="mt-4 text-sm underline">Go Back</button>
       </div>
+      
 
       <div v-else-if="!quiz" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700 mb-6 flex-1">
         Quiz not found.
