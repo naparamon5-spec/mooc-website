@@ -2,8 +2,8 @@
   <div class="h-screen flex flex-col bg-gray-50 overflow-hidden">
     <DashboardHeader :student-name="studentName" />
     
-    <main class="flex-1 min-h-0 px-4 md:px-8 lg:px-12 py-3 flex flex-col">
-      <h1 class="text-4xl font-bold text-gray-900 mb-4">All Available Quizzes</h1>
+    <main class="flex-1 min-h-0 px-4 sm:px-6 md:px-8 lg:px-12 py-3 flex flex-col">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">All Available Quizzes</h1>
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-2">
@@ -40,7 +40,7 @@
       <!-- Quizzes Grid -->
       <div
         v-else
-        class="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 content-start"
+        class="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-2 content-start justify-items-stretch"
       >
         <QuizCard
           v-for="quiz in sortedQuizzes"
@@ -124,8 +124,8 @@ const router = useRouter()
 const sortedQuizzes = computed(() => {
   if (!quizzes.value) return []
   return [...quizzes.value].sort((a, b) => {
-    const dateA = new Date(a.created_at || a.createdAt || 0).getTime()
-    const dateB = new Date(b.created_at || b.createdAt || 0).getTime()
+    const dateA = new Date(a.createdAt || a.createdAt || 0).getTime()
+    const dateB = new Date(b.createdAt || b.createdAt || 0).getTime()
     return dateA - dateB // oldest first, newest last
   })
 })

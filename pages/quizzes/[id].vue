@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50">
     <DashboardHeader />
 
-    <main class="max-w-6xl w-full mx-auto px-6 lg:px-8 py-10 flex-grow flex">
+    <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 flex-grow flex flex-col items-stretch">
       <div v-if="loading" class="text-center py-12 flex-1">
         <p class="text-gray-600">Loading quiz...</p>
       </div>
@@ -21,19 +21,22 @@
         Quiz not found.
       </div>
 
-      <div v-else-if="quiz" class="flex w-full flex-col lg:flex-row gap-6 lg:gap-8">
-        <!-- Sidebar with question numbers -->
+      <div v-else-if="quiz" class="flex w-full min-w-0 flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 lg:gap-8">
+        <!-- Question nav: horizontal scroll on small screens (left-aligned), sidebar on lg+ -->
         <aside
           v-if="!isReviewOnly"
-          class="w-full lg:w-1/4 xl:w-1/5 bg-white p-5 lg:p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-24 self-start max-h-[70vh] overflow-y-auto"
+          class="w-full min-w-0 lg:w-1/4 xl:w-1/5 shrink-0 bg-white p-4 sm:p-5 lg:p-6 rounded-2xl shadow-sm border border-gray-100 lg:sticky lg:top-24 lg:max-h-[70vh] lg:overflow-y-auto"
         >
-          <h3 class="text-lg font-semibold mb-4">Questions</h3>
-          <ul class="space-y-2">
+          <h3 class="text-base sm:text-lg font-semibold mb-3 lg:mb-4 text-left">Questions</h3>
+          <ul
+            class="flex flex-row flex-nowrap gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:thin] lg:flex-col lg:flex-wrap lg:overflow-visible lg:space-y-0 lg:gap-2 lg:pb-0 lg:mx-0 lg:px-0"
+            role="list"
+          >
             <li
               v-for="(q, idx) in quiz.questions"
               :key="idx"
               @click="currentQuestionIndex = idx as number"
-              class="cursor-pointer px-3 py-2 rounded-full text-center text-sm font-medium transition-colors"
+              class="cursor-pointer shrink-0 min-w-[2.75rem] h-10 px-3 rounded-full text-sm font-medium transition-colors flex items-center justify-center lg:w-full lg:min-w-0 lg:justify-center"
               :class="[
                 currentQuestionIndex === (idx as number)
                   ? 'bg-primary-600 text-white'
@@ -48,9 +51,9 @@
         </aside>
 
         <!-- Main quiz content -->
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
           <div class="mb-8">
-            <h1 class="text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 mb-3">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 mb-3">
               {{ quiz.title }}
             </h1>
             <p v-if="quiz.description" class="text-gray-700 mb-5 max-w-3xl">
