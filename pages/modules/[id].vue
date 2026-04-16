@@ -27,9 +27,23 @@
     />
 
     <main class="bg-primary-100 max-w-full mx-auto px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <!-- Mobile sidebar toggle -->
+      <div class="lg:hidden mb-4">
+        <button
+          type="button"
+          @click="isSidebarOpen = !isSidebarOpen"
+          class="w-full bg-white rounded-lg shadow p-3 text-gray-800 font-semibold flex items-center justify-between"
+          :aria-expanded="isSidebarOpen"
+          aria-controls="module-curriculum-sidebar"
+        >
+          <span>Curriculum</span>
+          <span class="text-sm" aria-hidden="true">{{ isSidebarOpen ? '▲' : '▼' }}</span>
+        </button>
+      </div>
+
       <!-- Sidebar -->
-      <aside class="lg:col-span-1">
-        <nav class="bg-white rounded-lg shadow p-4">
+      <aside class="lg:col-span-1" :class="isSidebarOpen ? 'block' : 'hidden lg:block'">
+        <nav id="module-curriculum-sidebar" class="bg-white rounded-lg shadow p-4">
           <h2 class="text-xl font-bold text-gray-800 mb-6">Curriculum</h2>
           <div class="space-y-2">
             <div v-for="(mod, moduleIndex) in sidebarModules" :key="mod.id" class="space-y-1">
@@ -414,6 +428,7 @@ const lessonParam = computed(() => { const lesson = route.query.lesson; return l
 // ── State ──────────────────────────────────────────────────────────────────
 const currentLessonIndex = ref(-1)
 const completedLessons = ref(new Set())
+const isSidebarOpen = ref(false)
 const showCompletionModal = ref(false)
 const showModuleCharacterModal = ref(false)
 const showQuizDialog = ref(false)
@@ -664,6 +679,7 @@ const markLessonAndGoToNext = () => {
   if (module.value?.lessons && currentLessonIndex.value < module.value.lessons.length - 1) { currentLessonIndex.value++; window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 const goToModule = (id: string, lessonIndex = -1) => {
+  isSidebarOpen.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
   navigateTo(lessonIndex === -1 ? `/modules/${id}` : `/modules/${id}?lesson=${lessonIndex}`)
 }
@@ -676,6 +692,7 @@ const isModuleAccessible = (modId: string, index: number) => {
 watch(moduleId, async (newId) => {
   const data = await fetchModuleById(newId)
   if (data) {
+    isSidebarOpen.value = false
     module.value = data
     currentLessonIndex.value = lessonParam.value >= 0 ? lessonParam.value : -1
     completedLessons.value.clear()
