@@ -366,7 +366,16 @@ const isLocked = computed(() => {
   const levelProgress = courseProgress.value[courseLevel as 'beginner' | 'advanced']
   if (!levelProgress) return false
   const completedLessons = levelProgress.completedLessons.get(moduleId)
-  return !completedLessons?.has(3)
+
+  // Unlock should be based on the module's actual lesson count.
+  // Some advanced modules may not have a lesson at index 3, so hardcoding `3`
+  // can keep the quiz locked forever.
+  const module = modules.value.find((m: any) => String(m.id) === String(moduleId))
+  const requiredLessonIndex = Array.isArray(module?.lessons) && module.lessons.length > 0
+    ? module.lessons.length - 1
+    : 3
+
+  return !completedLessons?.has(requiredLessonIndex)
 })
 
 const nextModuleId = computed(() => {
