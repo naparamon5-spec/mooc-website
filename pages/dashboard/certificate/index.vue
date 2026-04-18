@@ -220,6 +220,8 @@ const { getAllBadges, badgeMapping, courseProgress, loadProgressFromSupabase, cl
 const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates();
 const nuxtApp = useNuxtApp();
 const supabase = nuxtApp.$supabase;
+const NAME_X_OFFSET = 100;
+const NAME_Y_RATIO = 0.45;
 
 const studentName = ref('Student Name');
 const isLoading = ref(true);
@@ -257,6 +259,14 @@ const getCertificateSequenceOnly = (cert: any): string => {
   const fullCertificateNumber = cert?.certificateNumber || cert?.certificate_number || '';
   const match = String(fullCertificateNumber).match(/(\d{5})$/);
   return match?.[1] || 'Pending';
+};
+
+const getFittedNameSize = (name: string, font: any, maxWidth: number, startSize: number): number => {
+  let size = startSize;
+  while (size > 24 && font.widthOfTextAtSize(name, size) > maxWidth) {
+    size -= 1;
+  }
+  return size;
 };
 
 // Fetch user profile and progress on mount
@@ -420,13 +430,13 @@ const downloadCertificate = async (cert: any) => {
     const pageWidth = page.getWidth();
     const pageHeight = page.getHeight();
 
-    const studentDisplayName = getCertificateStudentName(cert);
-    const nameSize = 38;
+    const studentDisplayName = getCertificateStudentName(cert).trim() || 'Student Name';
+    const nameSize = getFittedNameSize(studentDisplayName, font, pageWidth * 0.67, 36);
     const nameWidth = font.widthOfTextAtSize(studentDisplayName, nameSize);
 
     page.drawText(studentDisplayName, {
-      x: ((pageWidth - nameWidth) / 2) + 100,
-      y: pageHeight * 0.45,
+      x: (pageWidth - nameWidth) / 2 + NAME_X_OFFSET,
+      y: pageHeight * NAME_Y_RATIO,
       size: nameSize,
       font,
       color: rgb(0, 0, 0),

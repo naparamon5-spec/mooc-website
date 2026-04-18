@@ -36,6 +36,8 @@ const props = defineProps<Props>()
 const previewUrl = ref<string>('')
 const loading = ref(true)
 const error = ref<string | null>(null)
+const NAME_X_OFFSET = 100
+const NAME_Y_RATIO = 0.45
 
 const formatCertificateDate = (cert: any): string => {
   const rawDate = cert?.earnedAt || cert?.issued_at || cert?.completed_at || cert?.created_at
@@ -97,8 +99,8 @@ const stampAndPreview = async () => {
     const nameWidth = nameFont.widthOfTextAtSize(studentDisplayName, nameSize)
 
     page.drawText(studentDisplayName, {
-      x: (pageWidth - nameWidth) / 2,
-      y: pageHeight * 0.57,
+      x: (pageWidth - nameWidth) / 2 + NAME_X_OFFSET,
+      y: pageHeight * NAME_Y_RATIO,
       size: nameSize,
       font: nameFont,
       color: rgb(0, 0, 0),

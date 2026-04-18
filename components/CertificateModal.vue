@@ -109,19 +109,34 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const downloadingPdf = ref(false)
 const resolvedTemplateUrl = ref<string>('')
+const NAME_X_OFFSET = 100
+const NAME_Y_RATIO = 0.45
 
 const { templates: certificateTemplates, fetchTemplates: fetchCertificateTemplates } = useCertificateTemplates()
+
+const getFittedNameSize = (name: string, font: any, maxWidth: number, startSize: number): number => {
+  let size = startSize
+  while (size > 24 && font.widthOfTextAtSize(name, size) > maxWidth) {
+    size -= 1
+  }
+  return size
+}
+
+// Helper: convert Uint8Array to a plain ArrayBuffer to satisfy Blob constructor
+const toPlainArrayBuffer = (uint8: Uint8Array): ArrayBuffer => {
+  const plain = new ArrayBuffer(uint8.byteLength)
+  new Uint8Array(plain).set(uint8)
+  return plain
+}
 
 // Resolve template URL - use prop or fetch from database
 const resolveTemplateUrl = async (): Promise<string | null> => {
   try {
-    // If templateUrl prop is provided, use it
     if (props.templateUrl) {
       console.log('✅ Using provided template URL:', props.templateUrl)
       return props.templateUrl
     }
 
-    // Otherwise, fetch templates and find by course level
     console.log('🔄 Template URL not provided, fetching by course level:', props.courseLevel)
     if (certificateTemplates.value.length === 0) {
       await fetchCertificateTemplates()
@@ -149,7 +164,6 @@ const stampAndPreview = async () => {
 
     console.log('🎓 CertificateModal: Starting certificate stamp')
 
-    // Resolve template URL
     const templateUrl = await resolveTemplateUrl()
     if (!templateUrl) {
       error.value = 'No certificate template found. Please contact support.'
@@ -161,40 +175,39 @@ const stampAndPreview = async () => {
     resolvedTemplateUrl.value = templateUrl
     console.log('📄 Starting PDF processing...')
 
-    // Fetch the PDF template
     const existingPdfBytes = await fetch(templateUrl).then(r => {
       if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status} ${r.statusText}`)
       return r.arrayBuffer()
     })
 
-    // Load and modify PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes)
-    const page = pdfDoc.getPages()[0]
 
-    // Embed font and add student name
+    // Assign first, then guard — this is what narrows the type for TypeScript
+    const page = pdfDoc.getPages()[0]
+    if (!page) {
+      throw new Error('PDF template has no pages.')
+    }
+
     const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
     const pageWidth = page.getWidth()
     const pageHeight = page.getHeight()
 
-    // Add name in center of page
-    const nameWidth = font.widthOfTextAtSize(props.studentName, 36)
-
-    
-    // Add name in center of page
-page.drawText(props.studentName, {
-  x: (pageWidth - nameWidth) / 2,  // ← perfect center
-  y: pageHeight * 0.57,  // ← bump this up more
-  size: 36,
-  font,
-  color: rgb(0, 0, 0),
-})
+    const studentDisplayName = props.studentName?.trim() || 'Student Name'
+    const nameSize = getFittedNameSize(studentDisplayName, font, pageWidth * 0.62, 36)
+    const nameWidth = font.widthOfTextAtSize(studentDisplayName, nameSize)
+    page.drawText(studentDisplayName, {
+      x: (pageWidth - nameWidth) / 2 + NAME_X_OFFSET,
+      y: pageHeight * NAME_Y_RATIO,
+      size: nameSize,
+      font,
+      color: rgb(0, 0, 0),
+    })
 
     console.log('✏️ Name stamped on PDF:', props.studentName)
 
-    // Save and create preview URL
-    const pdfBytes = await pdfDoc.save()
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const pdfUint8 = await pdfDoc.save()
+    const blob = new Blob([toPlainArrayBuffer(pdfUint8)], { type: 'application/pdf' })
     previewUrl.value = URL.createObjectURL(blob)
 
     console.log('✅ Certificate preview ready!')
@@ -206,7 +219,7 @@ page.drawText(props.studentName, {
   }
 }
 
-// Download certificate as PDF with student name already stamped
+// Download certificate as PDF
 const downloadCertificate = async () => {
   try {
     downloadingPdf.value = true
@@ -218,47 +231,46 @@ const downloadCertificate = async () => {
       return
     }
 
-    // Fetch the PDF template
     const existingPdfBytes = await fetch(resolvedTemplateUrl.value).then(r => {
       if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status} ${r.statusText}`)
       return r.arrayBuffer()
     })
 
-    // Load and modify PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes)
-    const page = pdfDoc.getPages()[0]
 
-    // Embed font and add student name
+    // Assign first, then guard — this is what narrows the type for TypeScript
+    const page = pdfDoc.getPages()[0]
+    if (!page) {
+      throw new Error('PDF template has no pages.')
+    }
+
     const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
     const pageWidth = page.getWidth()
     const pageHeight = page.getHeight()
 
-    // Add name in center
-    const nameWidth = font.widthOfTextAtSize(props.studentName, 36)
+    const studentDisplayName = props.studentName?.trim() || 'Student Name'
+    const nameSize = getFittedNameSize(studentDisplayName, font, pageWidth * 0.62, 36)
+    const nameWidth = font.widthOfTextAtSize(studentDisplayName, nameSize)
+    page.drawText(studentDisplayName, {
+      x: (pageWidth - nameWidth) / 2 + NAME_X_OFFSET,
+      y: pageHeight * NAME_Y_RATIO,
+      size: nameSize,
+      font,
+      color: rgb(0, 0, 0),
+    })
 
-    
-    // Add name in center of page
-page.drawText(props.studentName, {
-  x: (pageWidth - nameWidth) / 2,  // ← perfect center
-  y: pageHeight * 0.57,  // ← bump this up more
-  size: 36,
-  font,
-  color: rgb(0, 0, 0),
-})
-    // Save as PDF
-    const pdfBytes = await pdfDoc.save()
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    // FIX 2: Copy into a plain ArrayBuffer before passing to Blob
+    const pdfUint8 = await pdfDoc.save()
+    const blob = new Blob([toPlainArrayBuffer(pdfUint8)], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
 
-    // Trigger download
     const a = document.createElement('a')
     a.href = url
     const timestamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     a.download = `${props.studentName}_Certificate_${timestamp}.pdf`
     a.click()
 
-    // Clean up
     URL.revokeObjectURL(url)
 
     console.log('✅ Certificate downloaded:', a.download)
@@ -279,7 +291,6 @@ onMounted(async () => {
   }
 })
 
-// Watch for modal open/close
 watch(() => props.isOpen, async (isOpen) => {
   console.log('👀 Modal isOpen changed to:', isOpen)
   if (isOpen) {
@@ -287,7 +298,6 @@ watch(() => props.isOpen, async (isOpen) => {
   }
 })
 
-// Watch for template URL changes
 watch(() => props.templateUrl, async (newUrl) => {
   console.log('🔄 Template URL changed to:', newUrl)
   if (props.isOpen) {
@@ -295,7 +305,6 @@ watch(() => props.templateUrl, async (newUrl) => {
   }
 })
 
-// Watch for course level changes
 watch(() => props.courseLevel, async (newLevel) => {
   console.log('🔄 Course level changed to:', newLevel)
   if (props.isOpen) {

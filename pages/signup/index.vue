@@ -168,15 +168,12 @@ const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const showSuccessModal = ref(false)
-const countdown = ref(5)
 
 const errors = ref({
   name: '',
   email: '',
   password: ''
 })
-
-let countdownInterval: ReturnType<typeof setInterval> | null = null
 
 /* =====================
    Styles
@@ -191,13 +188,7 @@ const errorClass =
    Modal Message
 ===================== */
 const modalMessage = computed(() => {
-  if (countdown.value > 1) {
-    return `Please check your email for verification. Redirecting to login in ${countdown.value} seconds...`
-  }
-  if (countdown.value === 1) {
-    return 'Please check your email for verification. Redirecting to login in 1 second...'
-  }
-  return 'Redirecting to login...'
+  return 'Please check your email for verification, then click Continue to proceed to login.'
 })
 
 /* =====================
@@ -234,15 +225,6 @@ async function onSubmit() {
     if (error) throw error
 
     showSuccessModal.value = true
-    countdown.value = 5
-
-    countdownInterval = setInterval(() => {
-      countdown.value--
-      if (countdown.value === 0) {
-        clearInterval(countdownInterval!)
-        redirectToLogin()
-      }
-    }, 1000)
 
   } catch (err: any) {
     console.error('Signup error details:', {
@@ -266,7 +248,6 @@ function redirectToLogin() {
 }
 
 function handleModalClose() {
-  if (countdownInterval) clearInterval(countdownInterval)
   redirectToLogin()
 }
 </script>
