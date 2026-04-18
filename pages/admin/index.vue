@@ -2,9 +2,9 @@
   <div class="min-h-screen bg-gray-50">
     <AdminHeader :admin-name="adminName" />
     
-  <div class="max-w-full px-4 md:px-8 lg:px-12 py-8">
+  <div class="max-w-full px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 overflow-x-hidden">
       <!-- Top Row Metrics -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
           title="Total Enrolled Students"
           :value="totalEnrolled"
@@ -25,7 +25,7 @@
       </div>
 
       <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <!-- Course Management -->
         <div class="lg:col-span-1">
           <CourseManagement
@@ -40,7 +40,7 @@
       </div>
 
       <!-- Analytics Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <!-- Enrollment Analytics -->
         <EnrollmentAnalytics :data="enrollmentAnalyticsData" />
 

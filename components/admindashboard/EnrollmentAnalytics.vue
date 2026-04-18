@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+  <div class="bg-white rounded-lg shadow-sm p-4 sm:p-6 border border-gray-100">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold text-gray-900">Enrollment Analytics</h2>
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">Enrollment Analytics</h2>
     </div>
     
-    <div class="h-64 relative">
+    <div class="h-52 sm:h-64 relative">
       <svg viewBox="0 0 400 200" class="w-full h-full" preserveAspectRatio="xMidYMid meet">
         <!-- Grid lines -->
         <defs>

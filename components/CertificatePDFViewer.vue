@@ -59,7 +59,7 @@ const getCertificateSequenceOnly = (cert: any): string => {
 
 const getFittedNameSize = (name: string, font: any, maxWidth: number, startSize: number): number => {
   let size = startSize
-  while (size > 20 && font.widthOfTextAtSize(name, size) > maxWidth) {
+  while (size > 24 && font.widthOfTextAtSize(name, size) > maxWidth) {
     size -= 1
   }
   return size
@@ -93,12 +93,12 @@ const stampAndPreview = async () => {
     const pageHeight = page.getHeight()
 
     const studentDisplayName = props.studentName?.trim() || 'Student Name'
-    const nameSize = getFittedNameSize(studentDisplayName, nameFont, pageWidth * 0.58, 38)
+    const nameSize = getFittedNameSize(studentDisplayName, nameFont, pageWidth * 0.62, 36)
     const nameWidth = nameFont.widthOfTextAtSize(studentDisplayName, nameSize)
 
     page.drawText(studentDisplayName, {
       x: (pageWidth - nameWidth) / 2,
-      y: pageHeight * 0.452,
+      y: pageHeight * 0.57,
       size: nameSize,
       font: nameFont,
       color: rgb(0, 0, 0),
@@ -151,4 +151,8 @@ onMounted(async () => {
 watch(() => props.cert, async () => {
   await stampAndPreview()
 }, { deep: true })
+
+watch(() => props.studentName, async () => {
+  await stampAndPreview()
+})
 </script>

@@ -57,7 +57,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search by Student ID or Module title..."
+          placeholder="Search by Student ID, Name, or Module title..."
           class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -107,6 +107,7 @@
           <thead>
             <tr class="border-b border-gray-200">
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Student ID</th>
+              <th class="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Module</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Deadline</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
@@ -120,6 +121,7 @@
               class="border-b border-gray-200 hover:bg-gray-50"
             >
               <td class="py-3 px-4 text-gray-900">{{ assignment.student_id_display }}</td>
+              <td class="py-3 px-4 text-gray-900">{{ assignment.student_name_display }}</td>
               <td class="py-3 px-4 text-gray-600">{{ assignment.module_title }}</td>
               <td class="py-3 px-4 text-gray-600">{{ formatDate(assignment.deadline) }}</td>
               <td class="py-3 px-4">
@@ -155,6 +157,7 @@
           <thead>
             <tr class="border-b border-gray-200">
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Student ID</th>
+              <th class="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Module</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Deadline</th>
               <th class="text-left py-3 px-4 font-semibold text-gray-700">Days Overdue</th>
@@ -168,6 +171,7 @@
               class="border-b border-gray-200 hover:bg-gray-50"
             >
               <td class="py-3 px-4 text-gray-900">{{ assignment.student_id_display }}</td>
+              <td class="py-3 px-4 text-gray-900">{{ assignment.student_name_display }}</td>
               <td class="py-3 px-4 text-gray-600">{{ assignment.module_title }}</td>
               <td class="py-3 px-4 text-gray-600">{{ formatDate(assignment.deadline) }}</td>
               <td class="py-3 px-4">
@@ -242,6 +246,7 @@ type AssignmentRow = {
   status: string
   course_level: string
   student_id_display: string
+  student_name_display: string
   module_title: string
   completed_at?: string | null
 }
@@ -305,6 +310,7 @@ const filteredRows = computed(() => {
     const matchesQuery =
       !q ||
       r.student_id_display.toLowerCase().includes(q) ||
+      r.student_name_display.toLowerCase().includes(q) ||
       r.module_title.toLowerCase().includes(q)
 
     const matchesStatus = !statusFilter.value || r.status === statusFilter.value
@@ -357,7 +363,7 @@ const resolveDisplayData = async (assignments: any[], completions: any[] = []) =
       ? supabase.from('modules').select('id, title').in('id', moduleIds)
       : Promise.resolve({ data: [] as any[] }),
     userIds.length
-      ? supabase.from('profiles').select('id, student_id').in('id', userIds)
+      ? supabase.from('profiles').select('id, student_id, full_name').in('id', userIds)
       : Promise.resolve({ data: [] as any[] })
   ])
 
@@ -365,8 +371,10 @@ const resolveDisplayData = async (assignments: any[], completions: any[] = []) =
   for (const m of modulesRes.data || []) moduleTitleById.set(m.id, m.title || m.id)
 
   const studentIdByUserId = new Map<string, string>()
+  const studentNameByUserId = new Map<string, string>()
   for (const p of profilesRes.data || []) {
     studentIdByUserId.set(p.id, p.student_id || p.id?.substring?.(0, 8) || '—')
+    studentNameByUserId.set(p.id, p.full_name || 'Unknown user')
   }
 
   const completionMap = new Map<string, { completed_at?: string | null }>()
@@ -380,6 +388,7 @@ const resolveDisplayData = async (assignments: any[], completions: any[] = []) =
   return (assignments || []).map((a: any) => {
     const moduleTitle = moduleTitleById.get(a.module_id) || a.module_id
     const studentId = studentIdByUserId.get(a.user_id) || a.user_id?.substring?.(0, 8) || '—'
+    const studentName = studentNameByUserId.get(a.user_id) || 'Unknown user'
     const derived = deriveAssignmentStatus(a, completionMap)
 
     const row: AssignmentRow = {
@@ -390,6 +399,7 @@ const resolveDisplayData = async (assignments: any[], completions: any[] = []) =
       status: derived.status,
       course_level: a.course_level,
       student_id_display: studentId,
+      student_name_display: studentName,
       module_title: moduleTitle,
       completed_at: derived.completed_at
     }

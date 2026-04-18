@@ -30,12 +30,12 @@
             <p class="text-sm text-gray-600 mt-1">{{ quiz.description }}</p>
 
             <!-- Quiz Meta -->
-            <div class="flex flex-wrap items-center gap-2 sm:gap-4 mt-3">
+            <div class="mt-3 grid grid-cols-2 sm:flex sm:flex-wrap items-start gap-2 sm:gap-4">
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                 :class="quiz.level === 'beginner' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'">
                 {{ quiz.level === 'beginner' ? 'Beginner' : 'Advanced' }}
               </span>
-              <span v-if="getModuleTitle(quiz.moduleId || quiz.module_id)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded break-words max-w-full">
+              <span v-if="getModuleTitle(quiz.moduleId || quiz.module_id)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded break-words col-span-2 sm:col-span-1">
                 Module: {{ getModuleTitle(quiz.moduleId || quiz.module_id) }}
               </span>
               <span class="text-xs text-gray-500">
@@ -51,16 +51,16 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex gap-2 sm:ml-4 shrink-0">
+          <div class="flex gap-2 sm:ml-4 shrink-0 self-end sm:self-start">
             <button
               @click="$emit('edit', quiz)"
-              class="px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition"
+              class="px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition whitespace-nowrap"
             >
               Edit
             </button>
             <button
               @click="confirmDelete(quiz)"
-              class="px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50 rounded transition"
+              class="px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-50 rounded transition whitespace-nowrap"
             >
               Delete
             </button>

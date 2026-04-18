@@ -1,15 +1,19 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+  <div class="bg-white rounded-lg shadow-sm p-4 sm:p-6 border border-gray-100">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-bold text-gray-900">Module Completions (Last 2 Weeks)</h2>
+      <h2 class="text-lg sm:text-xl font-bold text-gray-900">Module Completions (Last 2 Weeks)</h2>
     </div>
 
     <div v-if="data.length === 0" class="text-center py-8 text-gray-500">
       <p>No completion data available</p>
     </div>
 
-    <div v-else class="relative">
-      <svg :width="chartWidth" :height="chartHeight" class="border border-gray-200 rounded">
+    <div v-else class="relative h-52 sm:h-64">
+      <svg
+        :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
+        class="w-full h-full border border-gray-200 rounded"
+        preserveAspectRatio="xMidYMid meet"
+      >
         <!-- Grid lines -->
         <defs>
           <pattern id="grid" width="40" height="20" patternUnits="userSpaceOnUse">
@@ -34,6 +38,7 @@
         <text
           v-for="(point, index) in data"
           :key="point.date"
+          v-show="index % visibleXLabelStep === 0 || index === data.length - 1"
           :x="50 + index * xStep"
           :y="chartHeight - 5"
           class="text-xs fill-gray-600"
@@ -75,7 +80,7 @@ const props = defineProps({
 })
 
 const chartWidth = 600
-const chartHeight = 200
+const chartHeight = 220
 
 const maxCompletions = computed(() => {
   return Math.max(...props.data.map(d => d.completions), 1)
@@ -97,6 +102,11 @@ const yScale = computed(() => {
 const xStep = computed(() => {
   if (props.data.length <= 1) return chartWidth - 100
   return (chartWidth - 100) / (props.data.length - 1)
+})
+
+const visibleXLabelStep = computed(() => {
+  if (props.data.length <= 5) return 1
+  return Math.ceil(props.data.length / 5)
 })
 
 const linePoints = computed(() => {
