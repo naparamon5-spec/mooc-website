@@ -33,9 +33,9 @@
           />
         </div>
 
-        <!-- System Health -->
+        <!-- Course Completion Rate -->
         <div class="lg:col-span-1">
-          <SystemHealth :data="dailyCompletions" />
+          <CourseCompletionRate :data="courseCompletionRates" />
         </div>
       </div>
 
@@ -44,8 +44,8 @@
         <!-- Enrollment Analytics -->
         <EnrollmentAnalytics :data="enrollmentAnalyticsData" />
 
-        <!-- Course Completion Rate -->
-        <CourseCompletionRate :data="courseCompletionRates" />
+        <!-- Module Completion -->
+        <SystemHealth :data="dailyCompletions" />
       </div>
 
       <!-- 2-Week Course Agreement Management -->

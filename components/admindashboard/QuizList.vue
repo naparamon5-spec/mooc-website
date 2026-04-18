@@ -22,20 +22,20 @@
       <div
         v-for="quiz in quizzes"
         :key="quiz.id"
-        class="p-6 hover:bg-gray-50 transition"
+        class="p-4 sm:p-6 hover:bg-gray-50 transition"
       >
-        <div class="flex items-start justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div class="flex-1">
             <h4 class="text-md font-semibold text-gray-900">{{ quiz.title }}</h4>
             <p class="text-sm text-gray-600 mt-1">{{ quiz.description }}</p>
 
             <!-- Quiz Meta -->
-            <div class="flex items-center gap-4 mt-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-4 mt-3">
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                 :class="quiz.level === 'beginner' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'">
                 {{ quiz.level === 'beginner' ? 'Beginner' : 'Advanced' }}
               </span>
-              <span v-if="getModuleTitle(quiz.moduleId || quiz.module_id)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+              <span v-if="getModuleTitle(quiz.moduleId || quiz.module_id)" class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded break-words max-w-full">
                 Module: {{ getModuleTitle(quiz.moduleId || quiz.module_id) }}
               </span>
               <span class="text-xs text-gray-500">
@@ -51,7 +51,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex gap-2 ml-4">
+          <div class="flex gap-2 sm:ml-4 shrink-0">
             <button
               @click="$emit('edit', quiz)"
               class="px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition"

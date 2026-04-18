@@ -13,11 +13,11 @@
         </div>
 
         <!-- Quiz List -->
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h2 class="text-xl font-bold text-gray-900">Quiz Management</h2>
           <button
             @click="startCreateQuiz"
-            class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+            class="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition whitespace-nowrap"
           >
             + Create Quiz
           </button>

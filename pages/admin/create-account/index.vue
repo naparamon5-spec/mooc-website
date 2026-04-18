@@ -4,16 +4,16 @@
     <AdminHeader :admin-name="adminName" />
 
     <div class="w-full px-4 md:px-8 lg:px-12 py-12">
-      <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 md:p-12">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 sm:p-6 md:p-12">
         <!-- Title and Create Button -->
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-8">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900">Manage Accounts</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Manage Accounts</h1>
             <p class="text-gray-600 mt-2">View and create instructor and admin accounts</p>
           </div>
           <button
             @click="openModal"
-            class="bg-primary-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-primary-700 transition"
+            class="bg-primary-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-primary-700 transition whitespace-nowrap"
           >
             Create Account
           </button>
@@ -30,7 +30,8 @@
           <p class="text-gray-600">No instructors or admins found.</p>
         </div>
         <div v-else class="w-full">
-          <table class="w-full table-fixed divide-y divide-gray-200">
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full table-fixed divide-y divide-gray-200 min-w-[900px]">
             <thead class="bg-gray-50">
               <tr>
                 <th style="width:15%" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -111,6 +112,83 @@
               </tr>
             </tbody>
           </table>
+          </div>
+
+          <!-- Mobile Cards -->
+          <div class="md:hidden space-y-3">
+            <div
+              v-for="user in users"
+              :key="`${user.id}-mobile`"
+              class="rounded-lg border border-gray-200 p-4"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-900 truncate">{{ user.name }}</p>
+                  <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+                </div>
+                <p class="text-xs text-gray-500 shrink-0">{{ new Date(user.createdAt).toLocaleDateString() }}</p>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span :class="[
+                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                  user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                ]">
+                  {{ user.role }}
+                </span>
+                <span :class="[
+                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                  user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                ]">
+                  {{ user.isActive ? 'Active' : 'Inactive' }}
+                </span>
+                <span class="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                  {{ user.phone || 'No phone' }}
+                </span>
+              </div>
+
+              <div v-if="user.id !== currentUserId" class="mt-3 flex flex-wrap gap-2">
+                <button
+                  @click="toggleUserStatus(user)"
+                  :disabled="togglingUserId === user.id"
+                  :class="[
+                    'inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed',
+                    user.isActive
+                      ? 'border-red-200 text-red-700 bg-red-50 hover:bg-red-100'
+                      : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
+                  ]"
+                >
+                  <svg v-if="togglingUserId === user.id" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  <svg v-else-if="user.isActive" class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                  </svg>
+                  <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  {{ togglingUserId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Activate' }}
+                </button>
+
+                <button
+                  @click="promptDeleteUser(user)"
+                  :disabled="deletingUserId === user.id"
+                  class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg v-if="deletingUserId === user.id" class="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  <svg v-else class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                  {{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}
+                </button>
+              </div>
+              <span v-else class="mt-3 inline-block text-xs text-gray-400 italic">You</span>
+            </div>
+          </div>
         </div>
 
         <!-- Toggle / Delete error -->
